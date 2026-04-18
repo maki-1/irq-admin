@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  FiDownload, FiBook, FiTrendingUp, FiMap,
+  FiClipboard, FiHome, FiHeart,
+  FiMapPin, FiClock, FiPhone, FiMail,
+  FiBell, FiLock, FiFolder, FiWifi, FiZap, FiX,
+} from 'react-icons/fi';
 import assets from '../assets/cloudinaryAssets';
 
 /* ─────────────────────────────────────────
@@ -23,7 +29,9 @@ function Modal({ open, onClose, title, children }) {
         <div className="p-8 pt-9">
           <div className="flex items-start justify-between mb-5">
             <h2 className="font-garamond text-2xl font-bold text-gold">{title}</h2>
-            <button onClick={onClose} className="text-white/40 hover:text-white text-xl leading-none mt-0.5 ml-4">✕</button>
+            <button onClick={onClose} className="text-white/40 hover:text-white mt-0.5 ml-4">
+              <FiX size={20} />
+            </button>
           </div>
           <div className="text-white/70 text-sm leading-relaxed space-y-4">{children}</div>
         </div>
@@ -72,8 +80,9 @@ function Navbar({ onContact }) {
             Contact
           </button>
           <button onClick={() => scrollTo('download')}
-            className="ml-2 px-4 py-2 text-sm font-semibold text-[#0d1f0d] bg-gold hover:bg-gold/90 rounded-lg transition-colors">
-            ⬇ Download App
+            className="ml-2 flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0d1f0d] bg-gold hover:bg-gold/90 rounded-lg transition-colors">
+            <FiDownload size={14} />
+            Download App
           </button>
         </div>
 
@@ -105,6 +114,18 @@ function Navbar({ onContact }) {
 }
 
 /* ─────────────────────────────────────────
+   Icon wrapper used in cards
+───────────────────────────────────────── */
+function CardIcon({ icon: Icon, color = '#c9a84c' }) {
+  return (
+    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+      style={{ background: `${color}18`, border: `1px solid ${color}30` }}>
+      <Icon size={18} color={color} />
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
    Main Landing Page
 ───────────────────────────────────────── */
 export default function Landing() {
@@ -124,30 +145,24 @@ export default function Landing() {
           HERO SECTION
       ══════════════════════════════════════ */}
       <section className="relative min-h-screen flex items-center justify-center px-4 py-24">
-        {/* Background video */}
         <video autoPlay muted loop playsInline
           className="absolute inset-0 w-full h-full object-cover z-[-2]" src={assets.BGVIDEO} />
-        {/* Overlays */}
         <div className="absolute inset-0 z-[-1] bg-gradient-to-b from-[#0a1f0a]/80 via-[#111811]/65 to-[#0a1f0a]/90" />
         <div className="absolute inset-0 z-[-1] pointer-events-none">
           <div className="absolute w-[500px] h-[500px] -top-32 -left-32 rounded-full bg-green-rich/30 blur-[100px] animate-pulse" />
           <div className="absolute w-[400px] h-[400px] -bottom-20 -right-20 rounded-full bg-green-accent/20 blur-[100px] animate-pulse [animation-delay:3s]" />
         </div>
 
-        {/* Hero card */}
         <div className="relative text-center w-full max-w-[500px] bg-[rgba(10,22,10,0.55)] backdrop-blur-[32px]
                         border border-white/10 rounded-[28px] px-10 py-14
                         shadow-[0_32px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.10)]">
-          {/* Gold top line */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/5 h-[1.5px] bg-gradient-to-r from-transparent via-gold to-transparent rounded-full" />
 
-          {/* Live badge */}
           <div className="inline-flex items-center gap-2 bg-green-accent/10 border border-green-accent/25 rounded-full px-3.5 py-1.5 mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-green-bright shadow-[0_0_6px_#3daa3d] animate-pulse" />
             <span className="text-white/50 text-[11px] tracking-widest uppercase">Online · Barangay Dologon</span>
           </div>
 
-          {/* Flipping logo */}
           <div className="w-[108px] h-[108px] mx-auto mb-6" style={{ perspective: '1000px' }}>
             <div className="relative w-full h-full transition-transform duration-[1600ms]"
               style={{ transformStyle: 'preserve-3d', transform: logoFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
@@ -180,7 +195,6 @@ export default function Landing() {
             Fast, secure, and paperless.
           </p>
 
-          {/* Scroll down hint */}
           <button onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
             className="flex flex-col items-center gap-1 mx-auto text-white/30 hover:text-white/60 transition-colors text-xs tracking-widest uppercase">
             <span>Discover More</span>
@@ -195,9 +209,8 @@ export default function Landing() {
           ABOUT SECTION
       ══════════════════════════════════════ */}
       <section id="about" className="relative py-24 px-4 bg-[#0d1f0d]">
-        <div className="absolute inset-0 bg-[url('/BARANGAYHALL.jpg')] bg-cover bg-center opacity-5" />
+        <div className="absolute inset-0 bg-cover bg-center opacity-5" style={{ backgroundImage: `url(${assets.BARANGAYHALL})` }} />
         <div className="relative max-w-5xl mx-auto">
-          {/* Section header */}
           <div className="text-center mb-14">
             <p className="text-[10px] tracking-[0.3em] uppercase text-gold/60 mb-2">Who We Are</p>
             <h2 className="font-garamond text-4xl md:text-5xl font-bold text-white mb-3">About Barangay Dologon</h2>
@@ -244,12 +257,12 @@ export default function Landing() {
           {/* Key facts */}
           <div className="grid md:grid-cols-3 gap-4 mt-6">
             {[
-              { icon: '🎓', title: 'Education', body: 'Home to Central Mindanao University — the premier agricultural school in Mindanao, located in Sitio Musuan. Dologon National High School serves the local community.' },
-              { icon: '🌿', title: 'Economy', body: 'Agriculture is dominant, with rural agri-based livelihood projects for residents and Indigenous Peoples (IPs) across the 12 puroks.' },
-              { icon: '⛰️', title: 'Landmarks', body: 'Musuan Peak is a prominent geographic feature known for its natural beauty. The CMU campus is a landmark destination in the area.' },
-            ].map(({ icon, title, body }) => (
+              { Icon: FiBook,       title: 'Education', body: 'Home to Central Mindanao University — the premier agricultural school in Mindanao, located in Sitio Musuan. Dologon National High School serves the local community.' },
+              { Icon: FiTrendingUp, title: 'Economy',   body: 'Agriculture is dominant, with rural agri-based livelihood projects for residents and Indigenous Peoples (IPs) across the 12 puroks.' },
+              { Icon: FiMap,        title: 'Landmarks', body: 'Musuan Peak is a prominent geographic feature known for its natural beauty. The CMU campus is a landmark destination in the area.' },
+            ].map(({ Icon, title, body }) => (
               <div key={title} className="bg-white/5 border border-white/10 rounded-2xl p-5">
-                <span className="text-2xl mb-3 block">{icon}</span>
+                <CardIcon icon={Icon} />
                 <h3 className="text-white font-semibold mb-2">{title}</h3>
                 <p className="text-white/55 text-sm leading-relaxed">{body}</p>
               </div>
@@ -278,30 +291,30 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             {[
               {
-                icon: '📋',
+                Icon: FiClipboard,
                 title: 'Barangay Clearance',
                 desc: 'Required for employment, business permits, and other government transactions. Certifies that you have no pending case in the barangay.',
                 fee: '₱130.00',
                 time: '1–2 business days',
               },
               {
-                icon: '🏠',
+                Icon: FiHome,
                 title: 'Certificate of Residency',
                 desc: 'Proves that you are a bona fide resident of Barangay Dologon. Required for school enrollment, scholarships, and legal transactions.',
                 fee: '₱130.00',
                 time: '1–2 business days',
               },
               {
-                icon: '🤝',
+                Icon: FiHeart,
                 title: 'Certificate of Indigency',
                 desc: 'Certifies financial need for PhilHealth, educational assistance, and medical assistance programs. Free for qualified residents.',
                 fee: 'Free / Exempt',
                 time: '1–2 business days',
               },
-            ].map(({ icon, title, desc, fee, time }) => (
+            ].map(({ Icon, title, desc, fee, time }) => (
               <div key={title}
                 className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/[0.08] hover:border-gold/30 transition-all duration-300 group">
-                <span className="text-3xl mb-4 block">{icon}</span>
+                <CardIcon icon={Icon} />
                 <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-gold transition-colors">{title}</h3>
                 <p className="text-white/55 text-sm leading-relaxed mb-5">{desc}</p>
                 <div className="border-t border-white/10 pt-4 flex justify-between text-xs">
@@ -317,10 +330,10 @@ export default function Landing() {
             <h3 className="font-garamond text-2xl font-bold text-gold text-center mb-8">How It Works</h3>
             <div className="grid md:grid-cols-4 gap-6">
               {[
-                { step: '01', title: 'Walk In', desc: 'Visit the barangay office or inform the secretary of your document request.' },
+                { step: '01', title: 'Walk In',        desc: 'Visit the barangay office or inform the secretary of your document request.' },
                 { step: '02', title: 'Submit Request', desc: 'The secretary encodes your information and submits the document request.' },
-                { step: '03', title: 'Payment', desc: 'Pay the document fee at the barangay collector\'s window.' },
-                { step: '04', title: 'Pick Up', desc: 'Once signed and sealed by the Barangay Captain, your document is ready for pickup.' },
+                { step: '03', title: 'Payment',        desc: 'Pay the document fee at the barangay collector\'s window.' },
+                { step: '04', title: 'Pick Up',        desc: 'Once signed and sealed by the Barangay Captain, your document is ready for pickup.' },
               ].map(({ step, title, desc }) => (
                 <div key={step} className="text-center">
                   <div className="w-12 h-12 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center mx-auto mb-3">
@@ -361,13 +374,15 @@ export default function Landing() {
             {/* Info */}
             <div className="space-y-4">
               {[
-                { icon: '📍', label: 'Address', value: 'Barangay Dologon, Maramag, Bukidnon 8714, Philippines' },
-                { icon: '🕐', label: 'Office Hours', value: 'Monday – Friday · 8:00 AM – 5:00 PM' },
-                { icon: '📞', label: 'Contact', value: 'Barangay Dologon Office' },
-                { icon: '📧', label: 'Email', value: 'support@irequestdologon.gov.ph' },
-              ].map(({ icon, label, value }) => (
+                { Icon: FiMapPin, label: 'Address',      value: 'Barangay Dologon, Maramag, Bukidnon 8714, Philippines' },
+                { Icon: FiClock,  label: 'Office Hours', value: 'Monday – Friday · 8:00 AM – 5:00 PM' },
+                { Icon: FiPhone,  label: 'Contact',      value: 'Barangay Dologon Office' },
+                { Icon: FiMail,   label: 'Email',        value: 'support@irequestdologon.gov.ph' },
+              ].map(({ Icon, label, value }) => (
                 <div key={label} className="flex gap-4 bg-white/5 border border-white/10 rounded-xl p-4">
-                  <span className="text-xl flex-shrink-0 mt-0.5">{icon}</span>
+                  <div className="w-8 h-8 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Icon size={14} color="#c9a84c" />
+                  </div>
                   <div>
                     <p className="text-white/40 text-[11px] uppercase tracking-widest mb-0.5">{label}</p>
                     <p className="text-white/80 text-sm">{value}</p>
@@ -376,7 +391,10 @@ export default function Landing() {
               ))}
 
               <div className="bg-gold/10 border border-gold/20 rounded-xl p-4">
-                <p className="text-gold text-sm font-medium mb-1">📌 Landmark</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <FiMapPin size={14} color="#c9a84c" />
+                  <p className="text-gold text-sm font-medium">Landmark</p>
+                </div>
                 <p className="text-white/60 text-sm">Near the Central Mindanao University (CMU) gate, Sitio Musuan area, Maramag, Bukidnon.</p>
               </div>
             </div>
@@ -388,14 +406,12 @@ export default function Landing() {
           DOWNLOAD SECTION
       ══════════════════════════════════════ */}
       <section id="download" className="relative py-24 px-4 bg-[#091509] overflow-hidden">
-        {/* Glow blobs */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute w-[500px] h-[500px] -top-40 left-1/2 -translate-x-1/2 rounded-full bg-gold/8 blur-[120px]" />
           <div className="absolute w-[300px] h-[300px] bottom-0 right-10 rounded-full bg-green-accent/10 blur-[100px]" />
         </div>
 
         <div className="relative max-w-5xl mx-auto">
-          {/* Header */}
           <div className="text-center mb-14">
             <p className="text-[10px] tracking-[0.3em] uppercase text-gold/60 mb-2">Android Application</p>
             <h2 className="font-garamond text-4xl md:text-5xl font-bold text-white mb-3">
@@ -408,14 +424,13 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Main download card */}
           <div className="flex flex-col lg:flex-row gap-8 items-stretch mb-12">
 
             {/* Left — branding + button */}
             <div className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center text-center
                             hover:border-gold/30 transition-all duration-300">
               <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-gold/40 shadow-[0_0_40px_rgba(201,168,76,0.2)] mb-5">
-                <img src={assets.DOLOGONLOGO} alt="App icon" className="w-full h-full object-cover" />
+                <img src="https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776177600/Irequest_Logo_kbbr2b.jpg" alt="App icon" className="w-full h-full object-cover" />
               </div>
 
               <h3 className="font-garamond text-2xl font-bold text-gold mb-1">iRequestDologon</h3>
@@ -423,15 +438,13 @@ export default function Landing() {
               <p className="text-white/30 text-xs mb-6">Released April 2026 · ~25 MB</p>
 
               <a
-                href="/iRequestDologon.apk"
+                href="https://drive.google.com/uc?export=download&id=1OCRSRuU_GbTnmcuiFjT6cqZTpNHxUmWr"
                 download
                 className="inline-flex items-center gap-3 px-8 py-3.5 rounded-xl font-semibold text-[#0d1f0d] bg-gold hover:bg-gold/90
                            shadow-[0_4px_24px_rgba(201,168,76,0.35)] hover:shadow-[0_6px_32px_rgba(201,168,76,0.5)]
                            transition-all duration-300 active:scale-95 text-sm"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v11" />
-                </svg>
+                <FiDownload size={18} />
                 Download for Android (.apk)
               </a>
 
@@ -445,15 +458,17 @@ export default function Landing() {
                 <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-widest text-gold/80">What's Included</h4>
                 <ul className="space-y-3">
                   {[
-                    ['📋', 'Submit document requests without a browser'],
-                    ['🔔', 'Real-time status notifications on your desktop'],
-                    ['🔒', 'Secure login — your data stays encrypted'],
-                    ['📁', 'View and track all your past requests in one place'],
-                    ['🌐', 'Works even on slow internet connections'],
-                    ['⚡', 'Lightweight & fast — minimal system resources'],
-                  ].map(([icon, text]) => (
+                    { Icon: FiClipboard,  text: 'Submit document requests without a browser' },
+                    { Icon: FiBell,       text: 'Real-time status notifications on your phone' },
+                    { Icon: FiLock,       text: 'Secure login — your data stays encrypted' },
+                    { Icon: FiFolder,     text: 'View and track all your past requests in one place' },
+                    { Icon: FiWifi,       text: 'Works even on slow internet connections' },
+                    { Icon: FiZap,        text: 'Lightweight & fast — minimal system resources' },
+                  ].map(({ Icon, text }) => (
                     <li key={text} className="flex items-start gap-3 text-sm text-white/65">
-                      <span className="text-base leading-none mt-0.5">{icon}</span>
+                      <div className="w-6 h-6 rounded-md bg-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Icon size={12} color="#c9a84c" />
+                      </div>
                       <span>{text}</span>
                     </li>
                   ))}
@@ -485,10 +500,10 @@ export default function Landing() {
             <h4 className="font-garamond text-xl font-bold text-gold text-center mb-8">How to Install</h4>
             <div className="grid md:grid-cols-4 gap-6">
               {[
-                { step: '01', title: 'Download',        desc: 'Tap the Download button above to save the APK file to your Android device.' },
-                { step: '02', title: 'Allow Install',   desc: 'Go to Settings → Security → enable "Install from Unknown Sources" for your browser.' },
-                { step: '03', title: 'Open APK',        desc: 'Tap the downloaded .apk file from your notifications or Downloads folder.' },
-                { step: '04', title: 'Request Docs',    desc: 'Log in with your registered account and start submitting document requests.' },
+                { step: '01', title: 'Download',     desc: 'Tap the Download button above to save the APK file to your Android device.' },
+                { step: '02', title: 'Allow Install', desc: 'Go to Settings → Security → enable "Install from Unknown Sources" for your browser.' },
+                { step: '03', title: 'Open APK',     desc: 'Tap the downloaded .apk file from your notifications or Downloads folder.' },
+                { step: '04', title: 'Request Docs', desc: 'Log in with your registered account and start submitting document requests.' },
               ].map(({ step, title, desc }) => (
                 <div key={step} className="text-center">
                   <div className="w-12 h-12 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center mx-auto mb-3">
@@ -578,10 +593,10 @@ export default function Landing() {
         <p>For technical concerns or inquiries regarding iRequestDologon, reach out through any of the channels below.</p>
         <div className="space-y-3">
           {[
-            { label: 'Email Support', value: 'support@irequestdologon.gov.ph' },
+            { label: 'Email Support',   value: 'support@irequestdologon.gov.ph' },
             { label: 'Barangay Office', value: 'Barangay Dologon, Maramag, Bukidnon (8714)' },
-            { label: 'Office Hours', value: 'Monday – Friday · 8:00 AM – 5:00 PM' },
-            { label: 'Facebook Page', value: 'Barangay Dologon Official' },
+            { label: 'Office Hours',    value: 'Monday – Friday · 8:00 AM – 5:00 PM' },
+            { label: 'Facebook Page',   value: 'Barangay Dologon Official' },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white/5 rounded-xl px-4 py-3">
               <p className="text-white/40 text-[11px] uppercase tracking-widest mb-0.5">{label}</p>
