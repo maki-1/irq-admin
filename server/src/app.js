@@ -10,6 +10,7 @@ const documentRoutes = require('./routes/document.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const auditRoutes = require('./routes/audit.routes');
+const verificationRoutes = require('./routes/verification.routes');
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/verifications', verificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(cmd /c \"rename \\\\\"d:\\\\irqadmin\\\\irq-admin\\\\client\\\\\" \\\\\"admin\\\\\"\")",
+      "Bash(powershell -Command \"Rename-Item -Path 'd:\\\\irqadmin\\\\irq-admin\\\\client' -NewName 'admin'\")",
+      "Bash(node src/seed.js)"
+    ]
+  }
+}
