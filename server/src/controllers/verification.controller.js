@@ -1,13 +1,30 @@
 const VerificationProfile = require('../models/VerificationProfile');
 
+const APPROVED_FILTER = {
+  $or: [{ verified: true }, { status: { $in: ['approved', 'Approved'] } }],
+};
+
 // GET /api/verifications/stats
 exports.getStats = async (req, res) => {
   try {
     const [total, pending] = await Promise.all([
-      VerificationProfile.countDocuments(),
+      VerificationProfile.countDocuments(APPROVED_FILTER),
       VerificationProfile.countDocuments({ status: { $in: ['pending', 'Pending'] } }),
     ]);
     res.json({ total, pending });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/verifications/approved  — latest approved residents for dashboard
+exports.getLatestApproved = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 6;
+    const profiles = await VerificationProfile.find(APPROVED_FILTER)
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(limit);
+    res.json(profiles);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -56,12 +73,7 @@ exports.review = async (req, res) => {
     }
     const profile = await VerificationProfile.findByIdAndUpdate(
       req.params.id,
-      {
-        status,
-        rejectionReason: remarks || '',
-        reviewedBy: req.user._id,
-        reviewedAt: new Date(),
-      },
+      { status, rejectionReason: remarks || '', reviewedBy: req.user._id, reviewedAt: new Date() },
       { new: true }
     );
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
