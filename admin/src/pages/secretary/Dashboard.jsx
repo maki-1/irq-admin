@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getDocuments, updateStatus } from '../../services/document.service';
-import { getVerificationStats } from '../../services/verification.service';
+import { getVerificationStats, getLatestApproved } from '../../services/verification.service';
 import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
@@ -34,10 +34,12 @@ export default function SecretaryDashboard() {
   const navigate = useNavigate();
   const [docs, setDocs] = useState([]);
   const [residentStats, setResidentStats] = useState({ total: 0, pending: 0 });
+  const [approvedResidents, setApprovedResidents] = useState([]);
 
   const fetchData = () => {
     getDocuments().then((r) => setDocs(r.data)).catch(() => {});
     getVerificationStats().then((r) => setResidentStats(r.data)).catch(() => {});
+    getLatestApproved(6).then((r) => setApprovedResidents(r.data)).catch(() => {});
   };
   useEffect(() => {
     fetchData();
@@ -62,9 +64,7 @@ export default function SecretaryDashboard() {
   const finishedDocs = todayDocs.filter((d) => d.status === 'Completed').length;
   const newReqs      = docs.filter((d) => d.status === 'Pending').slice(0, 5);
   const readyPickup  = docs.filter((d) => d.status === 'Completed').slice(0, 7);
-  const newResidents = [...docs]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 6);
+  const newResidents = approvedResidents;
 
   const firstName = user?.fullName?.split(' ')[0] || 'Secretary';
 
@@ -179,7 +179,7 @@ export default function SecretaryDashboard() {
                   {newResidents.map((d) => (
                     <tr key={d._id} style={{ borderTop: '1px solid #F5F0F0' }}>
                       <td className="py-2 pr-3" style={{ fontFamily: "'Inika', serif", color: '#A18D8D', fontSize: 13 }}>{d.fullName}</td>
-                      <td className="py-2 pr-3" style={{ fontFamily: "'Inika', serif", color: '#A18D8D', fontSize: 13 }}>{d.purok || '—'}</td>
+                      <td className="py-2 pr-3" style={{ fontFamily: "'Inika', serif", color: '#A18D8D', fontSize: 13 }}>{d.address || d.purok || '—'}</td>
                       <td className="py-2"       style={{ fontFamily: "'Inika', serif", color: '#A18D8D', fontSize: 13 }}>{d.status}</td>
                     </tr>
                   ))}

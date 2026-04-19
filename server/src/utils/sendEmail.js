@@ -1,17 +1,16 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: process.env.MAIL_PORT,
+  service: 'gmail',
   auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
 const sendEmail = async ({ to, subject, html }) => {
   await transporter.sendMail({
-    from: `"iRequestDologon" <${process.env.MAIL_USER}>`,
+    from: `"iRequestDologon" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     html,
