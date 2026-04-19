@@ -42,7 +42,7 @@ const verificationProfileSchema = new mongoose.Schema(
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedAt: { type: Date, default: null },
   },
-  { timestamps: true, collection: 'verification_profiles' }
+  { strict: false, timestamps: true, collection: 'verificationprofiles' }
 );
 
 module.exports = mongoose.model('VerificationProfile', verificationProfileSchema);

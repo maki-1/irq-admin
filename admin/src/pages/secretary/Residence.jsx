@@ -9,24 +9,28 @@ import {
 import api from '../../services/api';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
 
-/* ── Status badge ── */
+/* ── Status badge — matches actual MongoDB status values ── */
 const STATUS_CFG = {
-  Pending:      { bg: '#FFF7ED', color: '#C2610A', label: 'Pending'      },
-  'Under Review': { bg: '#EFF6FF', color: '#1D6DB5', label: 'Under Review' },
-  Verified:     { bg: '#F0FDF4', color: '#156D07', label: 'Verified'     },
-  Rejected:     { bg: '#FFF1F2', color: '#BE123C', label: 'Rejected'     },
+  pending:      { bg: '#FFF7ED', color: '#C2610A', label: 'Pending'      },
+  submitted:    { bg: '#EFF6FF', color: '#1D6DB5', label: 'Submitted'    },
+  'under review':{ bg: '#EFF6FF', color: '#1D6DB5', label: 'Under Review' },
+  approved:     { bg: '#F0FDF4', color: '#156D07', label: 'Approved'     },
+  rejected:     { bg: '#FFF1F2', color: '#BE123C', label: 'Rejected'     },
 };
 
+const normStatus = (s) => (s || '').toLowerCase();
+
 function StatusBadge({ status }) {
-  const cfg = STATUS_CFG[status] || STATUS_CFG.Pending;
+  const cfg = STATUS_CFG[normStatus(status)] || { bg: '#F5F5F5', color: '#888', label: status || '—' };
+  const ns = normStatus(status);
   return (
     <span
       className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold"
       style={{ background: cfg.bg, color: cfg.color, fontFamily: "'Hanken Grotesk', sans-serif" }}
     >
-      {status === 'Verified'     && <FiCheckCircle size={11} />}
-      {status === 'Rejected'     && <FiXCircle size={11} />}
-      {status === 'Under Review' && <FiClock size={11} />}
+      {ns === 'approved'                     && <FiCheckCircle size={11} />}
+      {ns === 'rejected'                     && <FiXCircle size={11} />}
+      {(ns === 'under review' || ns === 'submitted') && <FiClock size={11} />}
       {cfg.label}
     </span>
   );
@@ -51,8 +55,8 @@ function InfoRow({ icon: Icon, label, value }) {
 
 /* ── Review Modal ── */
 function ReviewModal({ profile, onClose, onSave }) {
-  const [status,  setStatus]  = useState(profile.status === 'Pending' ? 'Under Review' : profile.status);
-  const [remarks, setRemarks] = useState(profile.remarks || '');
+  const [status,  setStatus]  = useState(normStatus(profile.status) === 'pending' ? 'under review' : normStatus(profile.status));
+  const [remarks, setRemarks] = useState(profile.rejectionReason || profile.remarks || '');
   const [saving,  setSaving]  = useState(false);
 
   const handleSave = async () => {
@@ -106,7 +110,7 @@ function ReviewModal({ profile, onClose, onSave }) {
                 {profile.fullName}
               </p>
               <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
-                {profile.purok}
+                {profile.address || '—'}
               </p>
               <div className="mt-1"><StatusBadge status={profile.status} /></div>
             </div>
@@ -167,19 +171,19 @@ function ReviewModal({ profile, onClose, onSave }) {
               Decision
             </p>
             <div className="flex gap-2 mb-3">
-              {['Under Review', 'Verified', 'Rejected'].map((s) => (
+              {['under review', 'approved', 'rejected'].map((s) => (
                 <button
                   key={s}
                   onClick={() => setStatus(s)}
                   className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all border"
                   style={{
                     fontFamily: "'Hahmlet', sans-serif",
-                    background: status === s ? STATUS_CFG[s].bg    : '#F9F7F7',
-                    color:      status === s ? STATUS_CFG[s].color : '#A18D8D',
+                    background:  status === s ? STATUS_CFG[s].bg    : '#F9F7F7',
+                    color:       status === s ? STATUS_CFG[s].color : '#A18D8D',
                     borderColor: status === s ? STATUS_CFG[s].color : 'transparent',
                   }}
                 >
-                  {s}
+                  {STATUS_CFG[s].label}
                 </button>
               ))}
             </div>
@@ -265,11 +269,11 @@ export default function Residence() {
 
   /* Filter + search */
   const filtered = profiles.filter((p) => {
-    const matchFilter = filter === 'All' || p.status === filter;
+    const matchFilter = filter === 'All' || normStatus(p.status) === normStatus(filter);
     const q = search.toLowerCase();
     const matchSearch = !q ||
       p.fullName?.toLowerCase().includes(q) ||
-      p.purok?.toLowerCase().includes(q) ||
+      p.address?.toLowerCase().includes(q) ||
       p.email?.toLowerCase().includes(q);
     return matchFilter && matchSearch;
   });
@@ -279,11 +283,12 @@ export default function Residence() {
   const visible    = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const counts = profiles.reduce((acc, p) => {
-    acc[p.status] = (acc[p.status] || 0) + 1;
+    const k = normStatus(p.status);
+    acc[k] = (acc[k] || 0) + 1;
     return acc;
   }, {});
 
-  const FILTERS = ['All', 'Pending', 'Under Review', 'Verified', 'Rejected'];
+  const FILTERS = ['All', 'pending', 'submitted', 'under review', 'approved', 'rejected'];
 
   /* Reset to page 1 when filter or search changes */
   useEffect(() => { setPage(1); }, [filter, search]);
@@ -299,7 +304,7 @@ export default function Residence() {
       { header: 'Full Name',     key: 'fullName'     },
       { header: 'Email',         key: 'email'        },
       { header: 'Contact',       key: 'contactNumber'},
-      { header: 'Purok/Address', key: 'purok'        },
+      { header: 'Address',       key: 'address'      },
       { header: 'Gender',        key: 'gender'       },
       { header: 'Civil Status',  key: 'civilStatus'  },
       { header: 'Date of Birth', key: 'dateOfBirth'  },
@@ -345,9 +350,9 @@ export default function Residence() {
         {/* Summary chips */}
         <div className="flex flex-wrap gap-3">
           {FILTERS.map((f) => {
-            const count = f === 'All' ? profiles.length : (counts[f] || 0);
+            const count = f === 'All' ? profiles.length : (counts[normStatus(f)] || 0);
             const isActive = filter === f;
-            const cfg = STATUS_CFG[f];
+            const cfg = STATUS_CFG[normStatus(f)];
             return (
               <button
                 key={f}
@@ -361,7 +366,7 @@ export default function Residence() {
                   boxShadow:   isActive ? '0 2px 6px rgba(0,0,0,0.1)' : 'none',
                 }}
               >
-                {f}
+                {f === 'All' ? 'All' : (STATUS_CFG[normStatus(f)]?.label || f)}
                 <span
                   className="rounded-full px-2 py-0.5 text-xs"
                   style={{ background: isActive ? 'rgba(0,0,0,0.12)' : '#F0EAEA', color: isActive ? 'inherit' : '#A18D8D' }}
@@ -476,7 +481,7 @@ export default function Residence() {
                     {/* Address */}
                     <td className="px-5 py-3">
                       <span style={{ fontFamily: "'Inika', serif", color: '#A18D8D', fontSize: 13 }}>
-                        {p.purok}
+                        {p.address || '—'}
                       </span>
                     </td>
 

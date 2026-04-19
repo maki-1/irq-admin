@@ -1,24 +1,34 @@
 const VerificationProfile = require('../models/VerificationProfile');
 
-// GET /api/verifications  — list all (Secretary / Captain)
+// GET /api/verifications/stats
+exports.getStats = async (req, res) => {
+  try {
+    const [total, pending] = await Promise.all([
+      VerificationProfile.countDocuments(),
+      VerificationProfile.countDocuments({ status: { $in: ['pending', 'Pending'] } }),
+    ]);
+    res.json({ total, pending });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/verifications
 exports.getAll = async (req, res) => {
   try {
     const { status } = req.query;
-    const filter = status ? { status } : {};
-    const profiles = await VerificationProfile.find(filter)
-      .populate('reviewedBy', 'fullName role')
-      .sort({ createdAt: -1 });
+    const filter = status ? { status: { $regex: new RegExp(`^${status}$`, 'i') } } : {};
+    const profiles = await VerificationProfile.find(filter).sort({ createdAt: -1 });
     res.json(profiles);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// GET /api/verifications/:id  — single profile detail
+// GET /api/verifications/:id
 exports.getOne = async (req, res) => {
   try {
-    const profile = await VerificationProfile.findById(req.params.id)
-      .populate('reviewedBy', 'fullName role');
+    const profile = await VerificationProfile.findById(req.params.id);
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
     res.json(profile);
   } catch (err) {
@@ -26,7 +36,7 @@ exports.getOne = async (req, res) => {
   }
 };
 
-// POST /api/verifications  — client submits profile (public or auth)
+// POST /api/verifications
 exports.create = async (req, res) => {
   try {
     const profile = await VerificationProfile.create(req.body);
@@ -36,24 +46,24 @@ exports.create = async (req, res) => {
   }
 };
 
-// PATCH /api/verifications/:id/review  — Secretary updates status + remarks
+// PATCH /api/verifications/:id/review
 exports.review = async (req, res) => {
   try {
     const { status, remarks } = req.body;
-    const allowed = ['Under Review', 'Verified', 'Rejected'];
-    if (!allowed.includes(status)) {
+    const allowed = ['under review', 'approved', 'rejected'];
+    if (!allowed.includes(status?.toLowerCase())) {
       return res.status(400).json({ message: `Status must be one of: ${allowed.join(', ')}` });
     }
     const profile = await VerificationProfile.findByIdAndUpdate(
       req.params.id,
       {
         status,
-        remarks: remarks || '',
+        rejectionReason: remarks || '',
         reviewedBy: req.user._id,
         reviewedAt: new Date(),
       },
       { new: true }
-    ).populate('reviewedBy', 'fullName role');
+    );
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
     res.json(profile);
   } catch (err) {

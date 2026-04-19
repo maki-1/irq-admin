@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getDocuments, updateStatus } from '../../services/document.service';
+import { getVerificationStats } from '../../services/verification.service';
 import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
@@ -32,11 +33,17 @@ export default function SecretaryDashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [docs, setDocs] = useState([]);
+  const [residentStats, setResidentStats] = useState({ total: 0, pending: 0 });
 
   const fetchData = () => {
     getDocuments().then((r) => setDocs(r.data)).catch(() => {});
+    getVerificationStats().then((r) => setResidentStats(r.data)).catch(() => {});
   };
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleStatusChange = async (id, status) => {
     try {
@@ -46,17 +53,13 @@ export default function SecretaryDashboard() {
     } catch { toast.error('Failed to update status'); }
   };
 
-  const uniqueResidents = Object.values(
-    docs.reduce((acc, d) => {
-      const key = d.fullName?.toLowerCase().trim();
-      if (key && !acc[key]) acc[key] = d;
-      return acc;
-    }, {})
-  );
-  const totalRes     = uniqueResidents.length;
-  const pendingRes   = docs.filter((d) => d.status === 'Pending').length;
-  const pendingDocs  = pendingRes;
-  const finishedDocs = docs.filter((d) => d.status === 'Completed').length;
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayDocs = docs.filter((d) => new Date(d.createdAt) >= todayStart);
+
+  const totalRes     = residentStats.total;
+  const pendingRes   = residentStats.pending;
+  const pendingDocs  = todayDocs.filter((d) => d.status === 'Pending').length;
+  const finishedDocs = todayDocs.filter((d) => d.status === 'Completed').length;
   const newReqs      = docs.filter((d) => d.status === 'Pending').slice(0, 5);
   const readyPickup  = docs.filter((d) => d.status === 'Completed').slice(0, 7);
   const newResidents = [...docs]
@@ -134,7 +137,7 @@ export default function SecretaryDashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 36, lineHeight: 1 }}>{pendingDocs}</span>
-                <CircleProgress value={pendingDocs} total={docs.length} />
+                <CircleProgress value={pendingDocs} total={todayDocs.length || 1} />
               </div>
             </div>
 
