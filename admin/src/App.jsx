@@ -11,6 +11,8 @@ import Login from './pages/auth/Login';
 import SecretaryDashboard from './pages/secretary/Dashboard';
 import SecretaryProfile from './pages/secretary/Profile';
 import SecretaryResidence from './pages/secretary/Residence';
+import SecretaryRequests from './pages/secretary/Requests';
+import RequestRelease    from './pages/secretary/RequestRelease';
 
 // Collector
 import CollectorDashboard from './pages/collector/Dashboard';
@@ -43,6 +45,8 @@ export default function App() {
         <Route path="/secretary" element={<SecretaryDashboard />} />
         <Route path="/secretary/profile" element={<SecretaryProfile />} />
         <Route path="/secretary/residents" element={<SecretaryResidence />} />
+        <Route path="/secretary/requests" element={<SecretaryRequests />} />
+        <Route path="/secretary/releases" element={<RequestRelease />} />
       </Route>
 
       {/* Collector */}

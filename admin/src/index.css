@@ -12,6 +12,18 @@
 
 html { scroll-behavior: smooth; }
 
+/* ── Print styles ── */
+@media print {
+  @page { size: A4; margin: 0; }
+
+  body { background: white !important; }
+  .no-print   { display: none !important; }
+  .print-only { display: block !important; }
+}
+
+/* On screen: hide print clone */
+.print-only { display: none; }
+
 body {
   font-family: 'DM Sans', sans-serif;
   background-color: var(--green-rich);

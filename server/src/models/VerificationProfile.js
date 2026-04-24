@@ -28,10 +28,10 @@ const verificationProfileSchema = new mongoose.Schema(
     facePhoto:             { type: String }, // clear face photo
     educationCertificate:  { type: String }, // diploma, TOR, etc.
 
-    // Workflow
+    // Workflow — values must match what verification.controller.js writes
     status: {
       type: String,
-      enum: ['Pending', 'Under Review', 'Verified', 'Rejected'],
+      enum: ['Pending', 'pending', 'submitted', 'under review', 'approved', 'rejected'],
       default: 'Pending',
     },
 

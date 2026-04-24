@@ -77,7 +77,7 @@ exports.review = async (req, res) => {
 
     const profile = await VerificationProfile.findByIdAndUpdate(
       req.params.id,
-      { status, rejectionReason: remarks || '', reviewedBy: req.user._id, reviewedAt: new Date() },
+      { status, remarks: remarks || '', reviewedBy: req.user._id, reviewedAt: new Date() },
       { new: true }
     );
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
