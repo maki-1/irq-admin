@@ -83,7 +83,7 @@ export default function SecretaryRequests() {
   const filtered = requests.filter((r) => {
     const matchStatus = statusFilter === 'All' || norm(r.status) === norm(statusFilter);
     const q = search.toLowerCase();
-    const name = (r.user?.username || '').toLowerCase();
+    const name = (r.profile?.fullName || r.user?.username || '').toLowerCase();
     const matchSearch =
       !q ||
       name.includes(q) ||
@@ -123,7 +123,7 @@ export default function SecretaryRequests() {
     const rows = sorted.map((r, i) => [
       i + 1,
       String(r._id).slice(-6).toUpperCase(),
-      r.user?.username || '',
+      r.profile?.fullName || r.user?.username || '',
       r.user?.contactNumber || r.user?.email || '',
       r.documentType || '',
       r.purpose || '',
@@ -322,7 +322,7 @@ export default function SecretaryRequests() {
 
                       {/* Name */}
                       <td className="px-4 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#333', fontSize: 13, whiteSpace: 'nowrap' }}>
-                        {req.user?.username || <span style={{ color: '#C0B0B0' }}>—</span>}
+                        {req.profile?.fullName || req.user?.username || <span style={{ color: '#C0B0B0' }}>—</span>}
                       </td>
 
                       {/* Contact */}

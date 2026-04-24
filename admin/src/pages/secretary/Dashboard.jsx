@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getDocuments, updateStatus } from '../../services/document.service';
 import { getVerificationStats, getLatestApproved } from '../../services/verification.service';
+import { getReleases, getRequests } from '../../services/request.service';
 import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
@@ -35,11 +36,15 @@ export default function SecretaryDashboard() {
   const [docs, setDocs] = useState([]);
   const [residentStats, setResidentStats] = useState({ total: 0, pending: 0 });
   const [approvedResidents, setApprovedResidents] = useState([]);
+  const [releases, setReleases] = useState([]);
+  const [requests, setRequests] = useState([]);
 
   const fetchData = () => {
     getDocuments().then((r) => setDocs(r.data)).catch(() => {});
     getVerificationStats().then((r) => setResidentStats(r.data)).catch(() => {});
     getLatestApproved(6).then((r) => setApprovedResidents(r.data)).catch(() => {});
+    getReleases().then((r) => setReleases(r.data)).catch(() => {});
+    getRequests().then((r) => setRequests(r.data)).catch(() => {});
   };
   useEffect(() => {
     fetchData();
@@ -47,33 +52,25 @@ export default function SecretaryDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleStatusChange = async (id, status) => {
-    try {
-      await updateStatus(id, { status });
-      toast.success(`Status updated to ${status}`);
-      fetchData();
-    } catch { toast.error('Failed to update status'); }
-  };
-
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const todayDocs = docs.filter((d) => new Date(d.createdAt) >= todayStart);
+  const todayRequests = requests.filter((r) => new Date(r.createdAt) >= todayStart);
 
   const totalRes     = residentStats.total;
   const pendingRes   = residentStats.pending;
-  const pendingDocs  = todayDocs.filter((d) => d.status === 'Pending').length;
-  const finishedDocs = todayDocs.filter((d) => d.status === 'Completed').length;
-  const newReqs      = docs.filter((d) => d.status === 'Pending').slice(0, 5);
-  const readyPickup  = docs.filter((d) => d.status === 'Completed').slice(0, 7);
+  const pendingDocs  = todayRequests.filter((r) => r.status?.toLowerCase() === 'pending').length;
+  const finishedDocs = todayRequests.filter((r) => r.status?.toLowerCase() === 'completed').length;
+  const newReqs     = requests.filter((r) => r.status?.toLowerCase() === 'pending').slice(0, 5);
+  const readyPickup = releases.filter((r) => r.claimStatus !== 'claimed').slice(0, 10);
   const newResidents = approvedResidents;
 
   const firstName = user?.fullName?.split(' ')[0] || 'Secretary';
 
   return (
     <SecretaryLayout title="DASHBOARD">
-      <div className="flex flex-col lg:flex-row gap-4 min-w-0">
+      <div className="flex flex-col lg:flex-row gap-4 min-w-0 flex-1 min-h-0">
 
         {/* ── Centre column ── */}
-        <div className="flex flex-col flex-1 gap-3 min-w-0">
+        <div className="flex flex-col flex-1 gap-3 min-w-0 min-h-0">
 
           {/* Welcome card */}
           <div
@@ -137,7 +134,7 @@ export default function SecretaryDashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 36, lineHeight: 1 }}>{pendingDocs}</span>
-                <CircleProgress value={pendingDocs} total={todayDocs.length || 1} />
+                <CircleProgress value={pendingDocs} total={todayRequests.length || 1} />
               </div>
             </div>
 
@@ -152,8 +149,8 @@ export default function SecretaryDashboard() {
           </div>
 
           {/* Newly Registered Residents */}
-          <div className="bg-white rounded-3xl p-5" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-center justify-between mb-3">
+          <div className="bg-white rounded-3xl p-5 flex flex-col flex-1" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', minHeight: 0 }}>
+            <div className="flex items-center justify-between mb-3 shrink-0">
               <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 15 }}>Newly Registered Residents</p>
               <button
                 onClick={() => navigate('/secretary/residents')}
@@ -163,7 +160,7 @@ export default function SecretaryDashboard() {
                 See all
               </button>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-auto flex-1">
               <table className="w-full min-w-[320px]" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
@@ -193,7 +190,7 @@ export default function SecretaryDashboard() {
         </div>
 
         {/* ── Right column ── */}
-        <div className="flex flex-col gap-4 lg:shrink-0 w-full lg:w-72 xl:w-80">
+        <div className="flex flex-col gap-4 lg:shrink-0 w-full lg:w-72 xl:w-80 min-h-0">
 
           {/* Ready to Pick Up */}
           <div className="bg-white rounded-3xl p-5" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
@@ -207,8 +204,15 @@ export default function SecretaryDashboard() {
             <ul className="flex flex-col">
               {readyPickup.map((doc) => (
                 <li key={doc._id} className="flex justify-between items-center py-1.5" style={{ borderBottom: '1px solid #FAF7F7' }}>
-                  <span className="truncate mr-2" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>{doc.fullName}</span>
-                  <span className="shrink-0"      style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>{doc.customId}</span>
+                  <span className="truncate mr-2" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
+                    {doc.fullName || doc.user?.username || '—'}
+                  </span>
+                  <span
+                    className="shrink-0 font-mono text-xs px-1.5 py-0.5 rounded"
+                    style={{ background: '#F0FDF4', color: '#156D07', letterSpacing: 1 }}
+                  >
+                    {doc.claimCode}
+                  </span>
                 </li>
               ))}
               {readyPickup.length === 0 && (
@@ -218,7 +222,7 @@ export default function SecretaryDashboard() {
           </div>
 
           {/* New Request */}
-          <div className="bg-white rounded-3xl p-5" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
+          <div className="bg-white rounded-3xl p-5 flex flex-col flex-1 min-h-0" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
             <div className="flex items-center justify-between mb-3">
               <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 15 }}>New Request</p>
               <button
@@ -228,51 +232,34 @@ export default function SecretaryDashboard() {
                 see all
               </button>
             </div>
-            <div className="flex justify-between pb-2 mb-2"
+            <div className="flex justify-between pb-2 mb-2 shrink-0"
               style={{ borderBottom: '1px solid #F0EAEA', fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
               <span>Name</span>
               <span>Requested Documents</span>
             </div>
-            <ul className="flex flex-col gap-2">
-              {newReqs.map((doc) => (
-                <li key={doc._id} className="flex items-center gap-2 pb-2" style={{ borderBottom: '1px solid #FAF7F7' }}>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-sm font-bold" style={{ background: '#156D07' }}>
-                    {(doc.fullName || '?').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <span className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12, fontWeight: 700 }}>{doc.fullName}</span>
-                    <span className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 10 }}>{doc.purok || '—'}</span>
-                  </div>
-                  <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 10, maxWidth: 90, textAlign: 'right', lineHeight: 1.3, flexShrink: 0 }}>
-                    {doc.documentType}
-                  </span>
-                </li>
-              ))}
+            <ul className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0">
+              {newReqs.map((req) => {
+                const name = req.profile?.fullName || req.user?.username || '?';
+                return (
+                  <li key={req._id} className="flex items-center gap-2 pb-2" style={{ borderBottom: '1px solid #FAF7F7' }}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-sm font-bold" style={{ background: '#156D07' }}>
+                      {name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12, fontWeight: 700 }}>{name}</span>
+                      <span className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 10 }}>{req.profile?.purok || '—'}</span>
+                    </div>
+                    <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 10, maxWidth: 90, textAlign: 'right', lineHeight: 1.3, flexShrink: 0 }}>
+                      {req.documentType}
+                    </span>
+                  </li>
+                );
+              })}
               {newReqs.length === 0 && (
                 <li className="py-3 text-center text-xs" style={{ color: '#C0B0B0' }}>No new requests</li>
               )}
             </ul>
 
-            {newReqs.length > 0 && (
-              <div className="mt-3 pt-3" style={{ borderTop: '1px solid #F0EAEA' }}>
-                <p className="mb-2" style={{ color: '#A18D8D', fontSize: 10, fontFamily: "'Hanken Grotesk', sans-serif" }}>Update status:</p>
-                {newReqs.slice(0, 3).map((doc) => (
-                  <div key={doc._id} className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="truncate text-xs" style={{ color: '#A18D8D', maxWidth: 100 }}>{doc.fullName}</span>
-                    <select
-                      className="text-xs rounded-lg px-2 py-0.5 border"
-                      style={{ color: '#156D07', borderColor: '#E0E0E0', fontFamily: "'Hanken Grotesk', sans-serif" }}
-                      value={doc.status}
-                      onChange={(e) => handleStatusChange(doc._id, e.target.value)}
-                    >
-                      {['Pending', 'Processing', 'Printing', 'Completed', 'Rejected'].map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>

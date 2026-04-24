@@ -287,12 +287,12 @@ export default function RequestRelease() {
           </div>
 
           {/* Pagination */}
-          {!loading && filtered.length > PAGE_SIZE && (
+          {!loading && totalPages > 1 && (
             <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: '1px solid #F0EAEA' }}>
               <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
-                Page {page} of {totalPages}
+                {filtered.length} record{filtered.length !== 1 ? 's' : ''} &mdash; Page {page} of {totalPages}
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 items-center">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
@@ -305,6 +305,34 @@ export default function RequestRelease() {
                 >
                   <FiChevronLeft size={15} />
                 </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                  .reduce((acc, n, i, arr) => {
+                    if (i > 0 && n - arr[i - 1] > 1) acc.push('…');
+                    acc.push(n);
+                    return acc;
+                  }, [])
+                  .map((item, i) =>
+                    item === '…' ? (
+                      <span key={`ellipsis-${i}`} style={{ color: '#A18D8D', fontSize: 12, padding: '0 2px' }}>…</span>
+                    ) : (
+                      <button
+                        key={item}
+                        onClick={() => setPage(item)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-medium transition-colors"
+                        style={{
+                          fontFamily: "'Hanken Grotesk', sans-serif",
+                          borderColor: page === item ? '#156D07' : '#E8E0E0',
+                          background: page === item ? '#156D07' : '#FFFFFF',
+                          color: page === item ? '#FFFFFF' : '#555',
+                        }}
+                      >
+                        {item}
+                      </button>
+                    )
+                  )}
+
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
