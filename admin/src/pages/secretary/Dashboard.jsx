@@ -92,7 +92,7 @@ export default function SecretaryDashboard() {
               </button>
             </div>
             <img
-              src={assets.BIKERIDER} alt=""
+              src="https://res.cloudinary.com/dvw7ky1xq/image/upload/v1777136899/woman_working_with_documents_msfyzw.png" alt=""
               className="absolute right-0 bottom-0 pointer-events-none select-none"
               style={{ height: '90%', maxHeight: 180, objectFit: 'contain', objectPosition: 'bottom right' }}
             />

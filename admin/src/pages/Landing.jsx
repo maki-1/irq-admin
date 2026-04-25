@@ -438,8 +438,9 @@ export default function Landing() {
               <p className="text-white/30 text-xs mb-6">Released April 2026 · ~25 MB</p>
 
               <a
-                href="https://drive.google.com/uc?export=download&id=1OCRSRuU_GbTnmcuiFjT6cqZTpNHxUmWr"
-                download
+                href="https://drive.google.com/uc?export=download&id=1OiqodtD4LfMFlOoZhrr-h3VatpjSRXs8"download
+
+                
                 className="inline-flex items-center gap-3 px-8 py-3.5 rounded-xl font-semibold text-[#0d1f0d] bg-gold hover:bg-gold/90
                            shadow-[0_4px_24px_rgba(201,168,76,0.35)] hover:shadow-[0_6px_32px_rgba(201,168,76,0.5)]
                            transition-all duration-300 active:scale-95 text-sm"
