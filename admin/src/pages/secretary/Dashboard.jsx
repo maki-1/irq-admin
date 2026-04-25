@@ -74,8 +74,8 @@ export default function SecretaryDashboard() {
 
           {/* Welcome card */}
           <div
-            className="relative flex items-center overflow-hidden rounded-3xl"
-            style={{ background: '#156D07', height: 145, boxShadow: '0 4px 8px rgba(0,0,0,0.2)' }}
+            className="relative flex items-center rounded-3xl"
+            style={{ background: '#156D07', height: 145, boxShadow: '0 4px 8px rgba(0,0,0,0.2)', overflow: 'visible' }}
           >
             <div className="flex flex-col gap-2 px-6 py-5 z-10" style={{ maxWidth: '60%' }}>
               <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#FFFFFF', fontSize: 'clamp(18px,2.5vw,24px)', fontWeight: 400, lineHeight: 1.2 }}>
@@ -93,8 +93,8 @@ export default function SecretaryDashboard() {
             </div>
             <img
               src="https://res.cloudinary.com/dvw7ky1xq/image/upload/v1777136899/woman_working_with_documents_msfyzw.png" alt=""
-              className="absolute right-0 bottom-0 pointer-events-none select-none"
-              style={{ height: '90%', maxHeight: 180, objectFit: 'contain', objectPosition: 'bottom right' }}
+              className="hidden lg:block absolute right-4 pointer-events-none select-none"
+              style={{ height: 400, bottom: -102 }}
             />
           </div>
 
@@ -242,9 +242,10 @@ export default function SecretaryDashboard() {
                 const name = req.profile?.fullName || req.user?.username || '?';
                 return (
                   <li key={req._id} className="flex items-center gap-2 pb-2" style={{ borderBottom: '1px solid #FAF7F7' }}>
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-sm font-bold" style={{ background: '#156D07' }}>
-                      {name.charAt(0).toUpperCase()}
-                    </div>
+                    {req.user?.avatar
+                      ? <img src={req.user.avatar} alt={name} className="w-9 h-9 rounded-full shrink-0 object-cover" />
+                      : <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-sm font-bold" style={{ background: '#156D07' }}>{name.charAt(0).toUpperCase()}</div>
+                    }
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12, fontWeight: 700 }}>{name}</span>
                       <span className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 10 }}>{req.profile?.purok || '—'}</span>
