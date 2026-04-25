@@ -32,7 +32,7 @@ async function attachProfiles(requests) {
 exports.getAll = async (req, res) => {
   try {
     const requests = await Request.find()
-      .populate('user', 'username email contactNumber')
+      .populate('user', 'username email contactNumber avatar')
       .sort({ createdAt: -1 });
 
     const result = await attachProfiles(requests);
@@ -46,7 +46,7 @@ exports.getAll = async (req, res) => {
 exports.getOne = async (req, res) => {
   try {
     const request = await Request.findById(req.params.id)
-      .populate('user', 'username email contactNumber');
+      .populate('user', 'username email contactNumber avatar');
     if (!request) return res.status(404).json({ message: 'Request not found' });
 
     const [result] = await attachProfiles([request]);
@@ -64,7 +64,7 @@ exports.updateStatus = async (req, res) => {
       req.params.id,
       { status },
       { new: true }
-    ).populate('user', 'username email contactNumber');
+    ).populate('user', 'username email contactNumber avatar');
     if (!request) return res.status(404).json({ message: 'Request not found' });
 
     // When marked Completed, create a CompletedDocument record with a claim code
