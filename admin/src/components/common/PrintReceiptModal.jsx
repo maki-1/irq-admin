@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { FiX, FiPrinter } from 'react-icons/fi';
+import useAuthStore from '../../store/authStore';
 
 const PH_SEAL  = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778072706/Logo_ng_ph_qbmmwv.png';
 const BUK_SEAL = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778072846/province_iw77nm.png';
@@ -37,7 +38,7 @@ function amountToWords(amount) {
 }
 
 /* ── The actual form document ── */
-function ReceiptDocument({ req, residentName }) {
+function ReceiptDocument({ req, residentName, officerName }) {
   const date    = new Date(req.updatedAt || req.createdAt);
   const dateStr = date.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
   const amount  = req.amountPaid || 0;
@@ -51,7 +52,7 @@ function ReceiptDocument({ req, residentName }) {
 
   return (
     <div id="receipt-print-area" style={{
-      width: 420,
+      width: '100%',
       fontFamily: "'Times New Roman', Times, serif",
       fontSize: 11,
       color: '#000',
@@ -87,6 +88,11 @@ function ReceiptDocument({ req, residentName }) {
             </td>
             <td style={{ ...cell(), textAlign: 'center' }}>
               <div style={{ fontSize: 15, fontWeight: 'bold', letterSpacing: 2 }}>ORIGINAL</div>
+              {req.orNumber && (
+                <div style={{ fontSize: 11, fontWeight: 'bold', color: '#800000', letterSpacing: 1, marginTop: 2 }}>
+                  No. {req.orNumber}
+                </div>
+              )}
               {req.paymentLinkId && (
                 <div style={{ fontSize: 13, fontWeight: 'bold', color: '#cc0000', letterSpacing: 1, marginTop: 2 }}>
                   {req.paymentLinkId}
@@ -223,8 +229,8 @@ function ReceiptDocument({ req, residentName }) {
         <tbody>
           <tr>
             <td style={{ ...cell({ borderTop: '1px solid #000', verticalAlign: 'top', lineHeight: 1.9, fontSize: 10 }) }}>
-              <div>{req.paymentLinkId ? '☑' : '☐'} Online Payment</div>
-              <div>{req.paymentLinkId ? '☐' : '☑'} Cash</div>
+              <div>☑ Online Payment</div>
+              <div>☐ Cash</div>
             </td>
             <td style={{ ...cell({ borderTop: '1px solid #000', borderLeft: '1px solid #000', verticalAlign: 'top' }) }}></td>
             <td style={{ ...cell({ borderTop: '1px solid #000', borderLeft: '1px solid #000', verticalAlign: 'top' }) }}>
@@ -252,43 +258,94 @@ function ReceiptDocument({ req, residentName }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: -1 }}>
         <tbody>
           <tr>
-            <td style={{ ...cell({ borderTop: 'none', textAlign: 'right', paddingBottom: 2 }) }}>
-              <div style={{ width: 160, borderTop: '1px solid #000', marginLeft: 'auto', paddingTop: 3, textAlign: 'center', fontSize: 10 }}>
-                Collecting Officer
+            <td style={{ ...cell({ borderTop: 'none', textAlign: 'right', paddingBottom: 4 }) }}>
+              <div style={{ width: 180, marginLeft: 'auto', textAlign: 'center' }}>
+                {/* PNPKI digital signature block */}
+                <div style={{
+                  border: '1px solid #aaa',
+                  borderRadius: 3,
+                  padding: '4px 6px',
+                  marginBottom: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: '#fff',
+                }}>
+                  {/* handwritten signature */}
+                  <img
+                    src="https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778088798/Signature_k7he8f.png"
+                    alt="signature"
+                    style={{ width: 72, height: 52, objectFit: 'contain', flexShrink: 0 }}
+                  />
+                  {/* cert text */}
+                  <div style={{ textAlign: 'left', fontSize: 7.5, lineHeight: 1.6, color: '#111' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: 7.5 }}>Digitally signed by</div>
+                    <div style={{ fontWeight: 'bold' }}>{officerName}</div>
+                    <div>Date: {(() => {
+                      const d = new Date();
+                      return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} +08'00'`;
+                    })()}</div>
+                  </div>
+                </div>
+                <div style={{ borderTop: '1px solid #000', paddingTop: 3, fontSize: 10 }}>
+                  Collecting Officer
+                </div>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
 
-      {/* ── Note ── */}
-      <p style={{ fontSize: 9, marginTop: 6, color: '#333' }}>
-        <strong>NOTE:</strong>&nbsp; Write the number and date of this receipt on the back of check or money order received.
-      </p>
     </div>
   );
 }
 
 export default function PrintReceiptModal({ req, residentName, onClose }) {
   const printRef = useRef(null);
+  const officerName = useAuthStore((s) => s.user?.fullName || 'Collecting Officer');
 
   const handlePrint = () => {
     const content = printRef.current?.innerHTML;
     if (!content) return;
-    const win = window.open('', '_blank', 'width=520,height=800');
+    const win = window.open('', '_blank', 'width=816,height=1056');
     win.document.write(`
       <html>
         <head>
           <title>Official Receipt – ${residentName}</title>
           <style>
             * { box-sizing: border-box; }
-            body { margin: 0; padding: 12px; font-family: 'Times New Roman', Times, serif; }
+            body { margin: 0; padding: 6mm; font-family: 'Times New Roman', Times, serif; }
+            .wrapper {
+              display: flex;
+              flex-direction: row;
+              gap: 0;
+              width: 100%;
+              height: 100%;
+            }
+            .receipt-half {
+              width: 50%;
+              padding: 4mm;
+              box-sizing: border-box;
+              overflow: hidden;
+            }
+            .divider {
+              width: 1px;
+              background: repeating-linear-gradient(to bottom, #aaa 0, #aaa 4px, transparent 4px, transparent 8px);
+              flex-shrink: 0;
+              margin: 0 2mm;
+            }
             @media print {
-              @page { size: 5.5in 8.5in; margin: 8mm; }
+              @page { size: 8.5in 11in portrait; margin: 6mm; }
             }
           </style>
         </head>
-        <body>${content}</body>
+        <body>
+          <div class="wrapper">
+            <div class="receipt-half">${content}</div>
+            <div class="divider"></div>
+            <div class="receipt-half"></div>
+          </div>
+        </body>
       </html>
     `);
     win.document.close();
@@ -308,7 +365,7 @@ export default function PrintReceiptModal({ req, residentName, onClose }) {
       {/* Modal */}
       <div
         className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col"
-        style={{ background: '#F5F5F5', borderRadius: 20, boxShadow: '0 16px 40px rgba(0,0,0,0.25)', maxHeight: '90vh', overflow: 'hidden', width: 480 }}
+        style={{ background: '#F5F5F5', borderRadius: 20, boxShadow: '0 16px 40px rgba(0,0,0,0.25)', maxHeight: '90vh', overflow: 'hidden', width: 520 }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ background: '#fff', borderBottom: '1px solid #F0EAEA' }}>
@@ -321,7 +378,7 @@ export default function PrintReceiptModal({ req, residentName, onClose }) {
         {/* Preview */}
         <div className="overflow-auto flex-1 p-4 flex justify-center">
           <div ref={printRef} style={{ background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.12)', borderRadius: 4 }}>
-            <ReceiptDocument req={req} residentName={residentName} />
+            <ReceiptDocument req={req} residentName={residentName} officerName={officerName} />
           </div>
         </div>
 

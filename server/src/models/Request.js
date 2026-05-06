@@ -12,6 +12,7 @@ const requestSchema = new mongoose.Schema(
     paymentStatus:     { type: String, default: 'unpaid' },
     paymentLinkId:     { type: String },
     amountPaid:        { type: Number },
+    orNumber:          { type: String },
   },
   { timestamps: true, collection: 'requests' }
 );

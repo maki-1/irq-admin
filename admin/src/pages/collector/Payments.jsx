@@ -351,15 +351,17 @@ export default function CollectorPayments() {
                       {new Date(req.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </td>
                     <td className="px-5 py-3">
-                      <button
-                        onClick={() => setPrintReq(req)}
-                        title="Print Receipt"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                        style={{ background: '#F0FDF4', color: '#156D07', fontFamily: "'Hahmlet', sans-serif", border: '1px solid #BBF7D0' }}
-                      >
-                        <FiPrinter size={13} />
-                        Print
-                      </button>
+                      {req.amountPaid > 0 && (
+                        <button
+                          onClick={() => setPrintReq(req)}
+                          title="Print Receipt"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                          style={{ background: '#F0FDF4', color: '#156D07', fontFamily: "'Hahmlet', sans-serif", border: '1px solid #BBF7D0' }}
+                        >
+                          <FiPrinter size={13} />
+                          Print
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
