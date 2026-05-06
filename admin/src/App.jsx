@@ -16,6 +16,7 @@ import RequestRelease    from './pages/secretary/RequestRelease';
 
 // Collector
 import CollectorDashboard from './pages/collector/Dashboard';
+import CollectorPayments  from './pages/collector/Payments';
 
 // Barangay Captain
 import CaptainDashboard from './pages/captain/Dashboard';
@@ -51,7 +52,8 @@ export default function App() {
 
       {/* Collector */}
       <Route element={<ProtectedRoute allowedRoles={['Collector']} />}>
-        <Route path="/collector" element={<CollectorDashboard />} />
+        <Route path="/collector"          element={<CollectorDashboard />} />
+        <Route path="/collector/payments" element={<CollectorPayments />} />
       </Route>
 
       {/* Barangay Captain */}

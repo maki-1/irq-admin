@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Payment = require('../models/Payment');
 const Document = require('../models/Document');
+const Request = require('../models/Request');
 
 // POST /api/payments/paymongo/checkout
 exports.createPayMongoSession = async (req, res) => {
@@ -14,7 +15,7 @@ exports.createPayMongoSession = async (req, res) => {
             line_items: [
               {
                 currency: 'PHP',
-                amount: amount * 100,
+                amount: amount,
                 name: documentType,
                 quantity: 1,
               },
@@ -38,7 +39,7 @@ exports.createPayMongoSession = async (req, res) => {
       user: req.user._id,
       document: documentId,
       documentType,
-      amount,
+      amount: amount / 100,
       provider: 'paymongo',
       sessionId: session.id,
       status: 'pending',
@@ -63,6 +64,10 @@ exports.payMongoWebhook = async (req, res) => {
       );
       if (payment) {
         await Document.findByIdAndUpdate(payment.document, { paymentStatus: 'Paid' });
+        await Request.findByIdAndUpdate(payment.document, {
+          paymentStatus: 'paid',
+          amountPaid: payment.amount,  // stored in PHP (e.g. 100.00), not centavos
+        });
       }
     }
     res.sendStatus(200);

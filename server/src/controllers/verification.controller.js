@@ -7,6 +7,16 @@ const APPROVED_FILTER = {
   $or: [{ verified: true }, { status: { $in: ['approved', 'Approved'] } }],
 };
 
+// GET /api/verifications/resident-count
+exports.getResidentCount = async (req, res) => {
+  try {
+    const count = await ResidentUser.countDocuments();
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // GET /api/verifications/stats
 exports.getStats = async (req, res) => {
   try {

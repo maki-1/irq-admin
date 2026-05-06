@@ -5,8 +5,9 @@ const { protect, requireRole } = require('../middleware/auth');
 // Public — clients submit their own profile
 router.post('/', ctrl.create);
 
-// Protected — Secretary / Barangay Captain only
+// Protected
 router.use(protect);
+router.get('/resident-count', requireRole('Secretary', 'Barangay Captain', 'Collector'), ctrl.getResidentCount);
 router.get('/stats',    requireRole('Secretary', 'Barangay Captain'), ctrl.getStats);
 router.get('/approved', requireRole('Secretary', 'Barangay Captain'), ctrl.getLatestApproved);
 router.get('/',         requireRole('Secretary', 'Barangay Captain'), ctrl.getAll);

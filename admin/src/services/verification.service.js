@@ -1,6 +1,7 @@
 import api from './api';
 
 export const getVerificationStats = () => api.get('/verifications/stats');
+export const getResidentCount = () => api.get('/verifications/resident-count');
 export const getLatestApproved = (limit = 6) => api.get(`/verifications/approved?limit=${limit}`);
 export const getVerifications = (status) =>
   api.get('/verifications', { params: status ? { status } : {} });
