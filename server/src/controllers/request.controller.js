@@ -3,6 +3,8 @@ const Request             = require('../models/Request');
 const VerificationProfile = require('../models/VerificationProfile');
 const CompletedDocument   = require('../models/CompletedDocument');
 const auditLog            = require('../utils/auditLog');
+const sendEmail           = require('../utils/sendEmail');
+const sendSms             = require('../utils/sendSms');
 require('../models/ResidentUser'); // must be registered before Request.populate('user') runs
 
 function generateClaimCode() {
@@ -100,19 +102,58 @@ exports.updateStatus = async (req, res) => {
             { user:  request.user._id },
             { email: request.user.email?.toLowerCase() },
           ],
-        }).select('fullName age purok address').lean();
+        }).select('fullName age purok address contactNumber email').lean();
+
+        const claimCode = generateClaimCode();
 
         await CompletedDocument.create({
           request:      request._id,
           user:         request.user._id,
           documentType: request.documentType,
           purpose:      request.purpose,
-          claimCode:    generateClaimCode(),
+          claimCode,
           fullName:     profile?.fullName || request.user.username,
           age:          profile?.age      ?? null,
           purok:        profile?.purok    || (profile?.address || '').split(',')[0].replace(/^Purok\s+/i, '').trim(),
           address:      profile?.address  || '',
         });
+
+        // Gather contact info — profile first, fall back to ResidentUser fields
+        const email         = profile?.email         || request.user.email  || request.user.gmail  || null;
+        const contactNumber = profile?.contactNumber || request.user.contactNumber || null;
+        const name          = profile?.fullName      || request.user.username || 'Resident';
+        const docType       = request.documentType   || 'document';
+
+        console.log(`[completed] Notifying — email: ${email}, phone: ${contactNumber}`);
+
+        const emailHtml = `
+          <p>Dear <strong>${name}</strong>,</p>
+          <p>Your <strong>${docType}</strong> is now ready for claiming at the Barangay Dologon Administration Hall.</p>
+          <p>Please bring the following when you claim:</p>
+          <ul>
+            <li>Your <strong>Claim Code: <span style="font-size:16px;letter-spacing:2px">${claimCode}</span></strong></li>
+            <li>Your <strong>Purok Clearance</strong></li>
+          </ul>
+          <p>Office hours: Monday – Friday, 8:00 AM – 5:00 PM.</p>
+          <p style="color:#888;font-size:12px">Barangay Dologon – iRequestDologon</p>`;
+
+        const smsText = `Hi ${name}, your ${docType} is ready! Claim it at Brgy. Dologon Hall. Present your Claim Code: ${claimCode} and your Purok Clearance. Mon-Fri 8AM-5PM. -Brgy. Dologon`;
+
+        if (email) {
+          sendEmail({ to: email, subject: `Your ${docType} is Ready for Claiming – iRequestDologon`, html: emailHtml })
+            .then(() => console.log(`[completed] Email sent to ${email}`))
+            .catch((e) => console.error(`[completed] Email failed (${email}):`, e.message));
+        } else {
+          console.warn('[completed] No email found — skipping email notification');
+        }
+
+        if (contactNumber) {
+          sendSms({ to: contactNumber, message: smsText })
+            .then(() => console.log(`[completed] SMS sent to ${contactNumber}`))
+            .catch((e) => console.error(`[completed] SMS failed (${contactNumber}):`, e.message));
+        } else {
+          console.warn('[completed] No contact number found — skipping SMS notification');
+        }
       }
     }
 
