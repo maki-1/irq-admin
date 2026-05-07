@@ -7,6 +7,7 @@ router.post('/', ctrl.create);
 
 // Protected
 router.use(protect);
+router.get('/purok-stats',    requireRole('Barangay Captain'), ctrl.getPurokStats);
 router.get('/resident-count', requireRole('Secretary', 'Barangay Captain', 'Collector'), ctrl.getResidentCount);
 router.get('/stats',    requireRole('Secretary', 'Barangay Captain'), ctrl.getStats);
 router.get('/approved', requireRole('Secretary', 'Barangay Captain'), ctrl.getLatestApproved);

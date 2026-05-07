@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { logAction } from '../../services/audit.service';
 
 const DOLOGON_LOGO  = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776233357/irequestdologon/assets/DOLOGONLOGO.jpg';
 const MARAMAG_LOGO  = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776233358/irequestdologon/assets/MARAMAGLOGO.jpg';
@@ -267,13 +268,14 @@ function Document({ request }) {
   const monthYear = date.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
 
   const vp      = request.profile || {};
-  // Prefer verificationProfile data; fall back to user.username
-  const name    = vp.fullName    || request.user?.username || '';
-  const age     = vp.age         || '';
-  const address = vp.address     || '';
-  // Extract purok from address string if it starts with "Purok"
-  const purokMatch = address.match(/^Purok\s+(\S+)/i);
-  const purok   = vp.purok || (purokMatch ? purokMatch[1] : '');
+  const name    = vp.fullName || request.user?.username || '';
+  const age     = vp.age      ?? '';
+  const address = vp.address  || '';
+
+  // Extract purok: split address by comma, take first segment, strip "Purok " prefix
+  const firstSeg   = address.split(',')[0].trim();                   // e.g. "Purok 5"
+  const purokMatch = firstSeg.match(/^Purok\s+(.+)$/i);
+  const purok      = vp.purok || (purokMatch ? purokMatch[1].trim() : firstSeg);
 
   const props = { req: request, name, age, purok, address, day, monthYear };
 
@@ -292,6 +294,8 @@ function Document({ request }) {
 /* ─── Modal shell ───────────────────────────────────────────── */
 export default function PrintDocumentModal({ request, onClose }) {
   useEffect(() => {
+    const residentName = request?.profile?.fullName || request?.user?.username || '—';
+    logAction('Printed Document', `Resident: ${residentName}, Type: ${request?.documentType}`).catch(() => {});
     window.addEventListener('afterprint', onClose);
     const timer = setTimeout(() => window.print(), 100);
     return () => {

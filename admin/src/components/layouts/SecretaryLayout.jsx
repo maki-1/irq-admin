@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FiGrid, FiHome, FiFileText, FiMenu, FiX,
   FiSearch, FiMessageCircle, FiBell,
-  FiUser, FiLogOut, FiChevronDown, FiPackage,
+  FiUser, FiLogOut, FiChevronDown, FiPackage, FiActivity,
 } from 'react-icons/fi';
 import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
@@ -13,6 +13,7 @@ const NAV = [
   { to: '/secretary/residents', label: 'RESIDENCE', Icon: FiHome     },
   { to: '/secretary/requests',  label: 'REQUESTS',  Icon: FiFileText },
   { to: '/secretary/releases',  label: 'RELEASE',   Icon: FiPackage  },
+  { to: '/secretary/logs',      label: 'LOGS',      Icon: FiActivity },
 ];
 
 function SidebarContent({ onNavClick }) {

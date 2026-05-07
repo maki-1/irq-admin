@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { FiX, FiPrinter } from 'react-icons/fi';
 import useAuthStore from '../../store/authStore';
+import { logAction } from '../../services/audit.service';
 
 const PH_SEAL  = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778072706/Logo_ng_ph_qbmmwv.png';
 const BUK_SEAL = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778072846/province_iw77nm.png';
@@ -307,6 +308,7 @@ export default function PrintReceiptModal({ req, residentName, onClose }) {
   const handlePrint = () => {
     const content = printRef.current?.innerHTML;
     if (!content) return;
+    logAction('Printed Receipt', `Resident: ${residentName}, Document: ${req.documentType}`).catch(() => {});
     const win = window.open('', '_blank', 'width=816,height=1056');
     win.document.write(`
       <html>

@@ -2,9 +2,39 @@ const VerificationProfile = require('../models/VerificationProfile');
 const ResidentUser        = require('../models/ResidentUser');
 const sendEmail           = require('../utils/sendEmail');
 const sendSms             = require('../utils/sendSms');
+const auditLog            = require('../utils/auditLog');
 
 const APPROVED_FILTER = {
   $or: [{ verified: true }, { status: { $in: ['approved', 'Approved'] } }],
+};
+
+// GET /api/verifications/purok-stats
+exports.getPurokStats = async (req, res) => {
+  try {
+    const stats = await VerificationProfile.aggregate([
+      { $match: APPROVED_FILTER },
+      {
+        $addFields: {
+          purokLabel: {
+            $cond: {
+              if: { $gt: [{ $strLenCP: { $ifNull: ['$purok', ''] } }, 0] },
+              then: '$purok',
+              else: {
+                $trim: {
+                  input: { $arrayElemAt: [{ $split: [{ $ifNull: ['$address', 'Unknown'] }, ','] }, 0] },
+                },
+              },
+            },
+          },
+        },
+      },
+      { $group: { _id: '$purokLabel', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]);
+    res.json(stats.map((s) => ({ purok: s._id || 'Unknown', count: s.count })));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 // GET /api/verifications/resident-count
@@ -91,6 +121,12 @@ exports.review = async (req, res) => {
       { new: true }
     );
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
+
+    await auditLog({
+      user: req.user,
+      action: 'Reviewed Residence Profile',
+      details: `Resident: ${profile.fullName}, Status: ${status}${remarks ? `, Remarks: ${remarks}` : ''}`,
+    });
 
     const s = status.toLowerCase();
     if (s === 'approved' || s === 'rejected') {

@@ -327,7 +327,7 @@ export default function SecretaryRequests() {
 
                       {/* Contact */}
                       <td className="px-4 py-3 text-xs" style={{ color: '#A18D8D', fontFamily: "'Hanken Grotesk', sans-serif", whiteSpace: 'nowrap' }}>
-                        {req.user?.contactNumber || req.user?.email || <span style={{ color: '#C0B0B0' }}>—</span>}
+                        {req.profile?.contactNumber || req.user?.contactNumber || req.profile?.email || req.user?.email || <span style={{ color: '#C0B0B0' }}>—</span>}
                       </td>
 
                       {/* Document Type */}

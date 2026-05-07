@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  FiGrid, FiCreditCard, FiMenu, FiX,
+  FiGrid, FiHome, FiFileText, FiBarChart2, FiUsers, FiClipboard, FiMenu, FiX,
   FiSearch, FiMessageCircle, FiBell,
   FiUser, FiLogOut, FiChevronDown, FiActivity,
 } from 'react-icons/fi';
@@ -9,9 +9,13 @@ import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
 
 const NAV = [
-  { to: '/collector',          label: 'DASHBOARD', Icon: FiGrid       },
-  { to: '/collector/payments', label: 'PAYMENTS',  Icon: FiCreditCard },
-  { to: '/collector/logs',     label: 'LOGS',      Icon: FiActivity   },
+  { to: '/captain',            label: 'DASHBOARD', Icon: FiGrid      },
+  { to: '/captain/residents',  label: 'RESIDENCE',  Icon: FiHome      },
+  { to: '/captain/requests',   label: 'REQUESTS',   Icon: FiClipboard },
+  { to: '/captain/documents',  label: 'DOCUMENTS',  Icon: FiFileText  },
+  { to: '/captain/reports',    label: 'REPORTS',    Icon: FiBarChart2 },
+  { to: '/captain/users',      label: 'USERS',      Icon: FiUsers     },
+  { to: '/captain/logs',       label: 'LOGS',       Icon: FiActivity  },
 ];
 
 function SidebarContent({ onNavClick }) {
@@ -37,7 +41,7 @@ function SidebarContent({ onNavClick }) {
           <NavLink
             key={to}
             to={to}
-            end={to === '/collector'}
+            end={to === '/captain'}
             onClick={onNavClick}
             className={({ isActive }) =>
               `relative flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -149,7 +153,7 @@ function TopBar({ title, onHamburger }) {
                   <li>
                     <button
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                      onClick={() => { setAvatarOpen(false); navigate('/collector/profile'); }}
+                      onClick={() => { setAvatarOpen(false); navigate('/captain/profile'); }}
                     >
                       <FiUser size={15} color="#827575" />
                       <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#555', fontSize: 13 }}>
@@ -178,7 +182,7 @@ function TopBar({ title, onHamburger }) {
   );
 }
 
-export default function CollectorLayout({ title, children }) {
+export default function CaptainLayout({ title, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
