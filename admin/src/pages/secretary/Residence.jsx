@@ -4,7 +4,7 @@ import {
   FiSearch, FiEye, FiX,
   FiUser, FiMapPin, FiPhone, FiMail,
   FiCalendar, FiBriefcase, FiCheckCircle, FiXCircle, FiClock,
-  FiCreditCard, FiDownload,
+  FiCreditCard, FiDownload, FiRotateCcw, FiAlertTriangle,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
@@ -54,10 +54,12 @@ function InfoRow({ icon: Icon, label, value }) {
 }
 
 /* ── Review Modal ── */
-function ReviewModal({ profile, onClose, onSave }) {
-  const [status,  setStatus]  = useState(normStatus(profile.status) === 'pending' ? 'under review' : normStatus(profile.status));
-  const [remarks, setRemarks] = useState(profile.rejectionReason || profile.remarks || '');
-  const [saving,  setSaving]  = useState(false);
+function ReviewModal({ profile, onClose, onSave, onReset }) {
+  const [status,        setStatus]        = useState(['under review', 'approved'].includes(normStatus(profile.status)) ? normStatus(profile.status) : 'under review');
+  const [remarks,       setRemarks]       = useState(profile.rejectionReason || profile.remarks || '');
+  const [saving,        setSaving]        = useState(false);
+  const [resetting,     setResetting]     = useState(false);
+  const [confirmReset,  setConfirmReset]  = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -66,6 +68,17 @@ function ReviewModal({ profile, onClose, onSave }) {
       onClose();
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setResetting(true);
+    try {
+      await onReset(profile._id);
+      onClose();
+    } finally {
+      setResetting(false);
+      setConfirmReset(false);
     }
   };
 
@@ -99,11 +112,9 @@ function ReviewModal({ profile, onClose, onSave }) {
 
           {/* Resident summary */}
           <div className="flex items-center gap-4 p-4 rounded-2xl" style={{ background: '#F9F7F7' }}>
-            <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-white text-xl font-bold shrink-0"
+            <div className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0"
               style={{ background: '#156D07' }}>
-              {profile.facePhoto
-                ? <img src={profile.facePhoto} alt="face" className="w-full h-full object-cover" />
-                : profile.fullName?.charAt(0).toUpperCase()}
+              {profile.fullName?.charAt(0).toUpperCase()}
             </div>
             <div>
               <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 17 }}>
@@ -139,8 +150,7 @@ function ReviewModal({ profile, onClose, onSave }) {
             const docs = [
               { label: 'ID Front',               url: profile.idFront              },
               { label: 'ID Back',                url: profile.idBack               },
-              { label: 'Face Photo',             url: profile.facePhoto            },
-              { label: 'Education Certificate',  url: profile.educationCertificate },
+{ label: 'Education Certificate',  url: profile.educationCertificate },
               { label: 'Proof of Residency',     url: profile.proofOfResidency     },
               { label: 'Government ID',          url: profile.governmentId         },
               { label: 'Selfie with ID',         url: profile.selfieWithId         },
@@ -171,7 +181,7 @@ function ReviewModal({ profile, onClose, onSave }) {
               Decision
             </p>
             <div className="flex gap-2 mb-3">
-              {['under review', 'approved', 'rejected'].map((s) => (
+              {['under review', 'approved'].map((s) => (
                 <button
                   key={s}
                   onClick={() => setStatus(s)}
@@ -208,22 +218,68 @@ function ReviewModal({ profile, onClose, onSave }) {
         </div>
 
         {/* Footer actions */}
-        <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #F0EAEA' }}>
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-100"
-            style={{ fontFamily: "'Hahmlet', sans-serif", color: '#827575', background: '#F5F0F0' }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-opacity disabled:opacity-60"
-            style={{ fontFamily: "'Hahmlet', sans-serif", background: '#156D07' }}
-          >
-            {saving ? 'Saving…' : 'Save Decision'}
-          </button>
+        <div className="px-6 py-4" style={{ borderTop: '1px solid #F0EAEA' }}>
+          {confirmReset ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
+                style={{ background: '#FFF1F2', border: '1px solid #FECDD3' }}>
+                <FiAlertTriangle size={14} color="#BE123C" className="mt-0.5 shrink-0" />
+                <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#BE123C', fontSize: 12, lineHeight: 1.5 }}>
+                  This will permanently delete all verification data for <strong>{profile.fullName}</strong>.
+                  They will receive a notification to re-submit their information.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmReset(false)}
+                  disabled={resetting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-100 disabled:opacity-60"
+                  style={{ fontFamily: "'Hahmlet', sans-serif", color: '#827575', background: '#F5F0F0' }}
+                >
+                  No, Cancel
+                </button>
+                <button
+                  onClick={handleReset}
+                  disabled={resetting}
+                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-opacity disabled:opacity-60"
+                  style={{ fontFamily: "'Hahmlet', sans-serif", background: '#BE123C' }}
+                >
+                  {resetting ? 'Resetting…' : 'Yes, Reset'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-100"
+                style={{ fontFamily: "'Hahmlet', sans-serif", color: '#827575', background: '#F5F0F0' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setConfirmReset(true)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                style={{
+                  fontFamily: "'Hahmlet', sans-serif",
+                  color: '#BE123C',
+                  background: '#FFF1F2',
+                  border: '1px solid #FECDD3',
+                }}
+              >
+                <FiRotateCcw size={13} />
+                Reset
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-opacity disabled:opacity-60"
+                style={{ fontFamily: "'Hahmlet', sans-serif", background: '#156D07' }}
+              >
+                {saving ? 'Saving…' : 'Save Decision'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -267,6 +323,17 @@ export default function Residence() {
     }
   };
 
+  const handleReset = async (id) => {
+    try {
+      await api.delete(`/verifications/${id}/reset`);
+      toast.success('Verification reset. Resident has been notified to fill up again.');
+      fetchProfiles();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reset verification');
+      throw err;
+    }
+  };
+
   /* Filter + search */
   const filtered = profiles.filter((p) => {
     const matchFilter = filter === 'All' || normStatus(p.status) === normStatus(filter);
@@ -288,7 +355,7 @@ export default function Residence() {
     return acc;
   }, {});
 
-  const FILTERS = ['All', 'pending', 'submitted', 'under review', 'approved', 'rejected'];
+  const FILTERS = ['All', 'pending', 'submitted', 'under review', 'approved'];
 
   /* Reset to page 1 when filter or search changes */
   useEffect(() => { setPage(1); }, [filter, search]);
@@ -560,6 +627,7 @@ export default function Residence() {
           profile={selected}
           onClose={() => setSelected(null)}
           onSave={handleReview}
+          onReset={handleReset}
         />
       )}
     </SecretaryLayout>

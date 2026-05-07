@@ -13,6 +13,7 @@ router.get('/stats',    requireRole('Secretary', 'Barangay Captain'), ctrl.getSt
 router.get('/approved', requireRole('Secretary', 'Barangay Captain'), ctrl.getLatestApproved);
 router.get('/',         requireRole('Secretary', 'Barangay Captain'), ctrl.getAll);
 router.get('/:id',  requireRole('Secretary', 'Barangay Captain'), ctrl.getOne);
-router.patch('/:id/review', requireRole('Secretary', 'Barangay Captain'), ctrl.review);
+router.patch('/:id/review',  requireRole('Secretary', 'Barangay Captain'), ctrl.review);
+router.delete('/:id/reset',  requireRole('Secretary', 'Barangay Captain'), ctrl.reset);
 
 module.exports = router;
