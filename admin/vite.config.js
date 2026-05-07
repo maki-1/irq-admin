@@ -7,8 +7,8 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     proxy: {
       '/api': {
-        // target: 'https://irq-admin.onrender.com',
-      target: 'http://localhost:5000',
+        target: 'https://irq-admin.onrender.com',
+      // target: 'http://localhost:5000',
         changeOrigin: true,
       },
     },
