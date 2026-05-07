@@ -9,6 +9,8 @@ import SecretaryLayout from '../../components/layouts/SecretaryLayout';
 import PrintDocumentModal from '../../components/common/PrintDocumentModal';
 
 /* ── Status configs ── */
+const STATUS_ORDER = ['Pending', 'Processing', 'Printing', 'Completed'];
+
 const DOC_STATUS_CFG = {
   pending:    { bg: '#FFF7ED', color: '#C2610A', label: 'Pending',    Icon: FiClock       },
   processing: { bg: '#EFF6FF', color: '#1D6DB5', label: 'Processing', Icon: FiLoader      },
@@ -298,7 +300,9 @@ export default function SecretaryRequests() {
                 <tbody>
                   {paged.map((req, idx) => {
                     const isCompleted = norm(req.status) === 'completed';
-                    const canPrint = !isCompleted && norm(req.paymentStatus) === 'paid' && ['processing'].includes(norm(req.status));
+                    const isPaid = norm(req.paymentStatus) === 'paid';
+                    const isFree = req.documentType === 'Certificate of Indigency';
+                    const canPrint = !isCompleted && (isPaid || isFree) && ['processing'].includes(norm(req.status));
                     return (
                     <tr
                       key={req._id}
@@ -359,23 +363,32 @@ export default function SecretaryRequests() {
 
                       {/* Update Status */}
                       <td className="px-4 py-3">
-                        <select
-                          disabled={isCompleted || norm(req.paymentStatus) !== 'paid' || updatingId === req._id}
-                          value={req.status}
-                          onChange={(e) => handleStatusChange(req._id, e.target.value)}
-                          className="text-xs rounded-lg px-2 py-1 border outline-none"
-                          style={{
-                            color: isCompleted || norm(req.paymentStatus) !== 'paid' ? '#C0B0B0' : '#156D07',
-                            borderColor: isCompleted || norm(req.paymentStatus) !== 'paid' ? '#E8E0E0' : '#D1E8CF',
-                            fontFamily: "'Hanken Grotesk', sans-serif",
-                            background: isCompleted || norm(req.paymentStatus) !== 'paid' || updatingId === req._id ? '#F5F5F5' : '#FFFFFF',
-                            cursor: isCompleted || norm(req.paymentStatus) !== 'paid' ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          {['Pending', 'Processing', 'Printing', 'Completed', 'Rejected'].map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
+                        {(() => {
+                          const isLocked = isCompleted || norm(req.status) === 'rejected';
+                          const canChange = (isPaid || isFree) && !isLocked && updatingId !== req._id;
+                          const currentIdx = STATUS_ORDER.findIndex((s) => s.toLowerCase() === norm(req.status));
+                          const forwardOptions = STATUS_ORDER.filter((_, i) => i >= currentIdx);
+                          if (!['completed', 'rejected'].includes(norm(req.status))) forwardOptions.push('Rejected');
+                          return (
+                            <select
+                              disabled={!canChange}
+                              value={req.status}
+                              onChange={(e) => handleStatusChange(req._id, e.target.value)}
+                              className="text-xs rounded-lg px-2 py-1 border outline-none"
+                              style={{
+                                color:       !canChange ? '#C0B0B0' : '#156D07',
+                                borderColor: !canChange ? '#E8E0E0' : '#D1E8CF',
+                                fontFamily:  "'Hanken Grotesk', sans-serif",
+                                background:  !canChange ? '#F5F5F5' : '#FFFFFF',
+                                cursor:      !canChange ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              {forwardOptions.map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                          );
+                        })()}
                       </td>
 
                       {/* Print */}

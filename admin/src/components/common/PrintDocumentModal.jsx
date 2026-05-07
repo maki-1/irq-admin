@@ -4,6 +4,11 @@ import { logAction } from '../../services/audit.service';
 const DOLOGON_LOGO  = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776233357/irequestdologon/assets/DOLOGONLOGO.jpg';
 const MARAMAG_LOGO  = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776233358/irequestdologon/assets/MARAMAGLOGO.jpg';
 
+const SIG_CAPTAIN   = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778144373/michael_qzm39g.png';
+const SIG_SECRETARY = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778144372/Godsent_bvn2ur.png';
+const SIG_TREASURER = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778088798/Signature_k7he8f.png';
+const BRGY_STAMP    = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1778144665/483f4805-8a92-4fc6-beaa-79f532f07913-removebg-preview_qli5ty.png';
+
 /* ─── Shared header ─────────────────────────────────────────── */
 function DocHeader() {
   return (
@@ -54,11 +59,35 @@ function Blank({ value, width = 120, inline = true }) {
   return <span style={style}>{value || ' '}</span>;
 }
 
-/* ─── Signature block ───────────────────────────────────────── */
-function Sig({ name, title, align = 'center' }) {
+/* ─── Digital signature block (PNPKI-style) ─────────────────── */
+function Sig({ name, title, sigUrl, align = 'center' }) {
+  const now = new Date();
+  const ts  = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} `
+             +`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} +08'00'`;
   return (
-    <div style={{ textAlign: align, display: 'inline-block', minWidth: 180 }}>
-      <p style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: 0 }}>{name}</p>
+    <div style={{ textAlign: align, display: 'inline-block', minWidth: 190 }}>
+      <div style={{
+        border: '1px solid #aaa',
+        borderRadius: 3,
+        padding: '4px 6px',
+        marginBottom: 4,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        background: '#fff',
+      }}>
+        <img
+          src={sigUrl}
+          alt="signature"
+          style={{ width: 72, height: 52, objectFit: 'contain', flexShrink: 0 }}
+        />
+        <div style={{ textAlign: 'left', fontSize: 7.5, lineHeight: 1.6, color: '#111' }}>
+          <div style={{ fontWeight: 'bold' }}>Digitally signed by</div>
+          <div style={{ fontWeight: 'bold' }}>{name}</div>
+          <div>Date: {ts}</div>
+        </div>
+      </div>
+      <p style={{ fontWeight: 'bold', textDecoration: 'underline', margin: '2px 0 0' }}>{name}</p>
       <p style={{ margin: 0, fontSize: 10 }}>{title}</p>
     </div>
   );
@@ -69,6 +98,11 @@ function Sig({ name, title, align = 'center' }) {
 ══════════════════════════════════════════════════════════════ */
 
 function BarangayClearance({ req, name, age, purok, day, monthYear }) {
+  const paymentDate = req.updatedAt
+    ? new Date(req.updatedAt).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '';
+  const orAmount = req.amountPaid ? `Php ${Number(req.amountPaid).toFixed(2)}` : '';
+
   return (
     <div style={docStyle}>
       <DocHeader />
@@ -104,10 +138,10 @@ function BarangayClearance({ req, name, age, purok, day, monthYear }) {
       {/* Payment / CTC table */}
       <div style={{ display: 'flex', gap: 40, marginTop: 20, fontSize: 10 }}>
         <div style={{ flex: 1 }}>
-          <p style={metaRow}>Paid under OR No. : <Blank value="" width={80} /></p>
-          <p style={metaRow}>Issued on &emsp;&emsp;&emsp;&ensp;: <Blank value="" width={80} /></p>
-          <p style={metaRow}>Issued at &emsp;&emsp;&emsp;&ensp;: <Blank value="" width={80} /></p>
-          <p style={metaRow}>Amount &emsp;&emsp;&emsp;&emsp;&nbsp;: <Blank value="" width={80} /></p>
+          <p style={metaRow}>Paid under OR No. : <Blank value={req.orNumber} width={80} /></p>
+          <p style={metaRow}>Issued on &emsp;&emsp;&emsp;&ensp;: <Blank value={paymentDate} width={120} /></p>
+          <p style={metaRow}>Issued at &emsp;&emsp;&emsp;&ensp;: <Blank value="Dologon, Maramag, Bukidnon" width={160} /></p>
+          <p style={metaRow}>Amount &emsp;&emsp;&emsp;&emsp;&nbsp;: <Blank value={orAmount} width={80} /></p>
         </div>
         <div style={{ flex: 1 }}>
           <p style={metaRow}>CTC No. &nbsp;: <Blank value="" width={80} /></p>
@@ -119,19 +153,24 @@ function BarangayClearance({ req, name, age, purok, day, monthYear }) {
 
       {/* Signatures */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 30, alignItems: 'flex-end' }}>
-        <Sig name="CECILIA D. PADERNAL" title="Barangay Treasurer" align="center" />
-        <Sig name="GOD SENT GRACE S. LABO" title="Barangay Secretary" align="center" />
+        <Sig name="CECILIA D. PADERNAL"    title="Barangay Treasurer" sigUrl={SIG_TREASURER} align="center" />
+        <Sig name="GOD SENT GRACE S. LABO" title="Barangay Secretary" sigUrl={SIG_SECRETARY} align="center" />
       </div>
       <div style={{ textAlign: 'center', marginTop: 24 }}>
-        <Sig name="MICHAEL C. RITARDO" title="Punong Barangay" align="center" />
+        <Sig name="MICHAEL C. RITARDO" title="Punong Barangay" sigUrl={SIG_CAPTAIN} align="center" />
       </div>
 
-      <p style={{ fontSize: 9, marginTop: 30, color: '#555' }}>Brgy. seal</p>
+      <img src={BRGY_STAMP} alt="Barangay stamp" style={{ width: 140, height: 140, objectFit: 'contain', marginTop: 30, opacity: 0.85 }} />
     </div>
   );
 }
 
 function CertificateOfIndigency({ req, name, age, purok, day, monthYear }) {
+  const issuedOn = req.updatedAt
+    ? new Date(req.updatedAt).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '';
+  const orAmount = req.amountPaid ? `Php ${Number(req.amountPaid).toFixed(2)}` : 'FREE';
+
   return (
     <div style={docStyle}>
       <DocHeader />
@@ -165,20 +204,20 @@ function CertificateOfIndigency({ req, name, age, purok, day, monthYear }) {
       </p>
 
       <div style={{ textAlign: 'right', marginTop: 36 }}>
-        <Sig name="MICHAEL C. RITARDO" title="Punong Barangay" align="center" />
+        <Sig name="MICHAEL C. RITARDO" title="Punong Barangay" sigUrl={SIG_CAPTAIN} align="center" />
       </div>
 
       {/* OR / CTC section */}
       <div style={{ fontSize: 10, marginTop: 30 }}>
-        <p style={metaRow}>OR No. &emsp;&emsp;: <Blank value="" width={80} /></p>
-        <p style={metaRow}>Amount &emsp;&nbsp;: <Blank value="" width={80} /></p>
+        <p style={metaRow}>OR No. &emsp;&emsp;: <Blank value={req.orNumber} width={80} /></p>
+        <p style={metaRow}>Amount &emsp;&nbsp;: <Blank value={orAmount} width={80} /></p>
         <p style={metaRow}>CTC No. &emsp;: <Blank value="" width={80} /></p>
         <p style={metaRow}>Amount &emsp;&nbsp;: <Blank value="" width={80} /></p>
-        <p style={metaRow}>Issued on &nbsp;: <Blank value="" width={80} /></p>
-        <p style={metaRow}>Issued at &nbsp;&nbsp;: <Blank value="" width={80} /></p>
+        <p style={metaRow}>Issued on &nbsp;: <Blank value={issuedOn} width={140} /></p>
+        <p style={metaRow}>Issued at &nbsp;&nbsp;: <Blank value="Dologon, Maramag, Bukidnon" width={160} /></p>
       </div>
 
-      <p style={{ fontSize: 9, marginTop: 24, color: '#555' }}>Brgy. Seal</p>
+      <img src={BRGY_STAMP} alt="Barangay stamp" style={{ width: 140, height: 140, objectFit: 'contain', marginTop: 24, opacity: 0.85 }} />
     </div>
   );
 }
@@ -222,10 +261,10 @@ function CertificateOfResidency({ req, name, age, purok, day, monthYear }) {
       </p>
 
       <div style={{ textAlign: 'right', marginTop: 36 }}>
-        <Sig name="MICHAEL C. RITARDO" title="Punong Barangay" align="center" />
+        <Sig name="MICHAEL C. RITARDO" title="Punong Barangay" sigUrl={SIG_CAPTAIN} align="center" />
       </div>
 
-      <p style={{ fontSize: 9, marginTop: 40, color: '#555' }}>Brgy. Seal</p>
+      <img src={BRGY_STAMP} alt="Barangay stamp" style={{ width: 140, height: 140, objectFit: 'contain', marginTop: 40, opacity: 0.85 }} />
     </div>
   );
 }
