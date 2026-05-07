@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FiSearch, FiFileText, FiCheckCircle, FiXCircle,
-  FiClock, FiLoader, FiPrinter, FiChevronLeft, FiChevronRight, FiDownload,
+  FiClock, FiLoader, FiPrinter, FiChevronLeft, FiChevronRight, FiDownload, FiImage, FiX,
 } from 'react-icons/fi';
 import { getRequests, updateRequestStatus } from '../../services/request.service';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
@@ -65,6 +65,7 @@ export default function SecretaryRequests() {
   const [page, setPage]           = useState(1);
   const [updatingId, setUpdating]   = useState(null);
   const [printing,   setPrinting]   = useState(null); // request being printed
+  const [proofUrl,   setProofUrl]   = useState(null); // proof image to preview
 
   const fetchRequests = () => {
     setLoading(true);
@@ -279,7 +280,7 @@ export default function SecretaryRequests() {
               <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: 700 }}>
                 <thead>
                   <tr style={{ background: '#FAFAFA' }}>
-                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Update Status', 'Print'].map((h) => (
+                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Proof', 'Update Status', 'Print'].map((h) => (
                       <th
                         key={h}
                         className="text-left px-4 py-3"
@@ -301,7 +302,7 @@ export default function SecretaryRequests() {
                   {paged.map((req, idx) => {
                     const isCompleted = norm(req.status) === 'completed';
                     const isPaid = norm(req.paymentStatus) === 'paid';
-                    const isFree = req.documentType === 'Certificate of Indigency';
+                    const isFree = req.documentType === 'Certificate of Indigency' || !!req.freeDocumentProof;
                     const canPrint = !isCompleted && (isPaid || isFree) && ['processing'].includes(norm(req.status));
                     return (
                     <tr
@@ -361,6 +362,28 @@ export default function SecretaryRequests() {
                           : '—'}
                       </td>
 
+                      {/* Proof */}
+                      <td className="px-4 py-3">
+                        {req.freeDocumentProof ? (
+                          <button
+                            onClick={() => setProofUrl(req.freeDocumentProof)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                            style={{
+                              fontFamily: "'Hanken Grotesk', sans-serif",
+                              background: '#EFF6FF',
+                              color: '#1D6DB5',
+                              border: '1px solid #BFDBFE',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <FiImage size={12} />
+                            View
+                          </button>
+                        ) : (
+                          <span style={{ color: '#C0B0B0', fontSize: 12, fontFamily: "'Hanken Grotesk', sans-serif" }}>—</span>
+                        )}
+                      </td>
+
                       {/* Update Status */}
                       <td className="px-4 py-3">
                         {(() => {
@@ -415,7 +438,7 @@ export default function SecretaryRequests() {
 
                   {paged.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-12 text-center" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 13 }}>
+                      <td colSpan={12} className="py-12 text-center" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 13 }}>
                         No requests found
                       </td>
                     </tr>
@@ -473,6 +496,44 @@ export default function SecretaryRequests() {
         request={printing}
         onClose={() => setPrinting(null)}
       />
+    )}
+
+    {/* Proof image modal */}
+    {proofUrl && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: 'rgba(0,0,0,0.6)' }}
+        onClick={() => setProofUrl(null)}
+      >
+        <div
+          className="relative bg-white rounded-2xl overflow-hidden shadow-2xl"
+          style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ borderBottom: '1px solid #F0EAEA' }}
+          >
+            <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 14 }}>
+              Free Document Proof
+            </span>
+            <button
+              onClick={() => setProofUrl(null)}
+              className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              style={{ color: '#A18D8D' }}
+            >
+              <FiX size={18} />
+            </button>
+          </div>
+          <div className="p-4">
+            <img
+              src={proofUrl}
+              alt="Free Document Proof"
+              style={{ maxWidth: '80vw', maxHeight: '75vh', objectFit: 'contain', borderRadius: 8 }}
+            />
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

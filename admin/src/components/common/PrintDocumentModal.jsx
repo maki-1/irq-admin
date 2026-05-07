@@ -223,9 +223,8 @@ function CertificateOfIndigency({ req, name, age, purok, day, monthYear }) {
 }
 
 function CertificateOfResidency({ req, name, age, purok, day, monthYear }) {
-  const years = req.yearsAtAddress
-    ? `${req.yearsAtAddress} year${req.yearsAtAddress !== 1 ? 's' : ''}`
-    : null;
+  const raw = req.profile?.yearsAtAddress ?? req.yearsAtAddress;
+  const years = raw ? `${raw} year${raw !== 1 ? 's' : ''}` : null;
 
   return (
     <div style={docStyle}>
