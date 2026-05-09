@@ -78,6 +78,12 @@ exports.getAll = async (req, res) => {
   try {
     const { status } = req.query;
     const filter = status ? { status: { $regex: new RegExp(`^${status}$`, 'i') } } : {};
+    if (req.user.role === 'Purok Leader' && req.user.purok) {
+      filter.$or = [
+        { purok:   { $regex: new RegExp(req.user.purok, 'i') } },
+        { address: { $regex: new RegExp(req.user.purok, 'i') } },
+      ];
+    }
     const profiles = await VerificationProfile.find(filter).sort({ createdAt: -1 });
     res.json(profiles);
   } catch (err) {
@@ -112,6 +118,8 @@ exports.reset = async (req, res) => {
     const profile = await VerificationProfile.findById(req.params.id);
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
 
+    const { remarks } = req.body || {};
+
     // Gather contact info with same fallback pattern as review()
     let email         = profile.email         || null;
     let contactNumber = profile.contactNumber || null;
@@ -133,17 +141,23 @@ exports.reset = async (req, res) => {
 
     console.log(`[reset] Notifying — email: ${email}, phone: ${contactNumber}`);
 
+    const reasonBlock = remarks
+      ? `<p><strong>Reason:</strong> ${remarks}</p>`
+      : '';
+
     const emailHtml = `
       <p>Dear <strong>${name}</strong>,</p>
       <p>Your verification profile with <strong>Barangay Dologon</strong> has been
-      <strong style="color:#C2610A">reset</strong> by the Barangay Secretary.</p>
+      <strong style="color:#BE123C">rejected</strong> by the Barangay.</p>
+      ${reasonBlock}
       <p>Your previously submitted information and documents have been cleared.
-      Please open the <strong>iRequestDologon</strong> app and fill up your
-      verification form again to continue.</p>
+      Please open the <strong>iRequestDologon</strong> app and re-submit your
+      verification form to continue.</p>
       <p>If you have questions, please visit the Barangay Office.</p>
       <p style="color:#888;font-size:12px">Barangay Dologon – iRequestDologon</p>`;
 
-    const smsText = `Hi ${name}, your Barangay Dologon verification has been reset. Please open iRequestDologon and fill up your verification form again. -Brgy. Dologon`;
+    const reasonSuffix = remarks ? ` Reason: ${remarks}.` : '';
+    const smsText = `Hi ${name}, your Barangay Dologon verification was REJECTED.${reasonSuffix} Please open iRequestDologon and re-submit your verification form. -Brgy. Dologon`;
 
     if (email) {
       sendEmail({ to: email, subject: 'Verification Reset – Please Re-submit | iRequestDologon', html: emailHtml })
@@ -164,7 +178,7 @@ exports.reset = async (req, res) => {
     await auditLog({
       user: req.user,
       action: 'Reset Residence Verification',
-      details: `Resident: ${name} — verification data deleted and notified to re-submit`,
+      details: `Resident: ${name} — rejected and notified to re-submit${remarks ? `. Reason: ${remarks}` : ''}`,
     });
 
     await VerificationProfile.findByIdAndDelete(req.params.id);
@@ -198,7 +212,7 @@ exports.review = async (req, res) => {
     });
 
     const s = status.toLowerCase();
-    if (s === 'approved') {
+    if (s === 'approved' || s === 'under review') {
       // Get contact info — try verificationprofile first, fall back to linked user doc
       let email         = profile.email         || null;
       let contactNumber = profile.contactNumber || null;
@@ -220,16 +234,30 @@ exports.review = async (req, res) => {
 
       const name = profile.fullName || 'Resident';
 
-      const emailHtml = `<p>Dear <strong>${name}</strong>,</p>
-           <p>🎉 Your registration with <strong>Barangay Dologon</strong> has been
+      let emailHtml, smsText, emailSubject;
+
+      if (s === 'approved') {
+        emailSubject = 'Registration Approved – iRequestDologon';
+        emailHtml = `<p>Dear <strong>${name}</strong>,</p>
+           <p>Your registration with <strong>Barangay Dologon</strong> has been
            <strong style="color:#156D07">approved</strong>. You are now a verified resident.</p>
            <p>You may now use the iRequestDologon app to request barangay documents.</p>
            <p style="color:#888;font-size:12px">Barangay Dologon – iRequestDologon</p>`;
-
-      const smsText = `Hi ${name}, your Barangay Dologon registration has been APPROVED. You can now request documents via iRequestDologon. -Brgy. Dologon`;
+        smsText = `Hi ${name}, your Barangay Dologon registration has been APPROVED. You can now request documents via iRequestDologon. -Brgy. Dologon`;
+      } else {
+        emailSubject = 'Verification Under Review – iRequestDologon';
+        emailHtml = `<p>Dear <strong>${name}</strong>,</p>
+           <p>Your verification profile with <strong>Barangay Dologon</strong> is now
+           <strong style="color:#1D6DB5">under review</strong>.</p>
+           <p>Our team is currently reviewing your submitted information and documents.
+           You will receive another notification once a final decision has been made.</p>
+           <p>If you have questions, please visit the Barangay Office.</p>
+           <p style="color:#888;font-size:12px">Barangay Dologon – iRequestDologon</p>`;
+        smsText = `Hi ${name}, your Barangay Dologon verification is now UNDER REVIEW. We will notify you once a decision has been made. -Brgy. Dologon`;
+      }
 
       if (email) {
-        sendEmail({ to: email, subject: 'Registration Approved – iRequestDologon', html: emailHtml })
+        sendEmail({ to: email, subject: emailSubject, html: emailHtml })
           .then(() => console.log(`[review] Email sent to ${email}`))
           .catch((e) => console.error(`[review] Email failed (${email}):`, e.message));
       } else {

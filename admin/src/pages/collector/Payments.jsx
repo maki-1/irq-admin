@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { FiPrinter, FiFileText } from 'react-icons/fi';
 import CollectorLayout from '../../components/layouts/CollectorLayout';
 import PrintReceiptModal from '../../components/common/PrintReceiptModal';
 import { getRequests } from '../../services/request.service';
+import api from '../../services/api';
 
 const DOLOGON_LOGO = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776233357/irequestdologon/assets/DOLOGONLOGO.jpg';
 const MARAMAG_LOGO  = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776233358/irequestdologon/assets/MARAMAGLOGO.jpg';
@@ -29,6 +30,7 @@ function StatusBadge({ status }) {
 
 export default function CollectorPayments() {
   const [requests, setRequests] = useState([]);
+  const [feeMap,   setFeeMap]   = useState({}); // purokName.toLowerCase() -> feecentavos
   const [tab, setTab]           = useState('All');
   const [search, setSearch]     = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -38,15 +40,52 @@ export default function CollectorPayments() {
 
   useEffect(() => {
     setLoading(true);
-    getRequests()
-      .then((r) => setRequests(r.data))
-      .catch((err) => console.error('Failed to load requests:', err))
+    Promise.allSettled([
+      getRequests(),
+      api.get('/purok-clearance/all-fees'),
+    ])
+      .then(([reqResult, feeResult]) => {
+        if (reqResult.status === 'fulfilled') {
+          setRequests(reqResult.value.data);
+        } else {
+          console.error('Failed to load requests:', reqResult.reason);
+        }
+        if (feeResult.status === 'fulfilled') {
+          const map = {};
+          (feeResult.value.data || []).forEach((f) => {
+            if (f.purokName) map[f.purokName.toLowerCase()] = f.feecentavos;
+          });
+          setFeeMap(map);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const residentName = (req) => req.profile?.fullName || req.user?.username || '—';
 
-  const filtered = requests.filter((r) => {
+  // Net amount collector receives: amountPaid minus the purok clearance fee
+  const netAmount = (req) => {
+    if (req.paymentStatus !== 'paid' || req.amountPaid == null) return null;
+    const purok = (req.profile?.purok || req.profile?.address || '').toLowerCase();
+
+    // exact match first
+    let feecentavos = feeMap[purok];
+
+    // partial match: feeMap key contained in purok string or vice versa
+    if (feecentavos == null) {
+      for (const [key, val] of Object.entries(feeMap)) {
+        if (purok.includes(key) || key.includes(purok)) {
+          feecentavos = val;
+          break;
+        }
+      }
+    }
+
+    const fee = feecentavos != null ? feecentavos / 100 : 0;
+    return Math.max(0, req.amountPaid - fee);
+  };
+
+  const filtered = useMemo(() => requests.filter((r) => {
     const matchTab =
       tab === 'All' ||
       (tab === 'Paid'   && r.paymentStatus === 'paid') ||
@@ -63,7 +102,7 @@ export default function CollectorPayments() {
     const matchTo   = !dateTo   || (created && created <= new Date(dateTo + 'T23:59:59'));
 
     return matchTab && matchSearch && matchFrom && matchTo;
-  });
+  }), [requests, tab, search, dateFrom, dateTo]);
 
   const exportPDF = () => {
     const dateLabel = dateFrom || dateTo
@@ -74,24 +113,27 @@ export default function CollectorPayments() {
       hour: '2-digit', minute: '2-digit',
     });
 
-    const rows = filtered.map((req, idx) => `
+    const rows = filtered.map((req, idx) => {
+      const net = netAmount(req);
+      return `
       <tr>
         <td>${idx + 1}</td>
         <td>${residentName(req)}</td>
         <td>${req.documentType || '—'}</td>
         <td>${req.purpose || '—'}</td>
-        <td style="color:#156D07;font-weight:700">${req.amountPaid ? '₱' + req.amountPaid.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '—'}</td>
+        <td style="color:#156D07;font-weight:700">${net != null ? '₱' + net.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '—'}</td>
         <td>
           <span class="badge ${(req.paymentStatus || '').toLowerCase()}">
             ${req.paymentStatus || '—'}
           </span>
         </td>
         <td>${req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
 
-    const totalPaid = filtered
+    const totalCollected = filtered
       .filter(r => r.paymentStatus === 'paid')
-      .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
+      .reduce((sum, r) => sum + (netAmount(r) || 0), 0);
 
     const win = window.open('', '_blank', 'width=900,height=700');
     win.document.write(`
@@ -139,7 +181,7 @@ export default function CollectorPayments() {
         <table>
           <thead>
             <tr>
-              <th>#</th><th>Resident</th><th>Document Type</th><th>Purpose</th><th>Amount</th><th>Payment Status</th><th>Date</th>
+              <th>#</th><th>Resident</th><th>Document Type</th><th>Purpose</th><th>Net Amount</th><th>Payment Status</th><th>Date</th>
             </tr>
           </thead>
           <tbody>${rows || '<tr><td colspan="7" style="text-align:center;padding:16px;color:#999">No records</td></tr>'}</tbody>
@@ -147,7 +189,7 @@ export default function CollectorPayments() {
         <div class="summary">
           <span>Total Records: <span>${filtered.length}</span></span>
           &nbsp;&nbsp;
-          <span>Total Collected: <span>₱${totalPaid.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span></span>
+          <span>Total Collected: <span>₱${totalCollected.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span></span>
         </div>
         <div class="footer">Barangay Dologon, Maramag, Bukidnon &nbsp;·&nbsp; iRequestDologon System</div>
       </body>
@@ -282,7 +324,7 @@ export default function CollectorPayments() {
             <table className="w-full min-w-[640px]" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#F9F7F7' }}>
-                  {['#', 'Resident', 'Document Type', 'Purpose', 'Amount', 'Payment Status', 'Date', 'Action'].map((h) => (
+                  {['#', 'Resident', 'Document Type', 'Purpose', 'Net Amount', 'Payment Status', 'Date', 'Action'].map((h) => (
                     <th
                       key={h}
                       className="text-left px-5 py-3"
@@ -296,75 +338,78 @@ export default function CollectorPayments() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-sm" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif" }}>
                       Loading...
                     </td>
                   </tr>
                 )}
                 {!loading && filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-sm" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif" }}>
                       No records found.
                     </td>
                   </tr>
                 )}
-                {!loading && filtered.map((req, idx) => (
-                  <tr
-                    key={req._id}
-                    style={{ borderTop: '1px solid #F5F0F0' }}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#C0B0B0', fontSize: 12 }}>
-                      {idx + 1}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-bold"
-                          style={{ background: '#156D07' }}
-                        >
-                          {residentName(req).charAt(0).toUpperCase()}
+                {!loading && filtered.map((req, idx) => {
+                  const net = netAmount(req);
+                  return (
+                    <tr
+                      key={req._id}
+                      style={{ borderTop: '1px solid #F5F0F0' }}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#C0B0B0', fontSize: 12 }}>
+                        {idx + 1}
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-bold"
+                            style={{ background: '#156D07' }}
+                          >
+                            {residentName(req).charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#333', fontSize: 13, fontWeight: 600 }}>
+                              {residentName(req)}
+                            </p>
+                            <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 11 }}>
+                              {req.profile?.purok || req.user?.email || '—'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#333', fontSize: 13, fontWeight: 600 }}>
-                            {residentName(req)}
-                          </p>
-                          <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 11 }}>
-                            {req.profile?.purok || req.user?.email || '—'}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#555', fontSize: 13 }}>
-                      {req.documentType || '—'}
-                    </td>
-                    <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
-                      {req.purpose || '—'}
-                    </td>
-                    <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>
-                      {req.amountPaid ? `₱${req.amountPaid.toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '—'}
-                    </td>
-                    <td className="px-5 py-3">
-                      <StatusBadge status={req.paymentStatus} />
-                    </td>
-                    <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12, whiteSpace: 'nowrap' }}>
-                      {new Date(req.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </td>
-                    <td className="px-5 py-3">
-                      {req.amountPaid > 0 && (
-                        <button
-                          onClick={() => setPrintReq(req)}
-                          title="Print Receipt"
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                          style={{ background: '#F0FDF4', color: '#156D07', fontFamily: "'Hahmlet', sans-serif", border: '1px solid #BBF7D0' }}
-                        >
-                          <FiPrinter size={13} />
-                          Print
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#555', fontSize: 13 }}>
+                        {req.documentType || '—'}
+                      </td>
+                      <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
+                        {req.purpose || '—'}
+                      </td>
+                      <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>
+                        {net != null ? `₱${net.toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '—'}
+                      </td>
+                      <td className="px-5 py-3">
+                        <StatusBadge status={req.paymentStatus} />
+                      </td>
+                      <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        {new Date(req.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="px-5 py-3">
+                        {req.paymentStatus === 'paid' && (
+                          <button
+                            onClick={() => setPrintReq(req)}
+                            title="Print Receipt"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                            style={{ background: '#F0FDF4', color: '#156D07', fontFamily: "'Hahmlet', sans-serif", border: '1px solid #BBF7D0' }}
+                          >
+                            <FiPrinter size={13} />
+                            Print
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

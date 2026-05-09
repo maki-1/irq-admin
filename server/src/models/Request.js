@@ -13,6 +13,7 @@ const requestSchema = new mongoose.Schema(
     paymentLinkId:     { type: String },
     amountPaid:        { type: Number },
     orNumber:          { type: String },
+    freeDocumentProof: { type: String }, // URL of uploaded proof image for free documents
   },
   { timestamps: true, collection: 'requests' }
 );

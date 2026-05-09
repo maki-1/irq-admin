@@ -27,7 +27,7 @@ async function attachProfiles(requests) {
 
   const profiles = orClauses.length
     ? await VerificationProfile.find({ $or: orClauses })
-        .select('user fullName age address gender purok contactNumber email fatherName motherName civilStatus occupation nationality idType idName dateOfBirth')
+        .select('user fullName age address gender purok contactNumber email fatherName motherName civilStatus occupation nationality idType idName dateOfBirth yearsAtAddress facePhoto')
         .lean()
     : [];
 

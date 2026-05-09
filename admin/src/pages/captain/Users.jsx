@@ -7,12 +7,13 @@ import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
 
-const ROLES = ['Secretary', 'Collector', 'Barangay Captain'];
+const ROLES = ['Secretary', 'Collector', 'Barangay Captain', 'Purok Leader'];
 
 const ROLE_COLORS = {
   Secretary:         { bg: '#EFF6FF', color: '#1D6DB5' },
   Collector:         { bg: '#FFF7ED', color: '#C2610A' },
   'Barangay Captain':{ bg: '#F0FDF4', color: '#156D07' },
+  'Purok Leader':    { bg: '#FDF4FF', color: '#7C3AED' },
 };
 
 function RoleBadge({ role }) {
@@ -27,15 +28,32 @@ function RoleBadge({ role }) {
 
 /* ── Create Account Modal ── */
 function CreateModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ fullName: '', purok: '', email: '', password: '', role: 'Secretary' });
-  const [showPw, setShowPw] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [form,    setForm]    = useState({ fullName: '', purok: '', email: '', password: '', role: 'Secretary' });
+  const [showPw,  setShowPw]  = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [puroks,  setPuroks]  = useState([]);
+  const [loadingPuroks, setLoadingPuroks] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const fetchPuroks = async () => {
+    setLoadingPuroks(true);
+    try {
+      const { data } = await api.get('/purok-clearance/puroks');
+      setPuroks(data);
+    } catch {
+      toast.error('Failed to load purok list');
+    } finally {
+      setLoadingPuroks(false);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!form.fullName || !form.purok || !form.email || !form.password) {
+    if (!form.fullName || !form.email || !form.password) {
       toast.error('All fields are required.'); return;
+    }
+    if (form.role === 'Purok Leader' && !form.purok) {
+      toast.error('Select a purok for this Purok Leader.'); return;
     }
     if (form.password.length < 6) { toast.error('Password must be at least 6 characters.'); return; }
     setSaving(true);
@@ -67,8 +85,7 @@ function CreateModal({ onClose, onCreated }) {
 
         <div className="px-6 py-5 flex flex-col gap-4">
           {[
-            { label: 'Full Name', key: 'fullName', type: 'text', placeholder: 'e.g. Juan Dela Cruz' },
-            { label: 'Purok',     key: 'purok',    type: 'text', placeholder: 'e.g. Purok 1' },
+            { label: 'Full Name', key: 'fullName', type: 'text',  placeholder: 'e.g. Juan Dela Cruz' },
             { label: 'Email',     key: 'email',    type: 'email', placeholder: 'e.g. juan@email.com' },
           ].map(({ label, key, type, placeholder }) => (
             <div key={key}>
@@ -112,12 +129,16 @@ function CreateModal({ onClose, onCreated }) {
             <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>
               Role
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {ROLES.map((r) => (
                 <button
                   key={r}
                   type="button"
-                  onClick={() => set('role', r)}
+                  onClick={() => {
+                    set('role', r);
+                    set('purok', '');
+                    if (r === 'Purok Leader') fetchPuroks();
+                  }}
                   className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all border"
                   style={{
                     fontFamily: "'Hahmlet', sans-serif",
@@ -129,6 +150,29 @@ function CreateModal({ onClose, onCreated }) {
               ))}
             </div>
           </div>
+
+          {/* Purok — only for Purok Leader */}
+          {form.role === 'Purok Leader' && (
+            <div>
+              <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>
+                Purok
+              </label>
+              <select
+                value={form.purok}
+                onChange={(e) => set('purok', e.target.value)}
+                disabled={loadingPuroks}
+                className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none appearance-none disabled:opacity-60"
+                style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: form.purok ? '#333' : '#A18D8D' }}
+              >
+                <option value="" disabled>
+                  {loadingPuroks ? 'Loading puroks…' : puroks.length === 0 ? 'No puroks found' : 'Select purok…'}
+                </option>
+                {puroks.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #F0EAEA' }}>

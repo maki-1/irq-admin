@@ -14,6 +14,8 @@ const verificationRoutes = require('./routes/verification.routes');
 const requestRoutes      = require('./routes/request.routes');
 const releaseRoutes           = require('./routes/release.routes');
 const documentPriceRoutes     = require('./routes/documentPrice.routes');
+const cropRoutes              = require('./routes/crop.routes');
+const purokClearanceRoutes    = require('./routes/purokClearance.routes');
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use('/api/verifications', verificationRoutes);
 app.use('/api/requests',     requestRoutes);
 app.use('/api/releases',        releaseRoutes);
 app.use('/api/document-prices', documentPriceRoutes);
+app.use('/api/crop-id',        cropRoutes);
+app.use('/api/purok-clearance', purokClearanceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

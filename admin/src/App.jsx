@@ -26,6 +26,13 @@ import CaptainDocuments  from './pages/captain/Documents';
 import CaptainReports    from './pages/captain/Reports';
 import CaptainUsers      from './pages/captain/Users';
 
+// Purok Leader
+import PurokLeaderDashboard    from './pages/purokleader/Dashboard';
+import PurokLeaderResidence    from './pages/purokleader/Residence';
+import PurokLeaderCollection   from './pages/purokleader/Collection';
+import PurokLeaderClearanceFees from './pages/purokleader/ClearanceFees';
+import PurokLeaderProfile      from './pages/purokleader/Profile';
+
 // Shared
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Logs from './pages/logs/Logs';
@@ -34,6 +41,7 @@ const ROLE_HOME = {
   Secretary: '/secretary',
   Collector: '/collector',
   'Barangay Captain': '/captain',
+  'Purok Leader': '/purok-leader',
 };
 
 export default function App() {
@@ -73,6 +81,16 @@ export default function App() {
         <Route path="/captain/reports"    element={<CaptainReports />} />
         <Route path="/captain/users"      element={<CaptainUsers />} />
         <Route path="/captain/logs"       element={<Logs />} />
+      </Route>
+
+      {/* Purok Leader */}
+      <Route element={<ProtectedRoute allowedRoles={['Purok Leader']} />}>
+        <Route path="/purok-leader"                element={<PurokLeaderDashboard />} />
+        <Route path="/purok-leader/residents"      element={<PurokLeaderResidence />} />
+        <Route path="/purok-leader/collection"     element={<PurokLeaderCollection />} />
+        <Route path="/purok-leader/clearance-fees" element={<PurokLeaderClearanceFees />} />
+        <Route path="/purok-leader/profile"        element={<PurokLeaderProfile />} />
+        <Route path="/purok-leader/logs"           element={<Logs />} />
       </Route>
 
       {/* Landing page */}

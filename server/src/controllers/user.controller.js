@@ -74,8 +74,11 @@ exports.updateRole = async (req, res) => {
 exports.createUser = async (req, res) => {
   try {
     const { fullName, purok, email, password, role } = req.body;
-    if (!fullName || !purok || !email || !password || !role) {
+    if (!fullName || !email || !password || !role) {
       return res.status(400).json({ message: 'All fields are required.' });
+    }
+    if (role === 'Purok Leader' && !purok) {
+      return res.status(400).json({ message: 'Purok is required for Purok Leader.' });
     }
     const exists = await User.findOne({ email: email.toLowerCase() });
     if (exists) return res.status(409).json({ message: 'Email is already in use.' });
