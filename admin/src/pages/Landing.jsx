@@ -434,12 +434,11 @@ export default function Landing() {
               </div>
 
               <h3 className="font-garamond text-2xl font-bold text-gold mb-1">iRequestDologon</h3>
-              <p className="text-white/40 text-xs mb-1">Version 1.0.0 · Android APK</p>
-              <p className="text-white/30 text-xs mb-6">Released April 2026 · ~25 MB</p>
+              <p className="text-white/40 text-xs mb-1">Version 1.0.5 · Android APK</p>
+              <p className="text-white/30 text-xs mb-6">Released April 2026 · ~111 MB</p>
 
               <a
-                href="https://drive.google.com/uc?export=download&id=1l55FNj0zN-ankxdHK4Hpn3nxIGOUkDHC"download
-
+                href="https://drive.google.com/uc?export=download&id=1JKYwkvL-AI5XTtKOPw-Gz8wKkOcAAtpO"download
 
                 className="inline-flex items-center gap-3 px-8 py-3.5 rounded-xl font-semibold text-[#0d1f0d] bg-gold hover:bg-gold/90
                            shadow-[0_4px_24px_rgba(201,168,76,0.35)] hover:shadow-[0_6px_32px_rgba(201,168,76,0.5)]
