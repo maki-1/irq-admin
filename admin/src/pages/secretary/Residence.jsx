@@ -316,7 +316,9 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowReject(true)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                disabled={isApproved}
+                title={isApproved ? 'Undo Approve first before rejecting' : undefined}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{
                   fontFamily: "'Hahmlet', sans-serif",
                   color: '#BE123C',
