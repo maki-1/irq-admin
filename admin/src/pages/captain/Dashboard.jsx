@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import useAuthStore from '../../store/authStore';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
-import { getDocuments, signDocument, sealDocument } from '../../services/document.service';
 import { getVerificationStats, getPurokStats } from '../../services/verification.service';
 import { getRequests } from '../../services/request.service';
 
@@ -45,13 +44,12 @@ function PurokTooltip({ active, payload, label }) {
 
 export default function CaptainDashboard() {
   const { user } = useAuthStore();
-  const [docs, setDocs] = useState([]);
+  const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [residentStats, setResidentStats] = useState({ total: 0, pending: 0 });
   const [purokStats, setPurokStats] = useState([]);
 
   const fetchData = () => {
-    getDocuments().then((r) => setDocs(r.data)).catch(() => {});
     getRequests().then((r) => setRequests(r.data)).catch(() => {});
     getVerificationStats().then((r) => setResidentStats(r.data)).catch(() => {});
     getPurokStats().then((r) => setPurokStats(r.data)).catch(() => {});
@@ -62,22 +60,6 @@ export default function CaptainDashboard() {
     const interval = setInterval(fetchData, 30_000);
     return () => clearInterval(interval);
   }, []);
-
-  const handleSign = async (id) => {
-    try {
-      await signDocument(id);
-      toast.success('Document signed');
-      fetchData();
-    } catch { toast.error('Failed to sign'); }
-  };
-
-  const handleSeal = async (id) => {
-    try {
-      await sealDocument(id);
-      toast.success('Document sealed');
-      fetchData();
-    } catch { toast.error('Failed to seal'); }
-  };
 
   // Computed stats
   const monthStart = new Date();
@@ -90,9 +72,6 @@ export default function CaptainDashboard() {
     r.status?.toLowerCase() === 'completed' &&
     new Date(r.updatedAt) >= monthStart
   ).length;
-
-  const toSign = docs.filter((d) => d.status === 'Printing' && !d.signatureStatus);
-  const toSeal = docs.filter((d) => d.signatureStatus === 'Signed' && !d.sealStatus);
 
   const recentPending = pendingRequests.slice(0, 8);
   const firstName = user?.fullName?.split(' ')[0] || 'Captain';
@@ -114,7 +93,7 @@ export default function CaptainDashboard() {
                 Hello {firstName}!
               </p>
               <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#FFFFFF', fontSize: 'clamp(12px,1.5vw,14px)', lineHeight: 1.6 }}>
-                You have <strong>{pendingRequests.length}</strong> pending request{pendingRequests.length !== 1 ? 's' : ''} and <strong>{toSign.length}</strong> document{toSign.length !== 1 ? 's' : ''} awaiting your signature.
+                You have <strong>{pendingRequests.length}</strong> pending request{pendingRequests.length !== 1 ? 's' : ''} to review.
               </p>
             </div>
           </div>
@@ -128,8 +107,9 @@ export default function CaptainDashboard() {
           <div className="grid grid-cols-2 gap-3">
 
             {/* Total Residents */}
-            <div className="flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}>
+            <button onClick={() => navigate('/captain/residents')}
+              className="flex items-center justify-between bg-white rounded-2xl px-5 text-left transition-shadow hover:shadow-lg"
+              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: 'pointer' }}>
               <div>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>TOTAL</p>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>RESIDENTS</p>
@@ -137,11 +117,12 @@ export default function CaptainDashboard() {
               <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 44, lineHeight: 1 }}>
                 {totalResidents}
               </span>
-            </div>
+            </button>
 
             {/* Pending Requests */}
-            <div className="flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}>
+            <button onClick={() => navigate('/captain/requests')}
+              className="flex items-center justify-between bg-white rounded-2xl px-5 text-left transition-shadow hover:shadow-lg"
+              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: 'pointer' }}>
               <div>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 700 }}>PENDING</p>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>REQUESTS</p>
@@ -152,11 +133,12 @@ export default function CaptainDashboard() {
                 </span>
                 <CircleProgress value={pendingRequests.length} total={requests.length || 1} />
               </div>
-            </div>
+            </button>
 
             {/* Clearances this month */}
-            <div className="flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}>
+            <button onClick={() => navigate('/captain/requests')}
+              className="col-span-2 flex items-center justify-between bg-white rounded-2xl px-5 text-left transition-shadow hover:shadow-lg"
+              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: 'pointer' }}>
               <div>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 700 }}>CLEARANCES</p>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 700 }}>THIS MONTH</p>
@@ -164,22 +146,8 @@ export default function CaptainDashboard() {
               <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 44, lineHeight: 1 }}>
                 {clearancesMonth}
               </span>
-            </div>
+            </button>
 
-            {/* Awaiting Signature */}
-            <div className="flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}>
-              <div>
-                <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 700 }}>AWAITING</p>
-                <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 700 }}>SIGNATURE</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 36, lineHeight: 1 }}>
-                  {toSign.length}
-                </span>
-                <CircleProgress value={toSign.length} total={(toSign.length + toSeal.length) || 1} />
-              </div>
-            </div>
           </div>
 
           {/* Residents per Purok bar chart */}
@@ -220,9 +188,15 @@ export default function CaptainDashboard() {
 
           {/* Pending Requests */}
           <div className="bg-white rounded-3xl p-5 flex flex-col" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
-            <p className="mb-3" style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 15 }}>
-              Pending Requests
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 15 }}>Pending Requests</p>
+              <button
+                onClick={() => navigate('/captain/requests')}
+                style={{ fontFamily: "'Kaisei Decol', serif", color: '#A18D8D', fontSize: 12, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                see all
+              </button>
+            </div>
             <div className="flex justify-between pb-2 mb-1" style={{ borderBottom: '1px solid #F0EAEA' }}>
               <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 13, fontWeight: 700 }}>Name</span>
               <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 13, fontWeight: 700 }}>Document</span>
@@ -254,40 +228,6 @@ export default function CaptainDashboard() {
             </ul>
           </div>
 
-          {/* Awaiting Seal */}
-          <div className="bg-white rounded-3xl p-5 flex flex-col flex-1 min-h-0" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
-            <p className="mb-3 shrink-0" style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 15 }}>
-              Awaiting Seal
-            </p>
-            <div className="flex justify-between pb-2 mb-1 shrink-0" style={{ borderBottom: '1px solid #F0EAEA' }}>
-              <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 13, fontWeight: 700 }}>Document</span>
-              <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 13, fontWeight: 700 }}>Action</span>
-            </div>
-            <ul className="flex flex-col overflow-y-auto flex-1 min-h-0">
-              {toSeal.map((doc) => (
-                <li key={doc._id} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #FAF7F7' }}>
-                  <div className="min-w-0 mr-3">
-                    <p className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12, fontWeight: 700 }}>
-                      {doc.resident?.fullName || doc.fullName || '—'}
-                    </p>
-                    <p className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 10 }}>
-                      {doc.customId}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleSeal(doc._id)}
-                    className="shrink-0 px-3 py-1 rounded-xl text-white text-xs font-medium transition-colors hover:opacity-90"
-                    style={{ background: '#156D07', fontFamily: "'Hahmlet', sans-serif" }}
-                  >
-                    Seal
-                  </button>
-                </li>
-              ))}
-              {toSeal.length === 0 && (
-                <li className="py-3 text-center text-xs" style={{ color: '#C0B0B0' }}>No documents awaiting seal</li>
-              )}
-            </ul>
-          </div>
         </div>
 
       </div>

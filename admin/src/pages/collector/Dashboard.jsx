@@ -8,11 +8,12 @@ import CollectorLayout from '../../components/layouts/CollectorLayout';
 import { getRequests } from '../../services/request.service';
 import { getResidentCount } from '../../services/verification.service';
 
-function KpiCard({ label, sublabel, value, sub, accent = '#156D07' }) {
+function KpiCard({ label, sublabel, value, sub, accent = '#156D07', onClick }) {
   return (
     <div
-      className="flex items-center justify-between bg-white rounded-2xl px-5"
-      style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}
+      className={`flex items-center justify-between bg-white rounded-2xl px-5${onClick ? ' transition-shadow hover:shadow-lg' : ''}`}
+      style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: onClick ? 'pointer' : 'default' }}
+      onClick={onClick}
     >
       <div>
         <p style={{ fontFamily: "'Hahmlet', sans-serif", color: accent, fontSize: 12, fontWeight: 700 }}>
@@ -182,14 +183,15 @@ export default function CollectorDashboard() {
           {/* KPI grid */}
           <div className="grid grid-cols-2 gap-3">
 
-            <KpiCard label="TOTAL" sublabel="COLLECTIONS TODAY" value={`₱${collectionsToday.toLocaleString()}`} />
+            <KpiCard label="TOTAL" sublabel="COLLECTIONS TODAY" value={`₱${collectionsToday.toLocaleString()}`} onClick={() => navigate('/collector/payments')} />
 
-            <KpiCard label="NUMBER OF" sublabel="TRANSACTIONS" value={totalTransactions} />
+            <KpiCard label="NUMBER OF" sublabel="TRANSACTIONS" value={totalTransactions} onClick={() => navigate('/collector/payments')} />
 
             {/* Collections Week / Month */}
             <div
-              className="col-span-2 flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}
+              className="col-span-2 flex items-center justify-between bg-white rounded-2xl px-5 transition-shadow hover:shadow-lg"
+              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: 'pointer' }}
+              onClick={() => navigate('/collector/payments')}
             >
               <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 700, lineHeight: 1.4 }}>
                 COLLECTIONS<br />THIS WEEK / MONTH

@@ -84,6 +84,7 @@ export default function SecretaryRequests() {
   useEffect(() => { setPage(1); }, [search, statusFilter, dateFrom, dateTo]);
 
   const filtered = requests.filter((r) => {
+    if (!r.profile?.facePhoto) return false;
     const matchStatus = statusFilter === 'All' || norm(r.status) === norm(statusFilter);
     const q = search.toLowerCase();
     const name = (r.profile?.fullName || r.user?.username || '').toLowerCase();
@@ -109,11 +110,20 @@ export default function SecretaryRequests() {
   const paged = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleStatusChange = async (id, status) => {
+    if (status === 'Reprint') {
+      const req = requests.find((r) => r._id === id);
+      if (req) setPrinting(req);
+      return;
+    }
     setUpdating(id);
     try {
       await updateRequestStatus(id, { status });
       toast.success(`Status updated to ${status}`);
       fetchRequests();
+      if (status === 'Printing') {
+        const req = requests.find((r) => r._id === id);
+        if (req) setPrinting(req);
+      }
     } catch {
       toast.error('Failed to update status');
     } finally {
@@ -280,7 +290,7 @@ export default function SecretaryRequests() {
               <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: 700 }}>
                 <thead>
                   <tr style={{ background: '#FAFAFA' }}>
-                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Proof', 'Update Status', 'Print'].map((h) => (
+                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Proof', 'Update Status'].map((h) => (
                       <th
                         key={h}
                         className="text-left px-4 py-3"
@@ -303,7 +313,6 @@ export default function SecretaryRequests() {
                     const isCompleted = norm(req.status) === 'completed';
                     const isPaid = norm(req.paymentStatus) === 'paid';
                     const isFree = req.documentType === 'Certificate of Indigency' || !!req.freeDocumentProof;
-                    const canPrint = !isCompleted && (isPaid || isFree) && ['processing'].includes(norm(req.status));
                     return (
                     <tr
                       key={req._id}
@@ -387,11 +396,12 @@ export default function SecretaryRequests() {
                       {/* Update Status */}
                       <td className="px-4 py-3">
                         {(() => {
-                          const isLocked = isCompleted || norm(req.status) === 'rejected';
-                          const canChange = (isPaid || isFree) && !isLocked && updatingId !== req._id;
+                          const isRejected = norm(req.status) === 'rejected';
+                          const canChange = (isPaid || isFree) && !isRejected && updatingId !== req._id;
                           const currentIdx = STATUS_ORDER.findIndex((s) => s.toLowerCase() === norm(req.status));
-                          const forwardOptions = STATUS_ORDER.filter((_, i) => i >= currentIdx);
-                          if (!['completed', 'rejected'].includes(norm(req.status))) forwardOptions.push('Rejected');
+                          const forwardOptions = isCompleted
+                            ? ['Completed', 'Reprint']
+                            : STATUS_ORDER.filter((_, i) => i >= currentIdx).concat(['Rejected']);
                           return (
                             <select
                               disabled={!canChange}
@@ -414,31 +424,13 @@ export default function SecretaryRequests() {
                         })()}
                       </td>
 
-                      {/* Print */}
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => setPrinting(req)}
-                          disabled={!canPrint}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
-                          style={{
-                            fontFamily: "'Hanken Grotesk', sans-serif",
-                            ...(canPrint
-                              ? { background: '#F0FDF4', color: '#156D07', border: '1px solid #BBF7D0', cursor: 'pointer' }
-                              : { background: '#F5F5F5', color: '#C0B0B0', border: '1px solid #E8E0E0', cursor: 'not-allowed' }
-                            ),
-                          }}
-                        >
-                          <FiPrinter size={12} />
-                          Print
-                        </button>
-                      </td>
                     </tr>
                   );
                   })}
 
                   {paged.length === 0 && (
                     <tr>
-                      <td colSpan={12} className="py-12 text-center" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 13 }}>
+                      <td colSpan={11} className="py-12 text-center" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 13 }}>
                         No requests found
                       </td>
                     </tr>

@@ -105,8 +105,9 @@ export default function SecretaryDashboard() {
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}>
+            <button onClick={() => navigate('/secretary/residents')}
+              className="flex items-center justify-between bg-white rounded-2xl px-5 text-left transition-shadow hover:shadow-lg"
+              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: 'pointer' }}>
               <div>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 700 }}>PENDING</p>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>RESIDENTS</p>
@@ -115,19 +116,21 @@ export default function SecretaryDashboard() {
                 <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 36, lineHeight: 1 }}>{pendingRes}</span>
                 <CircleProgress value={pendingRes} total={totalRes} />
               </div>
-            </div>
+            </button>
 
-            <div className="flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}>
+            <button onClick={() => navigate('/secretary/residents')}
+              className="flex items-center justify-between bg-white rounded-2xl px-5 text-left transition-shadow hover:shadow-lg"
+              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: 'pointer' }}>
               <div>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>TOTAL</p>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>RESIDENTS</p>
               </div>
               <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 44, lineHeight: 1 }}>{totalRes}</span>
-            </div>
+            </button>
 
-            <div className="flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}>
+            <button onClick={() => navigate('/secretary/requests')}
+              className="flex items-center justify-between bg-white rounded-2xl px-5 text-left transition-shadow hover:shadow-lg"
+              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: 'pointer' }}>
               <div>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 700 }}>PENDING</p>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>DOCUMENTS</p>
@@ -136,16 +139,17 @@ export default function SecretaryDashboard() {
                 <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 36, lineHeight: 1 }}>{pendingDocs}</span>
                 <CircleProgress value={pendingDocs} total={todayRequests.length || 1} />
               </div>
-            </div>
+            </button>
 
-            <div className="flex items-center justify-between bg-white rounded-2xl px-5"
-              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80 }}>
+            <button onClick={() => navigate('/secretary/requests')}
+              className="flex items-center justify-between bg-white rounded-2xl px-5 text-left transition-shadow hover:shadow-lg"
+              style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)', height: 80, cursor: 'pointer' }}>
               <div>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>FINISH</p>
                 <p style={{ fontFamily: "'Hahmlet', sans-serif", color: '#156D07', fontSize: 13, fontWeight: 700 }}>DOCUMENTS</p>
               </div>
               <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 44, lineHeight: 1 }}>{finishedDocs}</span>
-            </div>
+            </button>
           </div>
 
           {/* Newly Registered Residents */}
@@ -194,9 +198,17 @@ export default function SecretaryDashboard() {
 
           {/* Ready to Pick Up */}
           <div className="bg-white rounded-3xl p-5" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
-            <p className="mb-3" style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 15 }}>
-              READY TO PICK UP DOCS
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 15 }}>
+                READY TO PICK UP DOCS
+              </p>
+              <button
+                onClick={() => navigate('/secretary/releases')}
+                style={{ fontFamily: "'Kaisei Decol', serif", color: '#A18D8D', fontSize: 12, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                see all
+              </button>
+            </div>
             <div className="flex justify-between pb-2 mb-1" style={{ borderBottom: '1px solid #F0EAEA' }}>
               <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 13, fontWeight: 700 }}>Name</span>
               <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 13, fontWeight: 700 }}>Claiming Code</span>

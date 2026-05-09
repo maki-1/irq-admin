@@ -4,7 +4,7 @@ import {
   FiSearch, FiEye, FiX,
   FiUser, FiMapPin, FiPhone, FiMail,
   FiCalendar, FiBriefcase, FiCheckCircle, FiXCircle, FiClock,
-  FiCreditCard, FiDownload, FiRotateCcw, FiAlertTriangle,
+  FiCreditCard, FiDownload, FiAlertTriangle,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
@@ -55,30 +55,63 @@ function InfoRow({ icon: Icon, label, value }) {
 
 /* ── Review Modal ── */
 function ReviewModal({ profile, onClose, onSave, onReset }) {
-  const [status,        setStatus]        = useState(['under review', 'approved'].includes(normStatus(profile.status)) ? normStatus(profile.status) : 'under review');
-  const [remarks,       setRemarks]       = useState(profile.rejectionReason || profile.remarks || '');
-  const [saving,        setSaving]        = useState(false);
-  const [resetting,     setResetting]     = useState(false);
-  const [confirmReset,  setConfirmReset]  = useState(false);
+  const [remarks,    setRemarks]    = useState('');
+  const [saving,     setSaving]     = useState(false);
+  const [resetting,  setResetting]  = useState(false);
+  const [showReject, setShowReject] = useState(false);
+  const [imgPreview,  setImgPreview]  = useState(null);
+  const [croppedUrl,  setCroppedUrl]  = useState(null);
+  const [cropLoading, setCropLoading] = useState(false);
 
-  const handleSave = async () => {
+  const ID_LABELS = ['ID Front', 'ID Back'];
+
+  useEffect(() => {
+    if (!imgPreview || !ID_LABELS.includes(imgPreview.label)) {
+      setCroppedUrl(null);
+      return;
+    }
+    let cancelled = false;
+    setCropLoading(true);
+    setCroppedUrl(null);
+
+    api.post('/crop-id/detect-id', { imageUrl: imgPreview.url })
+      .then(({ data }) => { if (!cancelled) setCroppedUrl(data.croppedImage); })
+      .catch(() => { if (!cancelled) setCroppedUrl(null); })
+      .finally(() => { if (!cancelled) setCropLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [imgPreview]);
+
+  const handleApprove = async () => {
     setSaving(true);
     try {
-      await onSave(profile._id, status, remarks);
+      await onSave(profile._id, 'approved', '');
       onClose();
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReset = async () => {
+  const handleUndoApprove = async () => {
+    setSaving(true);
+    try {
+      await onSave(profile._id, 'under review', '');
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isApproved = normStatus(profile.status) === 'approved';
+
+  const handleReject = async () => {
     setResetting(true);
     try {
-      await onReset(profile._id);
+      await onReset(profile._id, remarks);
       onClose();
     } finally {
       setResetting(false);
-      setConfirmReset(false);
+      setShowReject(false);
     }
   };
 
@@ -86,7 +119,53 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
     ? new Date(profile.dateOfBirth).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
     : null;
 
+  const age = profile.age != null
+    ? String(profile.age)
+    : profile.dateOfBirth
+      ? String(Math.floor((Date.now() - new Date(profile.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000)))
+      : null;
+
   return (
+    <>
+    {imgPreview && (
+      <div
+        className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.88)' }}
+        onClick={() => setImgPreview(null)}
+      >
+        <div className="relative w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-3">
+            <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#FFFFFF', fontSize: 15 }}>
+              {imgPreview.label}
+            </p>
+            <button
+              onClick={() => setImgPreview(null)}
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
+            >
+              <FiX size={16} color="#FFFFFF" />
+            </button>
+          </div>
+          <div className="rounded-2xl overflow-hidden flex items-center justify-center"
+            style={{ background: '#111', aspectRatio: '85.6/54', width: '100%' }}>
+            {cropLoading ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                  Loading ID…
+                </p>
+              </div>
+            ) : (
+              <img
+                src={croppedUrl || imgPreview.url}
+                alt={imgPreview.label}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.45)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -133,15 +212,20 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
               Personal Information
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <InfoRow icon={FiMail}      label="Email"          value={profile.email} />
-              <InfoRow icon={FiPhone}     label="Contact"        value={profile.contactNumber} />
-              <InfoRow icon={FiCalendar}  label="Date of Birth"  value={dob} />
-              <InfoRow icon={FiUser}      label="Gender"         value={profile.gender} />
-              <InfoRow icon={FiUser}      label="Civil Status"   value={profile.civilStatus} />
-              <InfoRow icon={FiBriefcase} label="Occupation"     value={profile.occupation} />
-              <InfoRow icon={FiMapPin}    label="Nationality"    value={profile.nationality} />
-              <InfoRow icon={FiCreditCard}label="ID Type"        value={profile.idType} />
-              <InfoRow icon={FiCreditCard}label="Name on ID"     value={profile.idName} />
+              <InfoRow icon={FiMail}      label="Email"              value={profile.email} />
+              <InfoRow icon={FiPhone}     label="Contact"            value={profile.contactNumber} />
+              <InfoRow icon={FiCalendar}  label="Date of Birth"      value={dob} />
+              <InfoRow icon={FiCalendar}  label="Age"                value={age} />
+              <InfoRow icon={FiUser}      label="Gender"             value={profile.gender} />
+              <InfoRow icon={FiUser}      label="Civil Status"       value={profile.civilStatus} />
+              <InfoRow icon={FiBriefcase} label="Occupation"         value={profile.occupation} />
+              <InfoRow icon={FiBriefcase} label="Education Level"    value={profile.educationLevel} />
+              <InfoRow icon={FiMapPin}    label="Nationality"        value={profile.nationality} />
+              <InfoRow icon={FiUser}      label="Mother's Name"      value={profile.mothersName} />
+              <InfoRow icon={FiUser}      label="Father's Name"      value={profile.fathersName} />
+              <InfoRow icon={FiMapPin}    label="Years at Residence" value={profile.yearsAtResidence != null ? String(profile.yearsAtResidence) : null} />
+              <InfoRow icon={FiCreditCard}label="ID Type"            value={profile.idType} />
+              <InfoRow icon={FiCreditCard}label="Name on ID"         value={profile.idName} />
             </div>
           </div>
 
@@ -150,8 +234,9 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
             const docs = [
               { label: 'ID Front',               url: profile.idFront              },
               { label: 'ID Back',                url: profile.idBack               },
-{ label: 'Education Certificate',  url: profile.educationCertificate },
+              { label: 'Education Certificate',  url: profile.educationCertificate },
               { label: 'Proof of Residency',     url: profile.proofOfResidency     },
+              { label: 'Free Proof Document',    url: profile.freeProofDocument    },
               { label: 'Government ID',          url: profile.governmentId         },
               { label: 'Selfie with ID',         url: profile.selfieWithId         },
             ].filter((d) => d.url);
@@ -163,63 +248,26 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   {docs.map((doc) => (
-                    <a key={doc.label} href={doc.url} target="_blank" rel="noreferrer"
+                    <button
+                      key={doc.label}
+                      onClick={() => setImgPreview(doc)}
                       className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: '#E0D8D8', color: '#156D07', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                      style={{ borderColor: '#E0D8D8', color: '#156D07', fontFamily: "'Hanken Grotesk', sans-serif" }}
+                    >
                       <FiEye size={13} />
                       {doc.label}
-                    </a>
+                    </button>
                   ))}
                 </div>
               </div>
             );
           })()}
 
-          {/* Review decision */}
-          <div>
-            <p className="mb-3" style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13 }}>
-              Decision
-            </p>
-            <div className="flex gap-2 mb-3">
-              {['under review', 'approved'].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStatus(s)}
-                  className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all border"
-                  style={{
-                    fontFamily: "'Hahmlet', sans-serif",
-                    background:  status === s ? STATUS_CFG[s].bg    : '#F9F7F7',
-                    color:       status === s ? STATUS_CFG[s].color : '#A18D8D',
-                    borderColor: status === s ? STATUS_CFG[s].color : 'transparent',
-                  }}
-                >
-                  {STATUS_CFG[s].label}
-                </button>
-              ))}
-            </div>
-
-            <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>
-              Remarks (optional)
-            </label>
-            <textarea
-              rows={3}
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              placeholder="Add notes or reason for decision…"
-              className="w-full resize-none rounded-xl px-4 py-3 text-sm focus:outline-none"
-              style={{
-                fontFamily: "'Hanken Grotesk', sans-serif",
-                background: '#F9F7F7',
-                border: '1px solid #E8E0E0',
-                color: '#333',
-              }}
-            />
-          </div>
         </div>
 
         {/* Footer actions */}
         <div className="px-6 py-4" style={{ borderTop: '1px solid #F0EAEA' }}>
-          {confirmReset ? (
+          {showReject ? (
             <div className="flex flex-col gap-3">
               <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
                 style={{ background: '#FFF1F2', border: '1px solid #FECDD3' }}>
@@ -229,9 +277,25 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
                   They will receive a notification to re-submit their information.
                 </p>
               </div>
+              <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 2 }}>
+                Remarks (optional)
+              </label>
+              <textarea
+                rows={3}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Add reason for rejection…"
+                className="w-full resize-none rounded-xl px-4 py-3 text-sm focus:outline-none"
+                style={{
+                  fontFamily: "'Hanken Grotesk', sans-serif",
+                  background: '#F9F7F7',
+                  border: '1px solid #E8E0E0',
+                  color: '#333',
+                }}
+              />
               <div className="flex gap-3">
                 <button
-                  onClick={() => setConfirmReset(false)}
+                  onClick={() => { setShowReject(false); setRemarks(''); }}
                   disabled={resetting}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-100 disabled:opacity-60"
                   style={{ fontFamily: "'Hahmlet', sans-serif", color: '#827575', background: '#F5F0F0' }}
@@ -239,26 +303,19 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
                   No, Cancel
                 </button>
                 <button
-                  onClick={handleReset}
+                  onClick={handleReject}
                   disabled={resetting}
                   className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-opacity disabled:opacity-60"
                   style={{ fontFamily: "'Hahmlet', sans-serif", background: '#BE123C' }}
                 >
-                  {resetting ? 'Resetting…' : 'Yes, Reset'}
+                  {resetting ? 'Rejecting…' : 'Yes, Reject'}
                 </button>
               </div>
             </div>
           ) : (
             <div className="flex gap-3">
               <button
-                onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-100"
-                style={{ fontFamily: "'Hahmlet', sans-serif", color: '#827575', background: '#F5F0F0' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setConfirmReset(true)}
+                onClick={() => setShowReject(true)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                 style={{
                   fontFamily: "'Hahmlet', sans-serif",
@@ -267,22 +324,31 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
                   border: '1px solid #FECDD3',
                 }}
               >
-                <FiRotateCcw size={13} />
-                Reset
+                <FiXCircle size={13} />
+                Reject
               </button>
               <button
-                onClick={handleSave}
+                onClick={isApproved ? handleUndoApprove : handleApprove}
                 disabled={saving}
-                className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-opacity disabled:opacity-60"
-                style={{ fontFamily: "'Hahmlet', sans-serif", background: '#156D07' }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity disabled:opacity-60 flex items-center justify-center gap-1.5"
+                style={{
+                  fontFamily: "'Hahmlet', sans-serif",
+                  background: isApproved ? '#F0FDF4' : '#156D07',
+                  color:      isApproved ? '#156D07' : '#FFFFFF',
+                  border:     isApproved ? '1px solid #BBF7D0' : 'none',
+                }}
               >
-                {saving ? 'Saving…' : 'Save Decision'}
+                {saving
+                  ? (isApproved ? 'Reverting…' : 'Approving…')
+                  : (isApproved ? 'Undo Approve' : 'Approve')
+                }
               </button>
             </div>
           )}
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -323,9 +389,9 @@ export default function Residence() {
     }
   };
 
-  const handleReset = async (id) => {
+  const handleReset = async (id, remarks) => {
     try {
-      await api.delete(`/verifications/${id}/reset`);
+      await api.delete(`/verifications/${id}/reset`, { data: { remarks } });
       toast.success('Verification reset. Resident has been notified to fill up again.');
       fetchProfiles();
     } catch (err) {
@@ -336,6 +402,7 @@ export default function Residence() {
 
   /* Filter + search */
   const filtered = profiles.filter((p) => {
+    if (!p.facePhoto) return false;
     const matchFilter = filter === 'All' || normStatus(p.status) === normStatus(filter);
     const q = search.toLowerCase();
     const matchSearch = !q ||
