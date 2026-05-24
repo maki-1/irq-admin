@@ -64,8 +64,8 @@ export default function SecretaryRequests() {
   const [dateTo,   setDateTo]     = useState('');
   const [page, setPage]           = useState(1);
   const [updatingId, setUpdating]   = useState(null);
-  const [printing,   setPrinting]   = useState(null); // request being printed
-  const [proofUrl,   setProofUrl]   = useState(null); // proof image to preview
+  const [printing,   setPrinting]   = useState(null);
+  const [imageModal, setImageModal] = useState(null); // { url, title }
 
   const fetchRequests = () => {
     setLoading(true);
@@ -290,7 +290,7 @@ export default function SecretaryRequests() {
               <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: 700 }}>
                 <thead>
                   <tr style={{ background: '#FAFAFA' }}>
-                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Proof', 'Update Status'].map((h) => (
+                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Control No.', 'Purok Clearance', 'Proof', 'Update Status'].map((h) => (
                       <th
                         key={h}
                         className="text-left px-4 py-3"
@@ -371,11 +371,38 @@ export default function SecretaryRequests() {
                           : '—'}
                       </td>
 
+                      {/* Control No. */}
+                      <td className="px-4 py-3 text-xs" style={{ color: '#555', fontFamily: "'Hanken Grotesk', sans-serif", whiteSpace: 'nowrap' }}>
+                        {req.controlNumber || <span style={{ color: '#C0B0B0' }}>—</span>}
+                      </td>
+
+                      {/* Purok Clearance Attachment */}
+                      <td className="px-4 py-3">
+                        {req.requestPhoto ? (
+                          <button
+                            onClick={() => setImageModal({ url: req.requestPhoto, title: 'Purok Clearance' })}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                            style={{
+                              fontFamily: "'Hanken Grotesk', sans-serif",
+                              background: '#F0FDF4',
+                              color: '#156D07',
+                              border: '1px solid #BBF7D0',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <FiImage size={12} />
+                            View
+                          </button>
+                        ) : (
+                          <span style={{ color: '#C0B0B0', fontSize: 12, fontFamily: "'Hanken Grotesk', sans-serif" }}>—</span>
+                        )}
+                      </td>
+
                       {/* Proof */}
                       <td className="px-4 py-3">
                         {req.freeDocumentProof ? (
                           <button
-                            onClick={() => setProofUrl(req.freeDocumentProof)}
+                            onClick={() => setImageModal({ url: req.freeDocumentProof, title: 'Free Document Proof' })}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
                             style={{
                               fontFamily: "'Hanken Grotesk', sans-serif",
@@ -430,7 +457,7 @@ export default function SecretaryRequests() {
 
                   {paged.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-12 text-center" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 13 }}>
+                      <td colSpan={13} className="py-12 text-center" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 13 }}>
                         No requests found
                       </td>
                     </tr>
@@ -490,12 +517,12 @@ export default function SecretaryRequests() {
       />
     )}
 
-    {/* Proof image modal */}
-    {proofUrl && (
+    {/* Image preview modal */}
+    {imageModal && (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center"
         style={{ background: 'rgba(0,0,0,0.6)' }}
-        onClick={() => setProofUrl(null)}
+        onClick={() => setImageModal(null)}
       >
         <div
           className="relative bg-white rounded-2xl overflow-hidden shadow-2xl"
@@ -507,10 +534,10 @@ export default function SecretaryRequests() {
             style={{ borderBottom: '1px solid #F0EAEA' }}
           >
             <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 14 }}>
-              Free Document Proof
+              {imageModal.title}
             </span>
             <button
-              onClick={() => setProofUrl(null)}
+              onClick={() => setImageModal(null)}
               className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
               style={{ color: '#A18D8D' }}
             >
@@ -519,8 +546,8 @@ export default function SecretaryRequests() {
           </div>
           <div className="p-4">
             <img
-              src={proofUrl}
-              alt="Free Document Proof"
+              src={imageModal.url}
+              alt={imageModal.title}
               style={{ maxWidth: '80vw', maxHeight: '75vh', objectFit: 'contain', borderRadius: 8 }}
             />
           </div>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FiSearch, FiFileText, FiCheckCircle, FiXCircle,
-  FiClock, FiLoader, FiPrinter, FiChevronLeft, FiChevronRight, FiDownload,
+  FiClock, FiLoader, FiPrinter, FiChevronLeft, FiChevronRight, FiDownload, FiImage, FiX,
 } from 'react-icons/fi';
 import { getRequests, updateRequestStatus } from '../../services/request.service';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
@@ -66,6 +66,7 @@ export default function CaptainRequests() {
   const [updatingId, setUpdating]  = useState(null);
   const [printing,   setPrinting]  = useState(null);
   const [receipt,    setReceipt]   = useState(null);
+  const [imageModal, setImageModal] = useState(null); // { url, title }
 
   const fetchRequests = () => {
     setLoading(true);
@@ -288,7 +289,7 @@ export default function CaptainRequests() {
               <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: 820 }}>
                 <thead>
                   <tr style={{ background: '#FAFAFA' }}>
-                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Update Status', 'Receipt'].map((h) => (
+                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Control No.', 'Purok Clearance', 'Update Status', 'Receipt'].map((h) => (
                       <th
                         key={h}
                         className="text-left px-4 py-3"
@@ -370,6 +371,33 @@ export default function CaptainRequests() {
                             : '—'}
                         </td>
 
+                        {/* Control No. */}
+                        <td className="px-4 py-3 text-xs" style={{ color: '#555', fontFamily: "'Hanken Grotesk', sans-serif", whiteSpace: 'nowrap' }}>
+                          {req.controlNumber || <span style={{ color: '#C0B0B0' }}>—</span>}
+                        </td>
+
+                        {/* Purok Clearance Attachment */}
+                        <td className="px-4 py-3">
+                          {req.requestPhoto ? (
+                            <button
+                              onClick={() => setImageModal({ url: req.requestPhoto, title: 'Purok Clearance' })}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                              style={{
+                                fontFamily: "'Hanken Grotesk', sans-serif",
+                                background: '#F0FDF4',
+                                color: '#156D07',
+                                border: '1px solid #BBF7D0',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <FiImage size={12} />
+                              View
+                            </button>
+                          ) : (
+                            <span style={{ color: '#C0B0B0', fontSize: 12, fontFamily: "'Hanken Grotesk', sans-serif" }}>—</span>
+                          )}
+                        </td>
+
                         {/* Update Status */}
                         <td className="px-4 py-3">
                           {(() => {
@@ -425,7 +453,7 @@ export default function CaptainRequests() {
 
                   {paged.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-12 text-center" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 13 }}>
+                      <td colSpan={13} className="py-12 text-center" style={{ color: '#C0B0B0', fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 13 }}>
                         No requests found
                       </td>
                     </tr>
@@ -490,6 +518,43 @@ export default function CaptainRequests() {
         residentName={receipt.profile?.fullName || receipt.user?.username || ''}
         onClose={() => setReceipt(null)}
       />
+    )}
+
+    {imageModal && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: 'rgba(0,0,0,0.6)' }}
+        onClick={() => setImageModal(null)}
+      >
+        <div
+          className="relative bg-white rounded-2xl overflow-hidden shadow-2xl"
+          style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ borderBottom: '1px solid #F0EAEA' }}
+          >
+            <span style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 14 }}>
+              {imageModal.title}
+            </span>
+            <button
+              onClick={() => setImageModal(null)}
+              className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              style={{ color: '#A18D8D' }}
+            >
+              <FiX size={18} />
+            </button>
+          </div>
+          <div className="p-4">
+            <img
+              src={imageModal.url}
+              alt={imageModal.title}
+              style={{ maxWidth: '80vw', maxHeight: '75vh', objectFit: 'contain', borderRadius: 8 }}
+            />
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

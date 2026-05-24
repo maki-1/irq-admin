@@ -6,14 +6,12 @@ import useAuthStore from '../../store/authStore';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
 import CollectorLayout from '../../components/layouts/CollectorLayout';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
-import PurokLeaderLayout from '../../components/layouts/PurokLeaderLayout';
 import { getAuditLogs } from '../../services/audit.service';
 
 const LAYOUTS = {
   Secretary: SecretaryLayout,
   Collector: CollectorLayout,
   'Barangay Captain': CaptainLayout,
-  'Purok Leader': PurokLeaderLayout,
 };
 
 const ROLE_COLORS = {

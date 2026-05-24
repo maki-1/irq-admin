@@ -12,8 +12,10 @@ const requestSchema = new mongoose.Schema(
     paymentStatus:     { type: String, default: 'unpaid' },
     paymentLinkId:     { type: String },
     amountPaid:        { type: Number },
-    orNumber:          { type: String },
-    freeDocumentProof: { type: String }, // URL of uploaded proof image for free documents
+    orNumber:                  { type: String },
+    freeDocumentProof:         { type: String },
+    controlNumber:  { type: String },
+    requestPhoto:   { type: String },
   },
   { timestamps: true, collection: 'requests' }
 );

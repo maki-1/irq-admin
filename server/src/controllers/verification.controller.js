@@ -78,12 +78,6 @@ exports.getAll = async (req, res) => {
   try {
     const { status } = req.query;
     const filter = status ? { status: { $regex: new RegExp(`^${status}$`, 'i') } } : {};
-    if (req.user.role === 'Purok Leader' && req.user.purok) {
-      filter.$or = [
-        { purok:   { $regex: new RegExp(req.user.purok, 'i') } },
-        { address: { $regex: new RegExp(req.user.purok, 'i') } },
-      ];
-    }
     const profiles = await VerificationProfile.find(filter).sort({ createdAt: -1 });
     res.json(profiles);
   } catch (err) {
