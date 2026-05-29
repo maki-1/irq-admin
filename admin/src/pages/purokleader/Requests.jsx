@@ -323,7 +323,7 @@ export default function PurokLeaderRequests() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {r.purokLeaderStatus === 'pending' ? (
+                        {r.purokLeaderStatus?.toLowerCase() === 'pending' ? (
                           <div className="flex gap-1.5">
                             <button
                               onClick={() => setModal({ request: r, action: 'approve' })}
