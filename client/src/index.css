@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #1a1a1a;
+    background-color: #f9fafb;
+    -webkit-font-smoothing: antialiased;
+  }
+  input, select, textarea {
+    font-size: 16px; /* Prevent iOS auto-zoom */
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white font-semibold py-3 px-6 rounded-xl hover:bg-green-800 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-outline {
+    @apply border-2 border-primary text-primary font-semibold py-3 px-6 rounded-xl hover:bg-primary hover:text-white active:scale-95 transition-all duration-150;
+  }
+  .input-field {
+    @apply w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-150 bg-white;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-5;
+  }
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  }
+  .status-processing {
+    @apply bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  }
+  .status-ready {
+    @apply bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  }
+  .status-rejected {
+    @apply bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  }
+  .status-claimed {
+    @apply bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  }
+}
