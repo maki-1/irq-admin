@@ -115,14 +115,14 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
     }
   };
 
-  const dob = profile.dateOfBirth
-    ? new Date(profile.dateOfBirth).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+  const dob = profile.birthday
+    ? new Date(profile.birthday).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
     : null;
 
   const age = profile.age != null
     ? String(profile.age)
-    : profile.dateOfBirth
-      ? String(Math.floor((Date.now() - new Date(profile.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000)))
+    : profile.birthday
+      ? String(Math.floor((Date.now() - new Date(profile.birthday)) / (365.25 * 24 * 60 * 60 * 1000)))
       : null;
 
   return (
@@ -441,7 +441,7 @@ export default function CaptainResidence() {
       { header: 'Address',       key: 'address'      },
       { header: 'Gender',        key: 'gender'       },
       { header: 'Civil Status',  key: 'civilStatus'  },
-      { header: 'Date of Birth', key: 'dateOfBirth'  },
+      { header: 'Date of Birth', key: 'birthday'  },
       { header: 'Occupation',    key: 'occupation'   },
       { header: 'Nationality',   key: 'nationality'  },
       { header: 'ID Type',       key: 'idType'       },
@@ -458,8 +458,8 @@ export default function CaptainResidence() {
     const header = columns.map((c) => c.header).join(',');
     const rows = filtered.map((p) =>
       columns.map((c) => {
-        if (c.key === 'dateOfBirth' && p.dateOfBirth) {
-          return escape(new Date(p.dateOfBirth).toLocaleDateString('en-PH'));
+        if (c.key === 'birthday' && p.birthday) {
+          return escape(new Date(p.birthday).toLocaleDateString('en-PH'));
         }
         return escape(p[c.key]);
       }).join(',')

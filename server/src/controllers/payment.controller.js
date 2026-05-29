@@ -63,11 +63,20 @@ exports.payMongoWebhook = async (req, res) => {
         { new: true }
       );
       if (payment) {
-        await Document.findByIdAndUpdate(payment.document, { paymentStatus: 'Paid' });
-        await Request.findByIdAndUpdate(payment.document, {
-          paymentStatus: 'paid',
-          amountPaid: payment.amount,  // stored in PHP (e.g. 100.00), not centavos
-        });
+        if (payment.document) {
+          await Document.findByIdAndUpdate(payment.document, { paymentStatus: 'Paid' });
+          await Request.findByIdAndUpdate(payment.document, {
+            paymentStatus: 'paid',
+            amountPaid: payment.amount,
+          });
+        }
+        // Handle resident pay-approved flow (uses requests array instead of document)
+        if (payment.requests?.length) {
+          await Request.updateMany(
+            { _id: { $in: payment.requests } },
+            { paymentStatus: 'paid', status: 'Processing', amountPaid: payment.amount }
+          );
+        }
       }
     }
     res.sendStatus(200);

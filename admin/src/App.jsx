@@ -25,6 +25,11 @@ import CaptainRequests   from './pages/captain/Requests';
 import CaptainDocuments  from './pages/captain/Documents';
 import CaptainReports    from './pages/captain/Reports';
 import CaptainUsers      from './pages/captain/Users';
+import PurokFees         from './pages/captain/PurokFees';
+
+// Purok Leader
+import PurokLeaderDashboard from './pages/purokleader/Dashboard';
+import PurokLeaderRequests  from './pages/purokleader/Requests';
 
 // Shared
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -34,6 +39,7 @@ const ROLE_HOME = {
   Secretary: '/secretary',
   Collector: '/collector',
   'Barangay Captain': '/captain',
+  'Purok Leader': '/purok-leader',
 };
 
 export default function App() {
@@ -66,13 +72,20 @@ export default function App() {
 
       {/* Barangay Captain */}
       <Route element={<ProtectedRoute allowedRoles={['Barangay Captain']} />}>
-        <Route path="/captain"            element={<CaptainDashboard />} />
-        <Route path="/captain/residents"  element={<CaptainResidence />} />
-        <Route path="/captain/requests"   element={<CaptainRequests />} />
-        <Route path="/captain/documents"  element={<CaptainDocuments />} />
-        <Route path="/captain/reports"    element={<CaptainReports />} />
-        <Route path="/captain/users"      element={<CaptainUsers />} />
-        <Route path="/captain/logs"       element={<Logs />} />
+        <Route path="/captain"              element={<CaptainDashboard />} />
+        <Route path="/captain/residents"    element={<CaptainResidence />} />
+        <Route path="/captain/requests"     element={<CaptainRequests />} />
+        <Route path="/captain/documents"    element={<CaptainDocuments />} />
+        <Route path="/captain/reports"      element={<CaptainReports />} />
+        <Route path="/captain/users"        element={<CaptainUsers />} />
+        <Route path="/captain/purok-fees"   element={<PurokFees />} />
+        <Route path="/captain/logs"         element={<Logs />} />
+      </Route>
+
+      {/* Purok Leader */}
+      <Route element={<ProtectedRoute allowedRoles={['Purok Leader']} />}>
+        <Route path="/purok-leader"          element={<PurokLeaderDashboard />} />
+        <Route path="/purok-leader/requests" element={<PurokLeaderRequests />} />
       </Route>
 
       {/* Landing page */}

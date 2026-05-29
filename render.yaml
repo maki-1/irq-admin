@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: irequestd
+    env: node
+    rootDir: .
+    buildCommand: cd client && npm ci && npm run build && cd ../server && npm ci
+    startCommand: node server/src/app.js
+    envVars:
+      - key: NODE_ENV
+        value: production

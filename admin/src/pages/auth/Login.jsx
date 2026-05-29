@@ -97,6 +97,9 @@ export default function Login() {
               placeholder="staff@dologon.gov.ph"
               value={form.email}
               onChange={(e) => handleChange('email', e.target.value)}
+              onCopy={e => e.preventDefault()}
+              onCut={e => e.preventDefault()}
+              onPaste={e => e.preventDefault()}
             />
             {errors.email && (
               <p className="mt-1 text-xs text-red-400">{errors.email}</p>
@@ -110,6 +113,9 @@ export default function Login() {
               placeholder="••••••••"
               value={form.password}
               onChange={(e) => handleChange('password', e.target.value)}
+              onCopy={e => e.preventDefault()}
+              onCut={e => e.preventDefault()}
+              onPaste={e => e.preventDefault()}
             />
             {errors.password && (
               <p className="mt-1 text-xs text-red-400">{errors.password}</p>

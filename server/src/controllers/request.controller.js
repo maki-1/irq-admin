@@ -27,7 +27,7 @@ async function attachProfiles(requests) {
 
   const profiles = orClauses.length
     ? await VerificationProfile.find({ $or: orClauses })
-        .select('user fullName age address gender purok contactNumber email fatherName motherName civilStatus occupation nationality idType idName dateOfBirth yearsAtAddress facePhoto')
+        .select('user fullName age address gender contactNumber email fatherName motherName civilStatus occupation nationality idType idName birthday yearsAtAddress facePhoto')
         .lean()
     : [];
 
@@ -102,7 +102,7 @@ exports.updateStatus = async (req, res) => {
             { user:  request.user._id },
             { email: request.user.email?.toLowerCase() },
           ],
-        }).select('fullName age purok address contactNumber email').lean();
+        }).select('fullName age address contactNumber email').lean();
 
         const claimCode = generateClaimCode();
 
@@ -114,9 +114,12 @@ exports.updateStatus = async (req, res) => {
           claimCode,
           fullName:     profile?.fullName || request.user.username,
           age:          profile?.age      ?? null,
-          purok:        profile?.purok    || (profile?.address || '').split(',')[0].replace(/^Purok\s+/i, '').trim(),
+          purok:        (profile?.address || '').split(',')[0].replace(/^Purok\s+/i, '').trim(),
           address:      profile?.address  || '',
         });
+
+        // Write claimCode back to the Request so the resident can see it
+        await Request.findByIdAndUpdate(request._id, { claimCode });
 
         // Gather contact info — profile first, fall back to ResidentUser fields
         const email         = profile?.email         || request.user.email  || request.user.gmail  || null;

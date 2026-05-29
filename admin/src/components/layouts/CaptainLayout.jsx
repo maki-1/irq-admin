@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FiGrid, FiHome, FiFileText, FiBarChart2, FiUsers, FiClipboard, FiMenu, FiX,
   FiSearch, FiMessageCircle, FiBell,
-  FiUser, FiLogOut, FiChevronDown, FiActivity,
+  FiUser, FiLogOut, FiChevronDown, FiActivity, FiTag,
 } from 'react-icons/fi';
 import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
@@ -15,6 +15,7 @@ const NAV = [
   { to: '/captain/documents',  label: 'DOCUMENTS',  Icon: FiFileText  },
   { to: '/captain/reports',    label: 'REPORTS',    Icon: FiBarChart2 },
   { to: '/captain/users',      label: 'USERS',      Icon: FiUsers     },
+  { to: '/captain/purok-fees', label: 'PUROK FEES', Icon: FiTag       },
   { to: '/captain/logs',       label: 'LOGS',       Icon: FiActivity  },
 ];
 

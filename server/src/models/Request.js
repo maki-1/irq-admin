@@ -16,6 +16,14 @@ const requestSchema = new mongoose.Schema(
     freeDocumentProof:         { type: String },
     controlNumber:  { type: String },
     requestPhoto:   { type: String },
+    // Purok Leader approval
+    claimCode:          { type: String, default: null },
+    // Purok Leader approval
+    purokLeaderStatus:  { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    purokLeaderBy:      { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    purokLeaderAt:      { type: Date, default: null },
+    purokLeaderRemarks: { type: String, default: '' },
+    purokClearanceFee:  { type: Number, default: 0 },
   },
   { timestamps: true, collection: 'requests' }
 );

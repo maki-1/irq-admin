@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String },
     role: {
       type: String,
-      enum: ['Secretary', 'Collector', 'Barangay Captain'],
+      enum: ['Secretary', 'Collector', 'Barangay Captain', 'Purok Leader'],
       default: 'Secretary',
     },
     // OAuth

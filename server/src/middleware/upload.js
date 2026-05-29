@@ -44,4 +44,13 @@ const uploadToCloudinary = (field, folder, resourceType = 'auto') => [
   },
 ];
 
-module.exports = { uploadToCloudinary };
+// Multi-field multer (memory) — for verification steps
+const multerMulti = multer({
+  storage: memoryStorage,
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB per file for IDs/selfies
+});
+
+const multiUpload = (fields) => multerMulti.fields(fields);
+
+module.exports = { uploadToCloudinary, multiUpload, streamToCloudinary };

@@ -7,13 +7,16 @@ import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
 
-const ROLES = ['Secretary', 'Collector', 'Barangay Captain'];
+const ROLES = ['Secretary', 'Collector', 'Barangay Captain', 'Purok Leader'];
 
 const ROLE_COLORS = {
-  Secretary:         { bg: '#EFF6FF', color: '#1D6DB5' },
-  Collector:         { bg: '#FFF7ED', color: '#C2610A' },
-  'Barangay Captain':{ bg: '#F0FDF4', color: '#156D07' },
+  Secretary:          { bg: '#EFF6FF', color: '#1D6DB5' },
+  Collector:          { bg: '#FFF7ED', color: '#C2610A' },
+  'Barangay Captain': { bg: '#F0FDF4', color: '#156D07' },
+  'Purok Leader':     { bg: '#FDF4FF', color: '#7C3AED' },
 };
+
+const PUROKS = Array.from({ length: 21 }, (_, i) => `Purok ${i + 1}`);
 
 function RoleBadge({ role }) {
   const cfg = ROLE_COLORS[role] || { bg: '#F5F5F5', color: '#888' };
@@ -27,7 +30,7 @@ function RoleBadge({ role }) {
 
 /* ── Create Account Modal ── */
 function CreateModal({ onClose, onCreated }) {
-  const [form,    setForm]    = useState({ fullName: '', email: '', password: '', role: 'Secretary' });
+  const [form,    setForm]    = useState({ fullName: '', email: '', password: '', role: 'Secretary', purok: '' });
   const [showPw,  setShowPw]  = useState(false);
   const [saving,  setSaving]  = useState(false);
 
@@ -38,6 +41,7 @@ function CreateModal({ onClose, onCreated }) {
       toast.error('All fields are required.'); return;
     }
     if (form.password.length < 6) { toast.error('Password must be at least 6 characters.'); return; }
+    if (form.role === 'Purok Leader' && !form.purok) { toast.error('Select a purok for this leader.'); return; }
     setSaving(true);
     try {
       const { data } = await api.post('/users', form);
@@ -116,9 +120,7 @@ function CreateModal({ onClose, onCreated }) {
                 <button
                   key={r}
                   type="button"
-                  onClick={() => {
-                    set('role', r);
-                  }}
+                  onClick={() => set('role', r)}
                   className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all border"
                   style={{
                     fontFamily: "'Hahmlet', sans-serif",
@@ -130,6 +132,24 @@ function CreateModal({ onClose, onCreated }) {
               ))}
             </div>
           </div>
+
+          {/* Purok selector — only when role is Purok Leader */}
+          {form.role === 'Purok Leader' && (
+            <div>
+              <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>
+                Assigned Purok <span style={{ color: '#DC2626' }}>*</span>
+              </label>
+              <select
+                value={form.purok}
+                onChange={(e) => set('purok', e.target.value)}
+                className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+                style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: form.purok ? '#333' : '#A18D8D' }}
+              >
+                <option value="">Select a purok…</option>
+                {PUROKS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          )}
 
         </div>
 
