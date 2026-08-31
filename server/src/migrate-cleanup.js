@@ -1,3 +1,6 @@
+// HISTORICAL — operates on MongoDB, which this app no longer uses. It was a
+// one-off that stripped renamed fields from verificationprofiles. Kept for
+// reference only; the live data now lives in Postgres.
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 

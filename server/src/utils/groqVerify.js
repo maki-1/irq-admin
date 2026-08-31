@@ -2,9 +2,16 @@ const Groq = require('groq-sdk');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+// meta-llama/llama-4-scout-17b-16e-instruct is no longer available on this Groq
+// account and returns 404 model_not_found. Qwen3.8-27B is the vision model the
+// account does expose. It reasons before answering, so the token budget is
+// larger and reasoning_format keeps message.content as plain JSON.
+const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
+
 async function verifyIdentity(facePhotoUrl, idFrontUrl) {
   const response = await groq.chat.completions.create({
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    model: GROQ_MODEL,
+    reasoning_format: 'hidden',
     messages: [
       {
         role: 'user',
@@ -30,7 +37,7 @@ Respond in this exact format:
       },
     ],
     temperature: 0.1,
-    max_tokens: 150,
+    max_tokens: 1024,
   });
 
   const text = response.choices[0]?.message?.content || '';

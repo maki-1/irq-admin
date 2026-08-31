@@ -1,37 +1,90 @@
-const VerificationProfile = require('../models/VerificationProfile');
-const ResidentUser        = require('../models/ResidentUser');
-const sendEmail           = require('../utils/sendEmail');
-const sendSms             = require('../utils/sendSms');
-const auditLog            = require('../utils/auditLog');
+const prisma     = require('../../lib/prisma');
+const { toApi }  = require('../../lib/serialize');
+const { isUuid } = require('../../lib/ids');
+const sendEmail  = require('../utils/sendEmail');
+const sendSms    = require('../utils/sendSms');
+const auditLog   = require('../utils/auditLog');
 
-const APPROVED_FILTER = {
-  $or: [{ verified: true }, { status: { $in: ['approved', 'Approved'] } }],
+// The Mongo filter was `{ $or: [{ verified: true }, { status: in [approved, Approved] }] }`.
+// No document has ever carried a `verified` field, so the first clause never
+// matched and the filter reduces to the status check.
+const APPROVED_WHERE = {
+  OR: [
+    { status: { equals: 'approved', mode: 'insensitive' } },
+  ],
 };
+
+// `create` previously accepted req.body wholesale; Prisma rejects unknown keys.
+const WRITABLE = [
+  'fullName', 'email', 'contactNumber', 'birthday', 'gender', 'civilStatus',
+  'nationality', 'occupation', 'governmentId', 'selfieWithId', 'proofOfResidency',
+  'idType', 'idName', 'idFront', 'idBack', 'facePhoto', 'educationCertificate',
+  'age', 'yearsAtAddress', 'address', 'motherName', 'fatherName', 'isPwd',
+  'isSenior', 'isIndigent', 'pwdProof', 'indigentProof', 'educationLevel',
+  'school', 'yearGraduated', 'course', 'secondaryIdType', 'secondaryIdName',
+  'secondaryIdFront', 'secondaryId2Type', 'secondaryId2Name', 'secondaryId2Front',
+  'status', 'remarks', 'currentStep',
+];
+const INT_FIELDS = new Set(['age', 'yearsAtAddress', 'currentStep']);
+const DATE_FIELDS = new Set(['birthday']);
+const BOOL_FIELDS = new Set(['isPwd', 'isSenior', 'isIndigent']);
+
+function pickWritable(body) {
+  const out = {};
+  for (const k of WRITABLE) {
+    if (body[k] === undefined) continue;
+    if (INT_FIELDS.has(k)) out[k] = body[k] === null ? null : parseInt(body[k], 10);
+    else if (DATE_FIELDS.has(k)) out[k] = body[k] ? new Date(body[k]) : null;
+    else if (BOOL_FIELDS.has(k)) out[k] = Boolean(body[k]);
+    // yearGraduated is a string column here; the portal's model treated it as a number
+    else if (k === 'yearGraduated') out[k] = body[k] === null ? '' : String(body[k]);
+    else out[k] = body[k];
+  }
+  return out;
+}
+
+// Falls back to the resident record when the profile has no contact details.
+async function contactFor(profile) {
+  let email         = profile.email         || null;
+  let contactNumber = profile.contactNumber || null;
+
+  if ((!email || !contactNumber) && profile.userId) {
+    try {
+      const user = await prisma.user.findUnique({ where: { id: profile.userId } });
+      if (user) {
+        email         = email         || user.email         || null;
+        contactNumber = contactNumber || user.contactNumber || null;
+      }
+    } catch (e) {
+      console.error('Failed to fetch resident user for contact info:', e.message);
+    }
+  }
+  return { email, contactNumber };
+}
 
 // GET /api/verifications/purok-stats
 exports.getPurokStats = async (req, res) => {
   try {
-    const stats = await VerificationProfile.aggregate([
-      { $match: APPROVED_FILTER },
-      {
-        $addFields: {
-          purokLabel: {
-            $cond: {
-              if: { $gt: [{ $strLenCP: { $ifNull: ['$purok', ''] } }, 0] },
-              then: '$purok',
-              else: {
-                $trim: {
-                  input: { $arrayElemAt: [{ $split: [{ $ifNull: ['$address', 'Unknown'] }, ','] }, 0] },
-                },
-              },
-            },
-          },
-        },
-      },
-      { $group: { _id: '$purokLabel', count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]);
-    res.json(stats.map((s) => ({ purok: s._id || 'Unknown', count: s.count })));
+    // The Mongo aggregation grouped by `purok` when present, else the first
+    // comma-separated segment of the address. No profile carries a `purok`
+    // field, so only the address branch is reachable. Grouped in JS — the
+    // table is small and this keeps the derivation readable.
+    const profiles = await prisma.verificationProfile.findMany({
+      where: APPROVED_WHERE,
+      select: { address: true },
+    });
+
+    const counts = new Map();
+    for (const p of profiles) {
+      const label = (p.address || 'Unknown').split(',')[0].trim() || 'Unknown';
+      counts.set(label, (counts.get(label) || 0) + 1);
+    }
+
+    const stats = [...counts.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([purok, count]) => ({ purok, count }));
+
+    res.json(stats);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -40,7 +93,7 @@ exports.getPurokStats = async (req, res) => {
 // GET /api/verifications/resident-count
 exports.getResidentCount = async (req, res) => {
   try {
-    const count = await ResidentUser.countDocuments();
+    const count = await prisma.user.count();
     res.json({ count });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -51,8 +104,10 @@ exports.getResidentCount = async (req, res) => {
 exports.getStats = async (req, res) => {
   try {
     const [total, pending] = await Promise.all([
-      VerificationProfile.countDocuments(APPROVED_FILTER),
-      VerificationProfile.countDocuments({ status: { $in: ['pending', 'Pending'] } }),
+      prisma.verificationProfile.count({ where: APPROVED_WHERE }),
+      prisma.verificationProfile.count({
+        where: { status: { equals: 'pending', mode: 'insensitive' } },
+      }),
     ]);
     res.json({ total, pending });
   } catch (err) {
@@ -64,10 +119,12 @@ exports.getStats = async (req, res) => {
 exports.getLatestApproved = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 6;
-    const profiles = await VerificationProfile.find(APPROVED_FILTER)
-      .sort({ updatedAt: -1, createdAt: -1 })
-      .limit(limit);
-    res.json(profiles);
+    const profiles = await prisma.verificationProfile.findMany({
+      where: APPROVED_WHERE,
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      take: limit,
+    });
+    res.json(toApi(profiles));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -77,9 +134,14 @@ exports.getLatestApproved = async (req, res) => {
 exports.getAll = async (req, res) => {
   try {
     const { status } = req.query;
-    const filter = status ? { status: { $regex: new RegExp(`^${status}$`, 'i') } } : {};
-    const profiles = await VerificationProfile.find(filter).sort({ createdAt: -1 });
-    res.json(profiles);
+    const where = status
+      ? { status: { equals: status, mode: 'insensitive' } }
+      : {};
+    const profiles = await prisma.verificationProfile.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(toApi(profiles));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -88,9 +150,10 @@ exports.getAll = async (req, res) => {
 // GET /api/verifications/:id
 exports.getOne = async (req, res) => {
   try {
-    const profile = await VerificationProfile.findById(req.params.id);
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
+    const profile = await prisma.verificationProfile.findUnique({ where: { id: req.params.id } });
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
-    res.json(profile);
+    res.json(toApi(profile));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -99,8 +162,15 @@ exports.getOne = async (req, res) => {
 // POST /api/verifications
 exports.create = async (req, res) => {
   try {
-    const profile = await VerificationProfile.create(req.body);
-    res.status(201).json(profile);
+    // userId is required and has no default — it must come from the caller.
+    const userId = req.body.userId || req.body.user;
+    if (!isUuid(userId)) {
+      return res.status(400).json({ message: 'A valid resident userId is required' });
+    }
+    const profile = await prisma.verificationProfile.create({
+      data: { ...pickWritable(req.body), userId },
+    });
+    res.status(201).json(toApi(profile));
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -109,28 +179,12 @@ exports.create = async (req, res) => {
 // DELETE /api/verifications/:id/reset
 exports.reset = async (req, res) => {
   try {
-    const profile = await VerificationProfile.findById(req.params.id);
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
+    const profile = await prisma.verificationProfile.findUnique({ where: { id: req.params.id } });
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
 
     const { remarks } = req.body || {};
-
-    // Gather contact info with same fallback pattern as review()
-    let email         = profile.email         || null;
-    let contactNumber = profile.contactNumber || null;
-
-    if ((!email || !contactNumber) && profile.user) {
-      try {
-        const residentUser = await ResidentUser.findById(profile.user);
-        if (residentUser) {
-          email         = email         || residentUser.email         || residentUser.gmail        || null;
-          contactNumber = contactNumber || residentUser.contactNumber || residentUser.phone        ||
-                          residentUser.mobileNumber || residentUser.contact || null;
-        }
-      } catch (e) {
-        console.error('[reset] Failed to fetch resident user for contact info:', e.message);
-      }
-    }
-
+    const { email, contactNumber } = await contactFor(profile);
     const name = profile.fullName || 'Resident';
 
     console.log(`[reset] Notifying — email: ${email}, phone: ${contactNumber}`);
@@ -175,7 +229,7 @@ exports.reset = async (req, res) => {
       details: `Resident: ${name} — rejected and notified to re-submit${remarks ? `. Reason: ${remarks}` : ''}`,
     });
 
-    await VerificationProfile.findByIdAndDelete(req.params.id);
+    await prisma.verificationProfile.delete({ where: { id: req.params.id } });
 
     res.json({ message: 'Verification reset. Resident has been notified to fill up again.' });
   } catch (err) {
@@ -191,12 +245,22 @@ exports.review = async (req, res) => {
     if (!allowed.includes(status?.toLowerCase())) {
       return res.status(400).json({ message: `Status must be one of: ${allowed.join(', ')}` });
     }
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
 
-    const profile = await VerificationProfile.findByIdAndUpdate(
-      req.params.id,
-      { status, remarks: remarks || '', reviewedBy: req.user._id, reviewedAt: new Date() },
-      { new: true }
-    );
+    const profile = await prisma.verificationProfile
+      .update({
+        where: { id: req.params.id },
+        data: {
+          status,
+          remarks: remarks || '',
+          reviewedById: req.user.id,
+          reviewedAt: new Date(),
+        },
+      })
+      .catch((e) => {
+        if (e.code === 'P2025') return null;
+        throw e;
+      });
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
 
     await auditLog({
@@ -207,22 +271,7 @@ exports.review = async (req, res) => {
 
     const s = status.toLowerCase();
     if (s === 'approved' || s === 'under review') {
-      // Get contact info — try verificationprofile first, fall back to linked user doc
-      let email         = profile.email         || null;
-      let contactNumber = profile.contactNumber || null;
-
-      if ((!email || !contactNumber) && profile.user) {
-        try {
-          const residentUser = await ResidentUser.findById(profile.user);
-          if (residentUser) {
-            email         = email         || residentUser.email         || residentUser.gmail  || null;
-            contactNumber = contactNumber || residentUser.contactNumber || residentUser.phone  ||
-                            residentUser.mobileNumber || residentUser.contact || null;
-          }
-        } catch (e) {
-          console.error('[review] Failed to fetch resident user for contact info:', e.message);
-        }
-      }
+      const { email, contactNumber } = await contactFor(profile);
 
       console.log(`[review] Notifying — status: ${s}, email: ${email}, phone: ${contactNumber}`);
 
@@ -267,7 +316,7 @@ exports.review = async (req, res) => {
       }
     }
 
-    res.json(profile);
+    res.json(toApi(profile));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

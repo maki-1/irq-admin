@@ -1,62 +1,54 @@
-const crypto              = require('crypto');
-const Request             = require('../models/Request');
-const VerificationProfile = require('../models/VerificationProfile');
-const CompletedDocument   = require('../models/CompletedDocument');
-const auditLog            = require('../utils/auditLog');
-const sendEmail           = require('../utils/sendEmail');
-const sendSms             = require('../utils/sendSms');
-require('../models/ResidentUser'); // must be registered before Request.populate('user') runs
+const crypto   = require('crypto');
+const prisma   = require('../../lib/prisma');
+const { toApi } = require('../../lib/serialize');
+const { isUuid } = require('../../lib/ids');
+const auditLog = require('../utils/auditLog');
+const sendEmail = require('../utils/sendEmail');
+const sendSms   = require('../utils/sendSms');
 
 function generateClaimCode() {
   return 'CLM-' + crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
-/* Attach verificationProfile to each request object */
-async function attachProfiles(requests) {
-  const userIds = requests.map(r => r.user?._id ?? r.user).filter(Boolean);
+const USER_SELECT = {
+  id: true, username: true, email: true, contactNumber: true, avatar: true,
+};
 
-  // ResidentUser may store email as 'email' or 'gmail' depending on auth provider
-  const emails = requests
-    .flatMap(r => [r.user?.email, r.user?.gmail])
-    .filter(Boolean)
-    .map(e => e.toLowerCase());
+const PROFILE_SELECT = {
+  id: true, userId: true, fullName: true, age: true, address: true, gender: true,
+  contactNumber: true, email: true, fatherName: true, motherName: true,
+  civilStatus: true, occupation: true, nationality: true, idType: true,
+  idName: true, birthday: true, yearsAtAddress: true, facePhoto: true,
+};
 
-  const orClauses = [];
-  if (userIds.length) orClauses.push({ user: { $in: userIds } });
-  if (emails.length)  orClauses.push({ email: { $in: emails } });
+// The Mongo version fetched profiles separately and matched them to requests by
+// user id *or* email, because `VerificationProfile.user` was optional. It is a
+// required relation here, so the profile comes back through the join and the
+// email fallback is no longer reachable.
+const REQUEST_INCLUDE = {
+  user: {
+    select: { ...USER_SELECT, verificationProfile: { select: PROFILE_SELECT } },
+  },
+};
 
-  const profiles = orClauses.length
-    ? await VerificationProfile.find({ $or: orClauses })
-        .select('user fullName age address gender contactNumber email fatherName motherName civilStatus occupation nationality idType idName birthday yearsAtAddress facePhoto')
-        .lean()
-    : [];
-
-  const byUserId = {};
-  const byEmail  = {};
-  profiles.forEach(vp => {
-    if (vp.user)  byUserId[vp.user.toString()]    = vp;
-    if (vp.email) byEmail[vp.email.toLowerCase()] = vp;
-  });
-
-  return requests.map(r => {
-    const obj   = r.toObject ? r.toObject() : { ...r };
-    const uid   = (r.user?._id ?? r.user)?.toString();
-    // try both email field names used by the mobile app
-    const email = (r.user?.email || r.user?.gmail)?.toLowerCase();
-    obj.profile = (uid && byUserId[uid]) || (email && byEmail[email]) || null;
-    return obj;
-  });
+// Preserves the old response shape: `profile` alongside the request, and `user`
+// without the nested profile.
+function shape(request) {
+  const obj = toApi(request);
+  const profile = obj.user?.verificationProfile ?? null;
+  if (obj.user) delete obj.user.verificationProfile;
+  obj.profile = profile;
+  return obj;
 }
 
 // GET /api/requests
 exports.getAll = async (req, res) => {
   try {
-    const requests = await Request.find()
-      .populate('user', 'username email gmail contactNumber avatar')
-      .sort({ createdAt: -1 });
-
-    const result = await attachProfiles(requests);
-    res.json(result);
+    const requests = await prisma.request.findMany({
+      include: REQUEST_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(requests.map(shape));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -65,12 +57,13 @@ exports.getAll = async (req, res) => {
 // GET /api/requests/:id
 exports.getOne = async (req, res) => {
   try {
-    const request = await Request.findById(req.params.id)
-      .populate('user', 'username email gmail contactNumber avatar');
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
+    const request = await prisma.request.findUnique({
+      where: { id: req.params.id },
+      include: REQUEST_INCLUDE,
+    });
     if (!request) return res.status(404).json({ message: 'Request not found' });
-
-    const [result] = await attachProfiles([request]);
-    res.json(result);
+    res.json(shape(request));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -80,51 +73,60 @@ exports.getOne = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const request = await Request.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    ).populate('user', 'username email gmail contactNumber avatar');
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
+
+    let request = await prisma.request
+      .update({
+        where: { id: req.params.id },
+        data: { status },
+        include: REQUEST_INCLUDE,
+      })
+      .catch((e) => {
+        if (e.code === 'P2025') return null;
+        throw e;
+      });
     if (!request) return res.status(404).json({ message: 'Request not found' });
 
     await auditLog({
       user: req.user,
       action: 'Update Request Status',
-      details: `Request ID: ${request._id}, Document: ${request.documentType}, New Status: ${status}`,
+      details: `Request ID: ${request.id}, Document: ${request.documentType}, New Status: ${status}`,
     });
 
     // When marked Completed, create a CompletedDocument record with a claim code
-    if (status.toLowerCase() === 'completed') {
-      const alreadyDone = await CompletedDocument.findOne({ request: request._id });
+    if (String(status).toLowerCase() === 'completed') {
+      const alreadyDone = await prisma.completedDocument.findFirst({
+        where: { requestId: request.id },
+      });
       if (!alreadyDone) {
-        const profile = await VerificationProfile.findOne({
-          $or: [
-            { user:  request.user._id },
-            { email: request.user.email?.toLowerCase() },
-          ],
-        }).select('fullName age address contactNumber email').lean();
-
+        const profile = request.user?.verificationProfile ?? null;
         const claimCode = generateClaimCode();
 
-        await CompletedDocument.create({
-          request:      request._id,
-          user:         request.user._id,
-          documentType: request.documentType,
-          purpose:      request.purpose,
-          claimCode,
-          fullName:     profile?.fullName || request.user.username,
-          age:          profile?.age      ?? null,
-          purok:        (profile?.address || '').split(',')[0].replace(/^Purok\s+/i, '').trim(),
-          address:      profile?.address  || '',
+        await prisma.completedDocument.create({
+          data: {
+            requestId:    request.id,
+            userId:       request.userId,
+            documentType: request.documentType,
+            purpose:      request.purpose,
+            claimCode,
+            fullName:     profile?.fullName || request.user?.username || null,
+            age:          profile?.age ?? null,
+            purok:        (profile?.address || '').split(',')[0].replace(/^Purok\s+/i, '').trim(),
+            address:      profile?.address || '',
+          },
         });
 
         // Write claimCode back to the Request so the resident can see it
-        await Request.findByIdAndUpdate(request._id, { claimCode });
+        request = await prisma.request.update({
+          where: { id: request.id },
+          data: { claimCode },
+          include: REQUEST_INCLUDE,
+        });
 
-        // Gather contact info — profile first, fall back to ResidentUser fields
-        const email         = profile?.email         || request.user.email  || request.user.gmail  || null;
-        const contactNumber = profile?.contactNumber || request.user.contactNumber || null;
-        const name          = profile?.fullName      || request.user.username || 'Resident';
+        // Gather contact info — profile first, fall back to the user record
+        const email         = profile?.email         || request.user?.email || null;
+        const contactNumber = profile?.contactNumber || request.user?.contactNumber || null;
+        const name          = profile?.fullName      || request.user?.username || 'Resident';
         const docType       = request.documentType   || 'document';
 
         console.log(`[completed] Notifying — email: ${email}, phone: ${contactNumber}`);
@@ -160,8 +162,7 @@ exports.updateStatus = async (req, res) => {
       }
     }
 
-    const [result] = await attachProfiles([request]);
-    res.json(result);
+    res.json(shape(request));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

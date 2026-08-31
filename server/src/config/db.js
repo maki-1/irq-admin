@@ -1,14 +1,13 @@
-const mongoose = require('mongoose');
+const prisma = require('../../lib/prisma');
 
+// Prisma connects lazily on the first query; this fails fast at boot the way
+// mongoose.connect() did, rather than surfacing the error on a user request.
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    });
-    console.log(`MongoDB connected: ${conn.connection.host} (db: ${conn.connection.name})`);
+    const [row] = await prisma.$queryRaw`SELECT current_database() AS db`;
+    console.log(`Postgres connected (db: ${row.db})`);
   } catch (error) {
-    console.error(`MongoDB connection error: ${error.message}`);
+    console.error(`Postgres connection error: ${error.message}`);
     process.exit(1);
   }
 };

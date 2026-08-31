@@ -1,7 +1,6 @@
 const axios = require('axios');
-const Payment = require('../models/Payment');
-const Document = require('../models/Document');
-const Request = require('../models/Request');
+const prisma = require('../../lib/prisma');
+const { isUuid } = require('../../lib/ids');
 
 // POST /api/payments/paymongo/checkout
 exports.createPayMongoSession = async (req, res) => {
@@ -35,14 +34,19 @@ exports.createPayMongoSession = async (req, res) => {
     );
 
     const session = response.data.data;
-    await Payment.create({
-      user: req.user._id,
-      document: documentId,
-      documentType,
-      amount: amount / 100,
-      provider: 'paymongo',
-      sessionId: session.id,
-      status: 'pending',
+    await prisma.payment.create({
+      data: {
+        // This route is behind admin auth, so the actor is staff, not a
+        // resident — recorded in adminId rather than userId. See the Payment
+        // model comment.
+        adminId: req.user.id,
+        documentId: isUuid(documentId) ? documentId : null,
+        documentType,
+        amount: amount / 100,
+        provider: 'paymongo',
+        sessionId: session.id,
+        status: 'pending',
+      },
     });
 
     res.json({ checkoutUrl: session.attributes.checkout_url, sessionId: session.id });
@@ -57,25 +61,37 @@ exports.payMongoWebhook = async (req, res) => {
     const event = req.body.data;
     if (event.attributes.type === 'checkout_session.payment.paid') {
       const sessionId = event.attributes.data.attributes.checkout_session_id;
-      const payment = await Payment.findOneAndUpdate(
-        { sessionId },
-        { status: 'paid' },
-        { new: true }
-      );
+
+      const existing = await prisma.payment.findFirst({ where: { sessionId } });
+      const payment = existing
+        ? await prisma.payment.update({
+            where: { id: existing.id },
+            data: { status: 'paid' },
+            include: { requests: { select: { id: true } } },
+          })
+        : null;
+
       if (payment) {
-        if (payment.document) {
-          await Document.findByIdAndUpdate(payment.document, { paymentStatus: 'Paid' });
-          await Request.findByIdAndUpdate(payment.document, {
-            paymentStatus: 'paid',
-            amountPaid: payment.amount,
+        if (payment.documentId) {
+          await prisma.document.update({
+            where: { id: payment.documentId },
+            data: { paymentStatus: 'Paid' },
+          });
+          // NOTE: the original code also ran a Request update keyed on the
+          // *document* id. Documents and requests have separate id spaces, so
+          // that never matched anything. Kept as a no-op updateMany rather than
+          // a single update, which would now throw instead of matching zero rows.
+          await prisma.request.updateMany({
+            where: { id: payment.documentId },
+            data: { paymentStatus: 'paid', amountPaid: payment.amount },
           });
         }
-        // Handle resident pay-approved flow (uses requests array instead of document)
+        // Handle resident pay-approved flow (uses the requests relation)
         if (payment.requests?.length) {
-          await Request.updateMany(
-            { _id: { $in: payment.requests } },
-            { paymentStatus: 'paid', status: 'Processing', amountPaid: payment.amount }
-          );
+          await prisma.request.updateMany({
+            where: { id: { in: payment.requests.map((r) => r.id) } },
+            data: { paymentStatus: 'paid', status: 'Processing', amountPaid: payment.amount },
+          });
         }
       }
     }

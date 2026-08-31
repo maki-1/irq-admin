@@ -1,9 +1,7 @@
-const axios    = require('axios');
+const axios      = require('axios');
 const cloudinary = require('../config/cloudinary');
-const Request  = require('../models/Request');
-const Payment  = require('../models/Payment');
-const PurokClearanceFee = require('../models/PurokClearanceFee');
-const VerificationProfile = require('../models/VerificationProfile');
+const prisma     = require('../../lib/prisma');
+const { isUuid } = require('../../lib/ids');
 const generateORNumber = require('../utils/generateORNumber');
 
 async function uploadBuffer(buffer, folder) {
@@ -19,10 +17,23 @@ async function uploadBuffer(buffer, folder) {
 const PAYMONGO_AUTH = () =>
   `Basic ${Buffer.from(process.env.PAYMONGO_SECRET_KEY + ':').toString('base64')}`;
 
+// Falls back to the same hardcoded defaults the original used when a document
+// type has no row in document_prices.
+const FALLBACK_CENTAVOS = {
+  'Certificate of Residency': 5000,
+  'Certificate of Indigency': 0,
+};
+
+async function priceCentavosFor(documentType) {
+  const priceDoc = await prisma.documentPrice.findUnique({ where: { documentType } });
+  if (priceDoc) return priceDoc.pricecentavos;
+  return FALLBACK_CENTAVOS[documentType] ?? 10000; // default ₱100
+}
+
 /* ── POST /api/payment/create-session ───────────────────── */
 exports.createSession = async (req, res) => {
   try {
-    const userId = req.resident._id;
+    const userId = req.resident.id;
     const body   = req.body;
 
     // Parse documents array from multipart
@@ -48,9 +59,6 @@ exports.createSession = async (req, res) => {
     if (!docs.length) return res.status(400).json({ message: 'No documents provided' });
 
     // Upload photos and create pending requests
-    const pendingRequests = [];
-    let totalCentavos = 0;
-
     for (let j = 0; j < docs.length; j++) {
       const doc = docs[j];
       let requestPhotoUrl = null;
@@ -59,35 +67,24 @@ exports.createSession = async (req, res) => {
         requestPhotoUrl = await uploadBuffer(fileArr[0].buffer, 'irequestd/clearance');
       }
 
-      // Get price from document-prices collection or use defaults
-      const { DocumentPrice } = require('../models/DocumentPrice') || {};
-      let priceInCentavos = 10000; // default ₱100 in centavos
-      try {
-        const DocumentPriceModel = require('../models/DocumentPrice');
-        const priceDoc = await DocumentPriceModel.findOne({ documentType: doc.type });
-        if (priceDoc) priceInCentavos = priceDoc.pricecentavos;
-        else {
-          if (doc.type === 'Certificate of Residency') priceInCentavos = 5000;
-          if (doc.type === 'Certificate of Indigency') priceInCentavos = 0;
-        }
-      } catch {}
-
-      totalCentavos += priceInCentavos;
+      const priceInCentavos = await priceCentavosFor(doc.type);
 
       const orNumber = await generateORNumber();
-      const request = await Request.create({
-        user:               userId,
-        documentType:       doc.type,
-        purpose:            doc.purpose,
-        additionalDetails:  doc.details || '',
-        status:             'Pending',
-        paymentStatus:      priceInCentavos === 0 ? 'free' : 'unpaid',
-        amountPaid:         priceInCentavos / 100,
-        requestPhoto:       requestPhotoUrl,
-        purokLeaderStatus:  'pending',
-        orNumber,
+      await prisma.request.create({
+        data: {
+          userId,
+          documentType:       doc.type,
+          purpose:            doc.purpose,
+          additionalDetails:  doc.details || '',
+          status:             'Pending',
+          paymentStatus:      priceInCentavos === 0 ? 'free' : 'unpaid',
+          amountPaid:         priceInCentavos / 100,
+          // Column is non-nullable; the old model allowed null here.
+          requestPhoto:       requestPhotoUrl ?? '',
+          purokLeaderStatus:  'pending',
+          orNumber,
+        },
       });
-      pendingRequests.push(request._id.toString());
     }
 
     // All requests require purok leader approval before payment
@@ -103,10 +100,11 @@ exports.createSession = async (req, res) => {
 /* ── POST /api/payment/pay-approved/:id ─────────────────── */
 exports.payApproved = async (req, res) => {
   try {
-    const userId    = req.resident._id;
+    const userId    = req.resident.id;
     const requestId = req.params.id;
+    if (!isUuid(requestId)) return res.status(404).json({ message: 'Request not found' });
 
-    const request = await Request.findOne({ _id: requestId, user: userId });
+    const request = await prisma.request.findFirst({ where: { id: requestId, userId } });
     if (!request) return res.status(404).json({ message: 'Request not found' });
     if (request.purokLeaderStatus !== 'approved') {
       return res.status(400).json({ message: 'Request not yet approved by Purok Leader' });
@@ -119,14 +117,13 @@ exports.payApproved = async (req, res) => {
     }
 
     // Document price (in centavos)
-    let docCentavos = 10000;
-    try {
-      const DocumentPriceModel = require('../models/DocumentPrice');
-      const priceDoc = await DocumentPriceModel.findOne({ documentType: request.documentType });
-      if (priceDoc) docCentavos = priceDoc.pricecentavos;
-    } catch {}
+    const priceDoc = await prisma.documentPrice.findUnique({
+      where: { documentType: request.documentType },
+    });
+    const docCentavos = priceDoc ? priceDoc.pricecentavos : 10000;
 
-    const purokFeeCentavos = Math.round((request.purokClearanceFee || 0) * 100);
+    // purokClearanceFee is a Prisma Decimal — coerce before arithmetic.
+    const purokFeeCentavos = Math.round(Number(request.purokClearanceFee || 0) * 100);
     const totalCentavos    = docCentavos + purokFeeCentavos;
 
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5174';
@@ -152,17 +149,23 @@ exports.payApproved = async (req, res) => {
 
     const session = response.data.data;
 
-    await Payment.create({
-      user:         userId,
-      documentType: request.documentType,
-      amount:       totalCentavos / 100,
-      provider:     'paymongo',
-      sessionId:    session.id,
-      status:       'pending',
-      requests:     [requestId],
+    await prisma.payment.create({
+      data: {
+        userId,
+        documentType: request.documentType,
+        amount:       totalCentavos / 100,
+        provider:     'paymongo',
+        sessionId:    session.id,
+        status:       'pending',
+        requests:     { connect: [{ id: requestId }] },
+        legacyRequestIds: [],
+      },
     });
 
-    await Request.findByIdAndUpdate(requestId, { paymentLinkId: session.id });
+    await prisma.request.update({
+      where: { id: requestId },
+      data: { paymentLinkId: session.id },
+    });
 
     res.json({
       checkoutUrl: session.attributes.checkout_url,
@@ -179,10 +182,11 @@ exports.payApproved = async (req, res) => {
 /* ── GET /api/payment/verify/:requestId ─────────────────── */
 exports.verifyPayment = async (req, res) => {
   try {
-    const userId    = req.resident._id;
+    const userId    = req.resident.id;
     const requestId = req.params.requestId;
+    if (!isUuid(requestId)) return res.status(404).json({ message: 'Request not found' });
 
-    const request = await Request.findOne({ _id: requestId, user: userId });
+    const request = await prisma.request.findFirst({ where: { id: requestId, userId } });
     if (!request) return res.status(404).json({ message: 'Request not found' });
 
     // Already marked paid
@@ -216,15 +220,15 @@ exports.verifyPayment = async (req, res) => {
       attrs.payment_status === 'paid';
 
     if (isPaid) {
-      await Request.findByIdAndUpdate(requestId, {
-        paymentStatus: 'paid',
-        status:        'Processing',
+      await prisma.request.update({
+        where: { id: requestId },
+        data: { paymentStatus: 'paid', status: 'Processing' },
       });
       // Also mark the Payment record if it exists
-      await Payment.findOneAndUpdate(
-        { sessionId: request.paymentLinkId },
-        { status: 'paid' }
-      );
+      await prisma.payment.updateMany({
+        where: { sessionId: request.paymentLinkId },
+        data: { status: 'paid' },
+      });
       return res.json({ paid: true, status: 'Processing' });
     }
 

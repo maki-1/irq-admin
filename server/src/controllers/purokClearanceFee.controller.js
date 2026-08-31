@@ -1,10 +1,11 @@
-const PurokClearanceFee = require('../models/PurokClearanceFee');
+const prisma = require('../../lib/prisma');
+const { toApi } = require('../../lib/serialize');
 
 /* GET /api/purok-clearance/all-fees */
 exports.getAll = async (req, res) => {
   try {
-    const fees = await PurokClearanceFee.find().sort({ purokName: 1 });
-    res.json(fees);
+    const fees = await prisma.purokClearanceFee.findMany({ orderBy: { purokName: 'asc' } });
+    res.json(toApi(fees));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -21,20 +22,27 @@ exports.upsert = async (req, res) => {
     }
 
     const updatedBy = req.user?.fullName || req.user?.email || 'admin';
-    const doc = await PurokClearanceFee.findOneAndUpdate(
-      { purokName: { $regex: `^${purokName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
-      {
-        purokName,
-        feecentavos: Math.round(Number(feecentavos)),
-        updatedBy,
-        ...(description    !== undefined && { description }),
-        ...(purokPresident !== undefined && { purokPresident }),
-        ...(treasurerName  !== undefined && { treasurerName }),
-      },
-      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
-    );
+    const data = {
+      purokName,
+      feecentavos: Math.round(Number(feecentavos)),
+      updatedBy,
+      ...(description    !== undefined && { description }),
+      ...(purokPresident !== undefined && { purokPresident }),
+      ...(treasurerName  !== undefined && { treasurerName }),
+    };
 
-    res.json(doc);
+    // The Mongo version matched purokName case-insensitively via regex, but the
+    // Postgres unique index is case-sensitive — so the lookup is done first and
+    // the row updated by id, rather than using a plain upsert on purokName.
+    const existing = await prisma.purokClearanceFee.findFirst({
+      where: { purokName: { equals: purokName, mode: 'insensitive' } },
+    });
+
+    const doc = existing
+      ? await prisma.purokClearanceFee.update({ where: { id: existing.id }, data })
+      : await prisma.purokClearanceFee.create({ data });
+
+    res.json(toApi(doc));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

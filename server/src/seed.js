@@ -1,6 +1,6 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
-const mongoose = require('mongoose');
-const User = require('./models/User');
+const prisma = require('../lib/prisma');
+const { hashPassword } = require('../lib/password');
 
 /* ── Staff accounts only ── */
 const admins = [
@@ -10,17 +10,20 @@ const admins = [
 ];
 
 async function seed() {
-  await mongoose.connect(process.env.MONGO_URI);
-  console.log('MongoDB connected');
+  await prisma.$queryRaw`SELECT 1`;
+  console.log('Postgres connected');
 
   for (const admin of admins) {
-    const exists = await User.findOne({ email: admin.email });
+    const exists = await prisma.admin.findUnique({ where: { email: admin.email } });
     if (exists) { console.log(`Skipped (exists): ${admin.email}`); continue; }
-    await User.create(admin);
+    // The pre('save') hook used to hash this; Prisma has no hooks.
+    await prisma.admin.create({
+      data: { ...admin, password: await hashPassword(admin.password) },
+    });
     console.log(`Created: ${admin.role} — ${admin.email}`);
   }
 
-  await mongoose.disconnect();
+  await prisma.$disconnect();
   console.log('Done.');
 }
 

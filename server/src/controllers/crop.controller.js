@@ -2,7 +2,9 @@ const axios = require('axios');
 const Jimp  = require('jimp');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL   = process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+// llama-4-scout is no longer available on this Groq account (404
+// model_not_found); qwen3.8-27b is the vision model it does expose.
+const GROQ_MODEL   = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
 
 // POST /api/crop-id/detect-id
 // Body: { imageUrl }
@@ -46,7 +48,10 @@ exports.detectId = async (req, res) => {
             },
           ],
         }],
-        max_tokens: 150,
+        // Reasoning tokens count against this budget, and the reply must not be
+        // truncated before the JSON bounding box is emitted.
+        max_tokens: 1024,
+        reasoning_format: 'hidden',
         temperature: 0,
       },
       {

@@ -1,9 +1,7 @@
-const cloudinary  = require('../config/cloudinary');
-const Request          = require('../models/Request');
-const CompletedDocument = require('../models/CompletedDocument');
-const ResidentUser = require('../models/ResidentUser');
-const VerificationProfile = require('../models/VerificationProfile');
-const DocumentPrice = require('../models/DocumentPrice');
+const cloudinary = require('../config/cloudinary');
+const prisma     = require('../../lib/prisma');
+const { toApi }  = require('../../lib/serialize');
+const { isUuid } = require('../../lib/ids');
 const generateORNumber = require('../utils/generateORNumber');
 
 async function uploadBuffer(buffer, folder) {
@@ -19,8 +17,11 @@ async function uploadBuffer(buffer, folder) {
 /* ── GET /api/requests/summary ──────────────────────────── */
 exports.getSummary = async (req, res) => {
   try {
-    const userId = req.resident._id;
-    const requests = await Request.find({ user: userId }).lean();
+    const userId = req.resident.id;
+    const requests = await prisma.request.findMany({
+      where: { userId },
+      select: { status: true },
+    });
 
     const summary = { total: requests.length, Pending: 0, Processing: 0, Printing: 0, Completed: 0, Claimed: 0 };
     requests.forEach((r) => {
@@ -36,9 +37,11 @@ exports.getSummary = async (req, res) => {
 /* ── GET /api/requests ──────────────────────────────────── */
 exports.getMyRequests = async (req, res) => {
   try {
-    const userId = req.resident._id;
-    const requests = await Request.find({ user: userId }).sort({ createdAt: -1 }).lean();
-    res.json(requests);
+    const requests = await prisma.request.findMany({
+      where: { userId: req.resident.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(toApi(requests));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -47,10 +50,11 @@ exports.getMyRequests = async (req, res) => {
 /* ── GET /api/requests/claimed ──────────────────────────── */
 exports.getClaimed = async (req, res) => {
   try {
-    const userId = req.resident._id;
-    const requests = await Request.find({ user: userId, status: 'Claimed' })
-      .sort({ updatedAt: -1 }).lean();
-    res.json(requests);
+    const requests = await prisma.request.findMany({
+      where: { userId: req.resident.id, status: 'Claimed' },
+      orderBy: { updatedAt: 'desc' },
+    });
+    res.json(toApi(requests));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -64,16 +68,26 @@ exports.getClaimed = async (req, res) => {
 ────────────────────────────────────────────────────────── */
 exports.getMyCompleted = async (req, res) => {
   try {
-    const userId = req.resident._id;
-    const filter = { user: userId };
-    if (req.query.status) filter.claimStatus = req.query.status;
+    const where = { userId: req.resident.id };
+    // Case-insensitive: claim statuses have been written with varying casing.
+    if (req.query.status) {
+      where.claimStatus = { equals: req.query.status, mode: 'insensitive' };
+    }
 
-    const docs = await CompletedDocument.find(filter)
-      .populate('request', 'documentType purpose paymentStatus orNumber controlNumber createdAt')
-      .sort({ completedAt: -1 })
-      .lean();
+    const docs = await prisma.completedDocument.findMany({
+      where,
+      include: {
+        request: {
+          select: {
+            id: true, documentType: true, purpose: true, paymentStatus: true,
+            orNumber: true, controlNumber: true, createdAt: true,
+          },
+        },
+      },
+      orderBy: { completedAt: 'desc' },
+    });
 
-    res.json(docs);
+    res.json(toApi(docs));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -82,13 +96,16 @@ exports.getMyCompleted = async (req, res) => {
 /* ── DELETE /api/requests/:id ───────────────────────────── */
 exports.deleteRequest = async (req, res) => {
   try {
-    const userId = req.resident._id;
-    const request = await Request.findOne({ _id: req.params.id, user: userId });
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
+
+    const request = await prisma.request.findFirst({
+      where: { id: req.params.id, userId: req.resident.id },
+    });
     if (!request) return res.status(404).json({ message: 'Request not found' });
     if (request.status !== 'Pending') {
       return res.status(400).json({ message: 'Only pending requests can be deleted' });
     }
-    await Request.findByIdAndDelete(req.params.id);
+    await prisma.request.delete({ where: { id: request.id } });
     res.json({ message: 'Request deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -98,11 +115,8 @@ exports.deleteRequest = async (req, res) => {
 /* ── POST /api/requests/bulk (free requests) ────────────── */
 exports.createBulk = async (req, res) => {
   try {
-    const userId  = req.resident._id;
-    const resident = req.resident;
+    const userId = req.resident.id;
 
-    // Parse documents array from multipart body
-    const documents = [];
     const body = req.body;
 
     // Support both JSON body and multipart array syntax
@@ -125,10 +139,6 @@ exports.createBulk = async (req, res) => {
 
     if (!docs.length) return res.status(400).json({ message: 'No documents provided' });
 
-    // Upload purok clearance photos
-    const photos = req.files?.photo || req.files?.['documents[0][photo]'] || [];
-    const photoFields = Object.keys(req.files || {}).filter((k) => k.includes('photo'));
-
     const created = [];
     for (let i = 0; i < docs.length; i++) {
       const doc = docs[i];
@@ -142,22 +152,25 @@ exports.createBulk = async (req, res) => {
       }
 
       const orNumber = await generateORNumber();
-      const request = await Request.create({
-        user:               userId,
-        documentType:       doc.type,
-        purpose:            doc.purpose,
-        additionalDetails:  doc.details || '',
-        status:             'Pending',
-        paymentStatus:      'free',
-        amountPaid:         0,
-        requestPhoto:       requestPhotoUrl,
-        purokLeaderStatus:  'pending',
-        orNumber,
+      const request = await prisma.request.create({
+        data: {
+          userId,
+          documentType:       doc.type,
+          purpose:            doc.purpose,
+          additionalDetails:  doc.details || '',
+          status:             'Pending',
+          paymentStatus:      'free',
+          amountPaid:         0,
+          // Column is non-nullable; the old model allowed null here.
+          requestPhoto:       requestPhotoUrl ?? '',
+          purokLeaderStatus:  'pending',
+          orNumber,
+        },
       });
       created.push(request);
     }
 
-    res.status(201).json({ message: 'Requests submitted', requests: created });
+    res.status(201).json({ message: 'Requests submitted', requests: toApi(created) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

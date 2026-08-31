@@ -1,6 +1,5 @@
-const cloudinary       = require('../config/cloudinary');
-const ResidentUser     = require('../models/ResidentUser');
-const VerificationProfile = require('../models/VerificationProfile');
+const cloudinary = require('../config/cloudinary');
+const prisma     = require('../../lib/prisma');
 const { verifyIdentity }      = require('../utils/groqVerify');
 const { azureVerifyIdentity } = require('../utils/azureFaceVerify');
 
@@ -14,10 +13,19 @@ async function uploadBuffer(buffer, folder) {
   });
 }
 
+// findOneAndUpdate({ user }, data, { upsert: true }) — userId is unique, so a
+// plain upsert is the direct equivalent.
+const upsertProfile = (userId, data) =>
+  prisma.verificationProfile.upsert({
+    where:  { userId },
+    create: { userId, ...data },
+    update: data,
+  });
+
 /* ── POST /api/verification/step1 ───────────────────────── */
 exports.step1 = async (req, res) => {
   try {
-    const userId = req.resident._id;
+    const userId = req.resident.id;
     const {
       firstName, middleName, lastName,
       birthday, gender, civilStatus, yearsAtAddress,
@@ -45,15 +53,15 @@ exports.step1 = async (req, res) => {
     }
 
     const profileData = {
-      user: userId,
       fullName,
-      birthday,
+      birthday: birthday ? new Date(birthday) : null,
       age: Number(age) || null,
       gender,
       civilStatus,
       yearsAtAddress: Number(yearsAtAddress) || 0,
       address,
-      motherName, fatherName,
+      motherName: motherName ?? '',
+      fatherName: fatherName ?? '',
       isPwd: isPwd === 'true' || isPwd === true,
       isSenior: isSenior === 'true' || isSenior === true,
       isIndigent: isIndigent === 'true' || isIndigent === true,
@@ -62,19 +70,17 @@ exports.step1 = async (req, res) => {
       status: 'submitted',
     };
 
-    // Upsert verification profile
-    await VerificationProfile.findOneAndUpdate(
-      { user: userId },
-      profileData,
-      { upsert: true, new: true }
-    );
+    await upsertProfile(userId, profileData);
 
     // Update resident user's step and special categories
-    await ResidentUser.findByIdAndUpdate(userId, {
-      verificationStep: 1,
-      isPwd: profileData.isPwd,
-      isSenior: profileData.isSenior,
-      isIndigent: profileData.isIndigent,
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        verificationStep: 1,
+        isPwd: profileData.isPwd,
+        isSenior: profileData.isSenior,
+        isIndigent: profileData.isIndigent,
+      },
     });
 
     res.json({ message: 'Step 1 saved', step: 1 });
@@ -86,7 +92,7 @@ exports.step1 = async (req, res) => {
 /* ── POST /api/verification/step2 ───────────────────────── */
 exports.step2 = async (req, res) => {
   try {
-    const userId = req.resident._id;
+    const userId = req.resident.id;
     const { educationLevel, schoolName, graduationYear, course } = req.body;
 
     if (!educationLevel || !schoolName || !graduationYear) {
@@ -98,19 +104,16 @@ exports.step2 = async (req, res) => {
       educationCertUrl = await uploadBuffer(req.files.educationCert[0].buffer, 'irequestd/education');
     }
 
-    await VerificationProfile.findOneAndUpdate(
-      { user: userId },
-      {
-        educationLevel,
-        school: schoolName,
-        yearGraduated: Number(graduationYear),
-        course: course || '',
-        ...(educationCertUrl && { educationCertificate: educationCertUrl }),
-      },
-      { upsert: true, new: true }
-    );
+    await upsertProfile(userId, {
+      educationLevel,
+      school: schoolName,
+      // Stored as text — the Flutter backend writes non-numeric years too.
+      yearGraduated: String(graduationYear),
+      course: course || '',
+      ...(educationCertUrl && { educationCertificate: educationCertUrl }),
+    });
 
-    await ResidentUser.findByIdAndUpdate(userId, { verificationStep: 2 });
+    await prisma.user.update({ where: { id: userId }, data: { verificationStep: 2 } });
 
     res.json({ message: 'Step 2 saved', step: 2 });
   } catch (err) {
@@ -121,7 +124,7 @@ exports.step2 = async (req, res) => {
 /* ── POST /api/verification/step3 ───────────────────────── */
 exports.step3 = async (req, res) => {
   try {
-    const userId = req.resident._id;
+    const userId = req.resident.id;
     const {
       idType, idName,
       secondaryIdType, secondaryIdName,
@@ -162,7 +165,7 @@ exports.step3 = async (req, res) => {
         azureVerifyIdentity(facePhotoUrl, idFrontUrl),
       ]);
 
-      aiVerification = { checkedAt: new Date() };
+      aiVerification = { checkedAt: new Date().toISOString() };
 
       if (groqResult.status === 'fulfilled') {
         Object.assign(aiVerification, groqResult.value);
@@ -198,15 +201,11 @@ exports.step3 = async (req, res) => {
       ...(secondaryId2FrontUrl && { secondaryId2Front: secondaryId2FrontUrl }),
     };
 
-    await VerificationProfile.findOneAndUpdate(
-      { user: userId },
-      updateData,
-      { upsert: true, new: true }
-    );
+    await upsertProfile(userId, updateData);
 
-    await ResidentUser.findByIdAndUpdate(userId, {
-      verificationStep: 3,
-      verificationStatus: 'pending',
+    await prisma.user.update({
+      where: { id: userId },
+      data: { verificationStep: 3, verificationStatus: 'pending' },
     });
 
     res.json({ message: 'Verification submitted for review', step: 3 });
@@ -218,13 +217,15 @@ exports.step3 = async (req, res) => {
 /* ── GET /api/verification/status ───────────────────────── */
 exports.getStatus = async (req, res) => {
   try {
-    const userId = req.resident._id;
-    const user   = await ResidentUser.findById(userId).lean();
+    const userId = req.resident.id;
+    const user   = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Also check the VerificationProfile status in case admin updated it
-    const profile = await VerificationProfile.findOne({ user: userId })
-      .select('status remarks fullName')
-      .lean();
+    const profile = await prisma.verificationProfile.findUnique({
+      where: { userId },
+      select: { status: true, remarks: true, fullName: true },
+    });
 
     let verificationStatus = user.verificationStatus || profile?.status || null;
     let isVerified = user.isVerified || false;
@@ -235,9 +236,9 @@ exports.getStatus = async (req, res) => {
       ['approved', 'Approved'].includes(profile.status) &&
       !isVerified
     ) {
-      await ResidentUser.findByIdAndUpdate(userId, {
-        isVerified: true,
-        verificationStatus: 'approved',
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isVerified: true, verificationStatus: 'approved' },
       });
       isVerified = true;
       verificationStatus = 'approved';
@@ -245,9 +246,9 @@ exports.getStatus = async (req, res) => {
 
     // Sync: if profile was reset (rejected), update user status
     if (!profile && user.verificationStep === 3) {
-      await ResidentUser.findByIdAndUpdate(userId, {
-        verificationStatus: 'rejected',
-        verificationStep: 0,
+      await prisma.user.update({
+        where: { id: userId },
+        data: { verificationStatus: 'rejected', verificationStep: 0 },
       });
       verificationStatus = 'rejected';
     }
@@ -256,7 +257,9 @@ exports.getStatus = async (req, res) => {
       status: verificationStatus,
       isVerified,
       verificationStep: user.verificationStep || 0,
-      rejectionReason: profile?.remarks || user.rejectionReason || null,
+      // `rejectionReason` has never been a column on the user record; the
+      // profile's remarks is the real source.
+      rejectionReason: profile?.remarks || null,
       fullName: profile?.fullName || null,
     });
   } catch (err) {

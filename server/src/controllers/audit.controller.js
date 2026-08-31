@@ -1,14 +1,16 @@
-const AuditTrail = require('../models/AuditTrail');
-const auditLog   = require('../utils/auditLog');
+const prisma   = require('../../lib/prisma');
+const { toApi } = require('../../lib/serialize');
+const auditLog = require('../utils/auditLog');
 
 // GET /api/audit
 exports.getAuditTrail = async (req, res) => {
   try {
-    const logs = await AuditTrail.find()
-      .populate('user', 'fullName role')
-      .sort({ createdAt: -1 })
-      .limit(500);
-    res.json(logs);
+    const logs = await prisma.auditTrail.findMany({
+      include: { admin: { select: { id: true, fullName: true, role: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+    res.json(toApi(logs));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -67,8 +67,8 @@ app.use('/api/payment',      residentPaymentRoutes);      // create-session
 // Prices alias for public portal
 app.get('/api/admin/prices', async (req, res) => {
   try {
-    const DocumentPrice = require('./models/DocumentPrice');
-    const prices = await DocumentPrice.find().sort({ documentType: 1 }).lean();
+    const prisma = require('../lib/prisma');
+    const prices = await prisma.documentPrice.findMany({ orderBy: { documentType: 'asc' } });
     const map = {};
     prices.forEach((p) => { map[p.documentType] = p.pricecentavos / 100; });
     res.json(map);

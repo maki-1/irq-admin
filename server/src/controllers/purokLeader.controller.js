@@ -1,15 +1,20 @@
-const Request             = require('../models/Request');
-const VerificationProfile = require('../models/VerificationProfile');
-const PurokClearanceFee   = require('../models/PurokClearanceFee');
-const auditLog            = require('../utils/auditLog');
-require('../models/ResidentUser');
+const prisma     = require('../../lib/prisma');
+const { toApi }  = require('../../lib/serialize');
+const { isUuid } = require('../../lib/ids');
+const auditLog   = require('../utils/auditLog');
+
+const USER_BRIEF = { select: { id: true, username: true, email: true, contactNumber: true } };
 
 /* Helper — get user IDs whose verification profile address contains the purok */
 async function getUserIdsForPurok(purok) {
-  const profiles = await VerificationProfile.find({
-    address: { $regex: purok.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' },
-  }).select('user').lean();
-  return profiles.map((p) => p.user).filter(Boolean);
+  if (!purok) return [];
+  // Was a case-insensitive regex; `contains` with insensitive mode is the
+  // equivalent for a plain substring match.
+  const profiles = await prisma.verificationProfile.findMany({
+    where: { address: { contains: purok, mode: 'insensitive' } },
+    select: { userId: true },
+  });
+  return profiles.map((p) => p.userId).filter(Boolean);
 }
 
 /* GET /api/purok-leader/dashboard */
@@ -18,7 +23,10 @@ exports.getDashboard = async (req, res) => {
     const purok   = req.user.purok;
     const userIds = await getUserIdsForPurok(purok);
 
-    const requests = await Request.find({ user: { $in: userIds } }).lean();
+    const requests = await prisma.request.findMany({
+      where: { userId: { in: userIds } },
+      select: { purokLeaderStatus: true, documentType: true },
+    });
 
     const stats = {
       total:    requests.length,
@@ -46,21 +54,28 @@ exports.getRequests = async (req, res) => {
     const purok   = req.user.purok;
     const userIds = await getUserIdsForPurok(purok);
 
-    const requests = await Request.find({ user: { $in: userIds } })
-      .populate('user', 'username email contactNumber')
-      .sort({ createdAt: -1 })
-      .lean();
+    const requests = await prisma.request.findMany({
+      where: { userId: { in: userIds } },
+      include: {
+        user: {
+          select: {
+            ...USER_BRIEF.select,
+            verificationProfile: { select: { id: true, userId: true, fullName: true, address: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
-    // Attach verification profiles
-    const profiles = await VerificationProfile.find({ user: { $in: userIds } })
-      .select('user fullName address').lean();
-    const profileMap = {};
-    profiles.forEach((p) => { profileMap[p.user?.toString()] = p; });
-
-    const result = requests.map((r) => ({
-      ...r,
-      profile: profileMap[r.user?._id?.toString() || r.user?.toString()] || null,
-    }));
+    // Preserves the old shape: `profile` beside the request rather than nested
+    // inside `user`.
+    const result = requests.map((r) => {
+      const obj = toApi(r);
+      const profile = obj.user?.verificationProfile ?? null;
+      if (obj.user) delete obj.user.verificationProfile;
+      obj.profile = profile;
+      return obj;
+    });
 
     res.json(result);
   } catch (err) {
@@ -72,35 +87,51 @@ exports.getRequests = async (req, res) => {
 exports.approveRequest = async (req, res) => {
   try {
     const { remarks } = req.body;
-    const purok = req.user.purok;
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
 
-    // Get the purok clearance fee for this leader's purok
-    const feeDoc = await PurokClearanceFee.findOne({
-      purokName: { $regex: purok.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' },
-    }).lean();
-    const purokClearanceFee = feeDoc ? feeDoc.feecentavos / 100 : 0;
+    // Find the request to get the resident's user ID
+    const existing = await prisma.request.findUnique({
+      where: { id: req.params.id },
+      select: { userId: true },
+    });
+    if (!existing) return res.status(404).json({ message: 'Request not found' });
 
-    const request = await Request.findByIdAndUpdate(
-      req.params.id,
-      {
+    // Look up resident's address from their verification profile
+    const profile = await prisma.verificationProfile.findUnique({
+      where: { userId: existing.userId },
+      select: { address: true },
+    });
+    const residentAddress = profile?.address || '';
+
+    // Match address against all purok clearance fees
+    let purokClearanceFee = 0;
+    if (residentAddress) {
+      const allFees = await prisma.purokClearanceFee.findMany();
+      const matched = allFees.find((fee) =>
+        new RegExp(fee.purokName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(residentAddress)
+      );
+      purokClearanceFee = matched ? matched.feecentavos / 100 : 0;
+    }
+
+    const request = await prisma.request.update({
+      where: { id: req.params.id },
+      data: {
         purokLeaderStatus:  'approved',
-        purokLeaderBy:      req.user._id,
+        purokLeaderBy:      req.user.id,
         purokLeaderAt:      new Date(),
         purokLeaderRemarks: remarks || '',
         purokClearanceFee,
       },
-      { new: true }
-    ).populate('user', 'username email');
-
-    if (!request) return res.status(404).json({ message: 'Request not found' });
+      include: { user: { select: { id: true, username: true, email: true } } },
+    });
 
     await auditLog({
       user: req.user,
       action: 'Purok Leader Approve Request',
-      details: `Request ${request._id} (${request.documentType}) approved by ${req.user.fullName} — Purok Clearance Fee: ₱${purokClearanceFee}`,
+      details: `Request ${request.id} (${request.documentType}) approved by ${req.user.fullName} — Purok Clearance Fee: ₱${purokClearanceFee}`,
     });
 
-    res.json(request);
+    res.json(toApi(request));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -110,28 +141,34 @@ exports.approveRequest = async (req, res) => {
 exports.rejectRequest = async (req, res) => {
   try {
     const { remarks } = req.body;
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
 
-    const request = await Request.findByIdAndUpdate(
-      req.params.id,
-      {
-        purokLeaderStatus:  'rejected',
-        purokLeaderBy:      req.user._id,
-        purokLeaderAt:      new Date(),
-        purokLeaderRemarks: remarks || '',
-        status:             'Rejected',
-      },
-      { new: true }
-    ).populate('user', 'username email');
+    const request = await prisma.request
+      .update({
+        where: { id: req.params.id },
+        data: {
+          purokLeaderStatus:  'rejected',
+          purokLeaderBy:      req.user.id,
+          purokLeaderAt:      new Date(),
+          purokLeaderRemarks: remarks || '',
+          status:             'Rejected',
+        },
+        include: { user: { select: { id: true, username: true, email: true } } },
+      })
+      .catch((e) => {
+        if (e.code === 'P2025') return null;
+        throw e;
+      });
 
     if (!request) return res.status(404).json({ message: 'Request not found' });
 
     await auditLog({
       user: req.user,
       action: 'Purok Leader Reject Request',
-      details: `Request ${request._id} (${request.documentType}) rejected by ${req.user.fullName}. Reason: ${remarks || 'none'}`,
+      details: `Request ${request.id} (${request.documentType}) rejected by ${req.user.fullName}. Reason: ${remarks || 'none'}`,
     });
 
-    res.json(request);
+    res.json(toApi(request));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
