@@ -21,13 +21,17 @@ const WRITABLE = [
   'idType', 'idName', 'idFront', 'idBack', 'facePhoto', 'educationCertificate',
   'age', 'yearsAtAddress', 'address', 'motherName', 'fatherName', 'isPwd',
   'isSenior', 'isIndigent', 'pwdProof', 'indigentProof', 'educationLevel',
+  'isSoloParent', 'isIndigenousPeople', 'isPregnant', 'isNonResident', 'ethnicGroup',
   'school', 'yearGraduated', 'course', 'secondaryIdType', 'secondaryIdName',
   'secondaryIdFront', 'secondaryId2Type', 'secondaryId2Name', 'secondaryId2Front',
   'status', 'remarks', 'currentStep',
 ];
 const INT_FIELDS = new Set(['age', 'yearsAtAddress', 'currentStep']);
 const DATE_FIELDS = new Set(['birthday']);
-const BOOL_FIELDS = new Set(['isPwd', 'isSenior', 'isIndigent']);
+const BOOL_FIELDS = new Set([
+  'isPwd', 'isSenior', 'isIndigent',
+  'isSoloParent', 'isIndigenousPeople', 'isPregnant', 'isNonResident',
+]);
 
 function pickWritable(body) {
   const out = {};

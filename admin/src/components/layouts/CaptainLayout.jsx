@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FiGrid, FiHome, FiFileText, FiBarChart2, FiUsers, FiClipboard, FiMenu, FiX,
-  FiSearch, FiMessageCircle, FiBell,
   FiUser, FiLogOut, FiChevronDown, FiActivity, FiTag,
 } from 'react-icons/fi';
 import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
+import HeaderActions from './HeaderActions';
 
 const NAV = [
   { to: '/captain',            label: 'DASHBOARD', Icon: FiGrid      },
@@ -20,6 +20,8 @@ const NAV = [
 ];
 
 function SidebarContent({ onNavClick }) {
+  const { user } = useAuthStore();
+
   return (
     <>
       <div className="flex flex-col items-center mb-6 pt-6 px-4">
@@ -34,6 +36,12 @@ function SidebarContent({ onNavClick }) {
           color: '#156D07', fontSize: 18, fontWeight: 700, letterSpacing: 2,
         }}>
           DOLOGON
+        </span>
+        <span style={{
+          fontFamily: "'Hanken Grotesk', sans-serif",
+          color: '#A18D8D', fontSize: 11, marginTop: 2,
+        }}>
+          {user?.role || 'Barangay Captain'}
         </span>
       </div>
 
@@ -100,15 +108,7 @@ function TopBar({ title, onHamburger }) {
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-white shadow-sm hover:shadow transition-shadow">
-          <FiSearch size={17} color="#1E1E1E" />
-        </button>
-        <button className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-white shadow-sm hover:shadow transition-shadow">
-          <FiMessageCircle size={17} color="#1E1E1E" />
-        </button>
-        <button className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-white shadow-sm hover:shadow transition-shadow">
-          <FiBell size={17} color="#1E1E1E" />
-        </button>
+        <HeaderActions />
 
         <div className="relative">
           <button

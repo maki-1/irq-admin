@@ -57,7 +57,12 @@ app.use('/api/releases',        releaseRoutes);
 app.use('/api/document-prices', documentPriceRoutes);
 app.use('/api/crop-id',        cropRoutes);
 app.use('/api/purok-leader',   purokLeaderRoutes);
+// Public SMS one-tap approval (authorised by a signed link, not a session).
+app.use('/api/purok-approve',  require('./routes/purokApprove.routes'));
 app.use('/api/purok-clearance', purokClearanceFeeRoutes);
+// Issuance register — mounted after the fee routes so their fixed paths
+// ('/all-fees') keep precedence over this router's own.
+app.use('/api/purok-clearance', require('./routes/purokClearance.routes'));
 
 // API Routes — Resident (public portal)
 app.use('/api/verification', residentVerificationRoutes); // step1/2/3/status

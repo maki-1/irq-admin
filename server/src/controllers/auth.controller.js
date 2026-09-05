@@ -3,6 +3,7 @@ const prisma = require('../../lib/prisma');
 const { comparePassword } = require('../../lib/password');
 const { toApi } = require('../../lib/serialize');
 const residentCtrl = require('./resident.auth.controller');
+const auditLog = require('../utils/auditLog');
 
 const signToken = (id) => {
   if (!process.env.JWT_SECRET) return id.toString();
@@ -30,7 +31,14 @@ exports.login = async (req, res) => {
     if (!user || !user.password || !(await comparePassword(password, user.password))) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
+    // Deactivated accounts keep their history but cannot sign in.
+    if (user.active === false) {
+      return res.status(403).json({ message: 'This account has been deactivated. Contact the Barangay Captain.' });
+    }
     const token = signToken(user.id);
+    // Record the sign-in on the audit trail. Fire-and-forget: a logging hiccup
+    // must never block a valid login.
+    auditLog({ user, action: 'Login', details: `Signed in as ${user.role}` }).catch(() => {});
     res.json({
       token,
       user: {
@@ -51,4 +59,18 @@ exports.login = async (req, res) => {
 // GET /api/auth/me
 exports.getMe = async (req, res) => {
   res.json(toApi(req.user));
+};
+
+// POST /api/auth/logout — records the sign-out on the audit trail.
+// The token is stateless (nothing to invalidate server-side); this exists so
+// the sign-out time is captured. `protect` runs first, so req.user is the
+// staff member logging out — any staff role, Purok Leader included.
+exports.logout = async (req, res) => {
+  try {
+    await auditLog({ user: req.user, action: 'Logout', details: `Signed out (${req.user.role})` });
+    res.sendStatus(204);
+  } catch (err) {
+    // Never fail a logout over a logging error.
+    res.sendStatus(204);
+  }
 };

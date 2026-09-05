@@ -2,7 +2,13 @@ const axios      = require('axios');
 const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
 const { isUuid } = require('../../lib/ids');
+const { notifyPurokLeader } = require('../../lib/purokNotify');
 const generateORNumber = require('../utils/generateORNumber');
+const sendSmsRaw = require('../utils/sendSms');
+const sendEmail = require('../utils/sendEmail');
+
+// The shared notifier calls sendSms(to, message); this util takes an object.
+const sendSms = (to, message) => sendSmsRaw({ to, message });
 
 async function uploadBuffer(buffer, folder) {
   return new Promise((resolve, reject) => {
@@ -59,6 +65,7 @@ exports.createSession = async (req, res) => {
     if (!docs.length) return res.status(400).json({ message: 'No documents provided' });
 
     // Upload photos and create pending requests
+    const created = [];
     for (let j = 0; j < docs.length; j++) {
       const doc = docs[j];
       let requestPhotoUrl = null;
@@ -70,7 +77,7 @@ exports.createSession = async (req, res) => {
       const priceInCentavos = await priceCentavosFor(doc.type);
 
       const orNumber = await generateORNumber();
-      await prisma.request.create({
+      const created_ = await prisma.request.create({
         data: {
           userId,
           documentType:       doc.type,
@@ -83,12 +90,27 @@ exports.createSession = async (req, res) => {
           requestPhoto:       requestPhotoUrl ?? '',
           purokLeaderStatus:  'pending',
           orNumber,
+          channel:            body.channel === 'kiosk' ? 'kiosk' : 'web',
         },
       });
+      created.push(created_);
     }
 
     // All requests require purok leader approval before payment
-    return res.json({ message: 'Requests submitted. Waiting for Purok Leader approval.', pendingApproval: true });
+    res.json({ message: 'Requests submitted. Waiting for Purok Leader approval.', pendingApproval: true });
+
+    // Tell the Purok Leader it is waiting on them. Fired after the response so
+    // a slow SMS gateway never delays the resident.
+    notifyPurokLeader({
+      userId,
+      documentTypes: created.map((r) => r.documentType),
+      channel: created[0]?.channel,
+      sendSms,
+      sendEmail,
+    })
+      .then((r) => { if (!r.notified) console.warn(`[payment] purok leader not notified: ${r.reason}`); })
+      .catch((e) => console.error('[payment] notify failed:', e.message));
+    return;
   } catch (err) {
     console.error('[createSession]', err.response?.data || err.message);
     res.status(500).json({
@@ -126,7 +148,11 @@ exports.payApproved = async (req, res) => {
     const purokFeeCentavos = Math.round(Number(request.purokClearanceFee || 0) * 100);
     const totalCentavos    = docCentavos + purokFeeCentavos;
 
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5174';
+    // CLIENT_URL is a comma-separated CORS allowlist (see app.js). Used raw as a
+    // redirect base it produces a malformed success_url — the whole list joined
+    // into one string — so PayMongo redirects the paid resident to a dead page.
+    // Take the first configured origin as the return base.
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5174').split(',')[0].trim();
 
     const response = await axios.post(
       'https://api.paymongo.com/v1/checkout_sessions',

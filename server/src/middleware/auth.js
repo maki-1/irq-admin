@@ -5,7 +5,7 @@ const { isUuid } = require('../../lib/ids');
 // Staff record minus the password hash (was .select('-password')).
 const ADMIN_FIELDS = {
   id: true, legacyId: true, fullName: true, purok: true, email: true,
-  role: true, oauthProvider: true, oauthId: true, createdAt: true, updatedAt: true,
+  role: true, active: true, oauthProvider: true, oauthId: true, createdAt: true, updatedAt: true,
 };
 
 // Without JWT_SECRET the bearer token is taken as a raw user id and not
@@ -35,6 +35,10 @@ const protect = async (req, res, next) => {
       select: ADMIN_FIELDS,
     });
     if (!req.user) return res.status(401).json({ message: 'User not found' });
+    // A staff member deactivated mid-session is locked out on their next request.
+    if (req.user.active === false) {
+      return res.status(403).json({ message: 'This account has been deactivated.' });
+    }
     next();
   } catch {
     res.status(401).json({ message: 'Token invalid or expired' });

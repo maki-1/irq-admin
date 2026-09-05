@@ -6,6 +6,7 @@ import Landing from './pages/Landing';
 
 // Auth pages
 import Login from './pages/auth/Login';
+import PurokApprove from './pages/public/PurokApprove';
 
 // Secretary
 import SecretaryDashboard from './pages/secretary/Dashboard';
@@ -17,6 +18,7 @@ import RequestRelease    from './pages/secretary/RequestRelease';
 // Collector
 import CollectorDashboard from './pages/collector/Dashboard';
 import CollectorPayments  from './pages/collector/Payments';
+import CollectorReports   from './pages/collector/Reports';
 
 // Barangay Captain
 import CaptainDashboard  from './pages/captain/Dashboard';
@@ -30,6 +32,7 @@ import PurokFees         from './pages/captain/PurokFees';
 // Purok Leader
 import PurokLeaderDashboard from './pages/purokleader/Dashboard';
 import PurokLeaderRequests  from './pages/purokleader/Requests';
+import PurokLeaderFeeReport from './pages/purokleader/FeeReport';
 
 // Shared
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -52,6 +55,8 @@ export default function App() {
         path="/login"
         element={!user ? <Login /> : <Navigate to={ROLE_HOME[user.role] || '/secretary'} />}
       />
+      {/* SMS one-tap approval — authorised by the signed link, no session */}
+      <Route path="/purok-approve" element={<PurokApprove />} />
 
       {/* Secretary */}
       <Route element={<ProtectedRoute allowedRoles={['Secretary']} />}>
@@ -67,6 +72,7 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={['Collector']} />}>
         <Route path="/collector"          element={<CollectorDashboard />} />
         <Route path="/collector/payments" element={<CollectorPayments />} />
+        <Route path="/collector/reports"  element={<CollectorReports />} />
         <Route path="/collector/logs"     element={<Logs />} />
       </Route>
 
@@ -84,8 +90,9 @@ export default function App() {
 
       {/* Purok Leader */}
       <Route element={<ProtectedRoute allowedRoles={['Purok Leader']} />}>
-        <Route path="/purok-leader"          element={<PurokLeaderDashboard />} />
-        <Route path="/purok-leader/requests" element={<PurokLeaderRequests />} />
+        <Route path="/purok-leader"            element={<PurokLeaderDashboard />} />
+        <Route path="/purok-leader/requests"   element={<PurokLeaderRequests />} />
+        <Route path="/purok-leader/fee-report" element={<PurokLeaderFeeReport />} />
       </Route>
 
       {/* Landing page */}

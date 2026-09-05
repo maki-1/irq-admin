@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { FiCheckCircle, FiXCircle, FiX, FiDownload, FiFilter } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import PurokLeaderLayout from '../../components/layouts/PurokLeaderLayout';
 import api from '../../services/api';
+import useAuthStore from '../../store/authStore';
+import { exportReportPDF, exportReportXLSX } from '../../utils/reportExport';
 
 const TABS     = ['Pending', 'Approved', 'Rejected'];
 const PAGE_SIZE = 10;
@@ -94,6 +94,7 @@ function ActionModal({ request, action, onClose, onDone }) {
 }
 
 export default function PurokLeaderRequests() {
+  const { user } = useAuthStore();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState('Pending');
@@ -134,57 +135,31 @@ export default function PurokLeaderRequests() {
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const pending    = requests.filter((r) => r.purokLeaderStatus === 'pending').length;
 
-  function exportCSV() {
-    const rows = [
-      ['#', 'Resident Name', 'Document Type', 'Purpose', 'Date Requested', 'Status', 'Remarks'],
-      ...filtered.map((r, i) => [
-        i + 1,
-        r.profile?.fullName || r.user?.username || '—',
-        r.documentType || '—',
-        r.purpose || '—',
-        new Date(r.createdAt).toLocaleDateString('en-PH'),
-        r.purokLeaderStatus || '—',
-        r.purokLeaderRemarks || '',
-      ]),
-    ];
-    const csv  = rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `purok-requests-${tab.toLowerCase()}-${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const REQ_COLUMNS = ['#', 'Resident Name', 'Document Type', 'Purpose', 'Date Requested', 'Status', 'Remarks'];
+  const reqReport = () => ({
+    title: 'Purok Leader Requests',
+    subtitle: `${tab} · ${user?.purok || ''}`.trim(),
+    columns: REQ_COLUMNS,
+    rows: filtered.map((r, i) => [
+      i + 1,
+      r.profile?.fullName || r.user?.username || '—',
+      r.documentType || '—',
+      r.purpose || '—',
+      new Date(r.createdAt).toLocaleDateString('en-PH'),
+      r.purokLeaderStatus || '—',
+      r.purokLeaderRemarks || '',
+    ]),
+    user,
+    filename: `purok-requests-${tab.toLowerCase()}`,
+  });
+
+  async function exportExcel() {
+    try { await exportReportXLSX({ ...reqReport(), sheetName: `${tab} Requests` }); }
+    catch { toast.error('Excel export failed'); }
   }
-
-  function exportPDF() {
-    const doc = new jsPDF({ orientation: 'landscape' });
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text(`Purok Leader — ${tab} Requests`, 14, 15);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString('en-PH')}`, 14, 22);
-
-    autoTable(doc, {
-      startY: 28,
-      head: [['#', 'Resident Name', 'Document Type', 'Purpose', 'Date Requested', 'Status', 'Remarks']],
-      body: filtered.map((r, i) => [
-        i + 1,
-        r.profile?.fullName || r.user?.username || '—',
-        r.documentType || '—',
-        r.purpose || '—',
-        new Date(r.createdAt).toLocaleDateString('en-PH'),
-        r.purokLeaderStatus || '—',
-        r.purokLeaderRemarks || '',
-      ]),
-      styles:           { fontSize: 9, cellPadding: 3 },
-      headStyles:       { fillColor: [21, 109, 7], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [245, 240, 240] },
-      columnStyles:     { 0: { cellWidth: 10 }, 6: { cellWidth: 45 } },
-    });
-
-    doc.save(`purok-requests-${tab.toLowerCase()}-${Date.now()}.pdf`);
+  async function exportPDF() {
+    try { await exportReportPDF({ ...reqReport(), orientation: 'landscape' }); }
+    catch { toast.error('PDF export failed'); }
   }
 
   /* page number list with ellipsis */
@@ -228,10 +203,10 @@ export default function PurokLeaderRequests() {
             {docTypes.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
-        <button onClick={exportCSV}
+        <button onClick={exportExcel}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold"
           style={{ background: '#F0FDF4', color: '#156D07', fontFamily: "'Hahmlet', sans-serif" }}>
-          <FiDownload size={14} /> Export CSV
+          <FiDownload size={14} /> Export Excel
         </button>
         <button onClick={exportPDF}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold"

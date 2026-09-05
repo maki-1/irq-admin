@@ -5,10 +5,13 @@ import {
 } from 'react-icons/fi';
 import { getReleases, updateClaimStatus } from '../../services/request.service';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
+import useAuthStore from '../../store/authStore';
+import { exportReportXLSX } from '../../utils/reportExport';
 
 const PAGE_SIZE = 10;
 
 export default function RequestRelease() {
+  const { user } = useAuthStore();
   const [releases, setReleases] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
@@ -60,8 +63,8 @@ export default function RequestRelease() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const exportCSV = () => {
-    const headers = ['#', 'Claim Code', 'Name', 'Document Type', 'Purpose', 'Purok', 'Completed Date'];
+  const exportExcel = () => {
+    const columns = ['#', 'Claim Code', 'Name', 'Document Type', 'Purpose', 'Purok', 'Completed Date'];
     const rows = filtered.map((r, i) => [
       i + 1,
       r.claimCode || '',
@@ -73,18 +76,10 @@ export default function RequestRelease() {
         ? new Date(r.completedAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
         : '',
     ]);
-
-    const csv = [headers, ...rows]
-      .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `releases-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportReportXLSX({
+      title: 'Document Releases', sheetName: 'Releases',
+      columns, rows, user, filename: 'releases',
+    }).catch(() => toast.error('Excel export failed'));
   };
 
   const inputStyle = {
@@ -148,7 +143,7 @@ export default function RequestRelease() {
 
             {/* Export */}
             <button
-              onClick={exportCSV}
+              onClick={exportExcel}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold"
               style={{
                 fontFamily: "'Hanken Grotesk', sans-serif",
@@ -159,7 +154,7 @@ export default function RequestRelease() {
               }}
             >
               <FiDownload size={12} />
-              Export CSV
+              Export Excel
             </button>
           </div>
         </div>

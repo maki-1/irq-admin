@@ -55,6 +55,10 @@ export default function NewRequest() {
   }
 
   const total = items.reduce((sum, item) => sum + (item.type ? getPrice(item.type) : 0), 0);
+  // Distinguish "nothing chosen yet" (total is 0 because the form is empty) from
+  // a genuinely free document. Without this the summary reads FREE by default,
+  // before the resident has selected anything.
+  const hasSelection = items.some((item) => item.type);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -196,14 +200,20 @@ export default function NewRequest() {
           ))}
           <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between font-bold">
             <span>Total</span>
-            <span className={total === 0 ? 'text-primary' : 'text-gray-800'}>
-              {total === 0 ? 'FREE' : `₱${total}`}
+            <span className={!hasSelection ? 'text-gray-400' : total === 0 ? 'text-primary' : 'text-gray-800'}>
+              {!hasSelection ? '—' : total === 0 ? 'FREE' : `₱${total}`}
             </span>
           </div>
         </div>
 
-        <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-base">
-          {loading ? <LoadingSpinner size="sm" /> : total > 0 ? `Submit & Await Approval` : 'Submit Free Request'}
+        <button type="submit" disabled={loading || !hasSelection} className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-base disabled:opacity-50">
+          {loading
+            ? <LoadingSpinner size="sm" />
+            : !hasSelection
+              ? 'Select a document'
+              : total > 0
+                ? 'Submit & Await Approval'
+                : 'Submit Free Request'}
         </button>
       </form>
     </AppLayout>

@@ -4,7 +4,7 @@ const jwt     = require('jsonwebtoken');
 const prisma  = require('../../lib/prisma');
 const { toApi }  = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
-const { login, getMe }  = require('../controllers/auth.controller');
+const { login, getMe, logout }  = require('../controllers/auth.controller');
 const residentCtrl      = require('../controllers/resident.auth.controller');
 const { protect }       = require('../middleware/auth');
 const { residentProtect } = require('../middleware/residentAuth');
@@ -69,5 +69,8 @@ router.get('/me', async (req, res) => {
 });
 router.put('/avatar',               residentProtect, upload.single('avatar'), residentCtrl.updateAvatar);
 router.post('/change-password',     residentProtect, residentCtrl.changePassword);
+
+// Staff sign-out — records the logout on the audit trail (any staff role).
+router.post('/logout', protect, logout);
 
 module.exports = router;

@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FiGrid, FiClipboard, FiMenu, FiX,
-  FiUser, FiLogOut, FiChevronDown,
+  FiUser, FiLogOut, FiChevronDown, FiDollarSign,
 } from 'react-icons/fi';
 import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
 
 const NAV = [
-  { to: '/purok-leader',          label: 'DASHBOARD', Icon: FiGrid      },
-  { to: '/purok-leader/requests', label: 'REQUESTS',  Icon: FiClipboard },
+  { to: '/purok-leader',            label: 'DASHBOARD',  Icon: FiGrid       },
+  { to: '/purok-leader/requests',   label: 'REQUESTS',   Icon: FiClipboard  },
+  { to: '/purok-leader/fee-report', label: 'FEE REPORT', Icon: FiDollarSign },
 ];
 
 function SidebarContent({ onNavClick }) {

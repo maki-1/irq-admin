@@ -2,7 +2,24 @@ const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
 const { toApi }  = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
+const { notifyPurokLeader } = require('../../lib/purokNotify');
 const generateORNumber = require('../utils/generateORNumber');
+const sendSmsRaw = require('../utils/sendSms');
+const sendEmail = require('../utils/sendEmail');
+
+// The shared notifier calls sendSms(to, message); this util takes an object.
+const sendSms = (to, message) => sendSmsRaw({ to, message });
+
+// A new request cannot be paid for until the Purok Leader approves it, and
+// nothing used to tell them it was waiting. Fired after the response is sent so
+// a slow gateway never delays the resident.
+function announceToPurokLeader(userId, documentTypes, channel) {
+  notifyPurokLeader({ userId, documentTypes, channel, sendSms, sendEmail })
+    .then((r) => {
+      if (!r.notified) console.warn(`[requests] purok leader not notified: ${r.reason}`);
+    })
+    .catch((e) => console.error('[requests] notify failed:', e.message));
+}
 
 async function uploadBuffer(buffer, folder) {
   return new Promise((resolve, reject) => {
@@ -165,12 +182,15 @@ exports.createBulk = async (req, res) => {
           requestPhoto:       requestPhotoUrl ?? '',
           purokLeaderStatus:  'pending',
           orNumber,
+          channel:            body.channel === 'kiosk' ? 'kiosk' : 'web',
         },
       });
       created.push(request);
     }
 
     res.status(201).json({ message: 'Requests submitted', requests: toApi(created) });
+    // One notification for the batch, not one per document.
+    announceToPurokLeader(userId, created.map((r) => r.documentType), created[0]?.channel);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

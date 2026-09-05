@@ -8,6 +8,8 @@ import { getRequests, updateRequestStatus } from '../../services/request.service
 import CaptainLayout from '../../components/layouts/CaptainLayout';
 import PrintDocumentModal from '../../components/common/PrintDocumentModal';
 import PrintReceiptModal  from '../../components/common/PrintReceiptModal';
+import useAuthStore from '../../store/authStore';
+import { exportReportXLSX } from '../../utils/reportExport';
 
 const STATUS_ORDER = ['Pending', 'Processing', 'Printing', 'Completed'];
 
@@ -56,6 +58,7 @@ const DOC_STATUSES = ['All', 'Pending', 'Processing', 'Printing', 'Completed', '
 const PAGE_SIZE = 10;
 
 export default function CaptainRequests() {
+  const { user } = useAuthStore();
   const [requests,   setRequests]  = useState([]);
   const [loading,    setLoading]   = useState(true);
   const [search,     setSearch]    = useState('');
@@ -132,8 +135,8 @@ export default function CaptainRequests() {
     }
   };
 
-  const exportCSV = () => {
-    const headers = ['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date'];
+  const exportExcel = () => {
+    const columns = ['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date'];
     const rows = sorted.map((r, i) => [
       i + 1,
       String(r._id).slice(-6).toUpperCase(),
@@ -145,16 +148,10 @@ export default function CaptainRequests() {
       r.paymentStatus || '',
       r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '',
     ]);
-    const csv = [headers, ...rows]
-      .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `requests-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportReportXLSX({
+      title: 'Document Requests', sheetName: 'Requests',
+      columns, rows, user, filename: 'requests',
+    }).catch(() => toast.error('Excel export failed'));
   };
 
   return (
@@ -245,7 +242,7 @@ export default function CaptainRequests() {
               ))}
 
               <button
-                onClick={exportCSV}
+                onClick={exportExcel}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
                 style={{
                   fontFamily: "'Hanken Grotesk', sans-serif",
@@ -256,7 +253,7 @@ export default function CaptainRequests() {
                 }}
               >
                 <FiDownload size={12} />
-                Export CSV
+                Export Excel
               </button>
             </div>
           </div>

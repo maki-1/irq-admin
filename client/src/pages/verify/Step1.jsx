@@ -26,6 +26,10 @@ export default function Step1() {
   const [privacyConsent, setPrivacyConsent] = useState(false);
   const [isPwd, setIsPwd] = useState(false);
   const [isIndigent, setIsIndigent] = useState(false);
+  const [isSoloParent, setIsSoloParent] = useState(false);
+  const [isIndigenousPeople, setIsIndigenousPeople] = useState(false);
+  const [isPregnant, setIsPregnant] = useState(false);
+  const [isNonResident, setIsNonResident] = useState(false);
   const [pwdProof, setPwdProof] = useState(null);
   const [indigentProof, setIndigentProof] = useState(null);
 
@@ -57,6 +61,11 @@ export default function Step1() {
       fd.set('isPwd', isPwd);
       fd.set('isSenior', isSenior);
       fd.set('isIndigent', isIndigent);
+      fd.set('isSoloParent', isSoloParent);
+      fd.set('isIndigenousPeople', isIndigenousPeople);
+      fd.set('isPregnant', isPregnant);
+      fd.set('isNonResident', isNonResident);
+      if (!isIndigenousPeople) fd.delete('ethnicGroup');
       fd.set('age', age);
       if (isPwd && pwdProof) fd.append('pwdProof', pwdProof);
       if (isIndigent && indigentProof) fd.append('indigentProof', indigentProof);
@@ -222,6 +231,52 @@ export default function Step1() {
                 <div>
                   <label className="label">Indigency Proof Document</label>
                   <input type="file" accept="image/*" onChange={(e) => setIndigentProof(e.target.files[0])} className="input-field py-2" />
+                </div>
+              )}
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => setIsSoloParent(!isSoloParent)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isSoloParent ? 'bg-primary' : 'bg-gray-300'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow ${isSoloParent ? 'left-7' : 'left-1'}`} />
+                </div>
+                <span className="text-sm text-gray-700">Solo Parent</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => setIsPregnant(!isPregnant)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isPregnant ? 'bg-primary' : 'bg-gray-300'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow ${isPregnant ? 'left-7' : 'left-1'}`} />
+                </div>
+                <span className="text-sm text-gray-700">Pregnant</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => setIsNonResident(!isNonResident)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isNonResident ? 'bg-primary' : 'bg-gray-300'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow ${isNonResident ? 'left-7' : 'left-1'}`} />
+                </div>
+                <span className="text-sm text-gray-700">Non-Resident</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => setIsIndigenousPeople(!isIndigenousPeople)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isIndigenousPeople ? 'bg-primary' : 'bg-gray-300'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow ${isIndigenousPeople ? 'left-7' : 'left-1'}`} />
+                </div>
+                <span className="text-sm text-gray-700">Indigenous People (IP)</span>
+              </label>
+              {isIndigenousPeople && (
+                <div>
+                  <label className="label">Ethnic Group / Tribe</label>
+                  <input {...register('ethnicGroup')} className="input-field" placeholder="e.g. Manobo, Higaonon" />
                 </div>
               )}
             </div>

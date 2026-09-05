@@ -8,6 +8,8 @@ import {
 } from 'react-icons/fi';
 import api from '../../services/api';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
+import useAuthStore from '../../store/authStore';
+import { exportReportXLSX } from '../../utils/reportExport';
 
 /* ── Status badge — matches actual MongoDB status values ── */
 const STATUS_CFG = {
@@ -358,9 +360,10 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
 const PAGE_SIZE = 10;
 
 export default function CaptainResidence() {
+  const { user } = useAuthStore();
   const [profiles, setProfiles] = useState([]);
   const [loading,  setLoading]  = useState(true);
-  const [search,   setSearch]   = useState('');
+  const [search,   setSearch]   = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [filter,   setFilter]   = useState('All');
   const [selected, setSelected] = useState(null);
   const [page,     setPage]     = useState(1);
@@ -427,14 +430,14 @@ export default function CaptainResidence() {
   /* Reset to page 1 when filter or search changes */
   useEffect(() => { setPage(1); }, [filter, search]);
 
-  /* Export filtered data as CSV */
+  /* Export filtered residents as a presentable Excel file */
   const handleExport = () => {
     if (filtered.length === 0) {
       toast.error('No data to export for the current filter.');
       return;
     }
 
-    const columns = [
+    const cols = [
       { header: 'Full Name',     key: 'fullName'     },
       { header: 'Email',         key: 'email'        },
       { header: 'Contact',       key: 'contactNumber'},
@@ -448,33 +451,25 @@ export default function CaptainResidence() {
       { header: 'Status',        key: 'status'       },
       { header: 'Remarks',       key: 'remarks'      },
     ];
-
-    const escape = (val) => {
-      if (val == null) return '';
-      const str = String(val).replace(/"/g, '""');
-      return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str}"` : str;
-    };
-
-    const header = columns.map((c) => c.header).join(',');
     const rows = filtered.map((p) =>
-      columns.map((c) => {
-        if (c.key === 'birthday' && p.birthday) {
-          return escape(new Date(p.birthday).toLocaleDateString('en-PH'));
-        }
-        return escape(p[c.key]);
-      }).join(',')
+      cols.map((c) =>
+        c.key === 'birthday' && p.birthday
+          ? new Date(p.birthday).toLocaleDateString('en-PH')
+          : (p[c.key] ?? '')
+      )
     );
-
-    const csv = [header, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
     const label = filter === 'All' ? 'All' : filter.replace(/\s+/g, '_');
-    a.href     = url;
-    a.download = `residents_${label}_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`Exported ${filtered.length} record${filtered.length !== 1 ? 's' : ''}`);
+    exportReportXLSX({
+      title: 'Residence Records',
+      subtitle: `Filter: ${filter} · ${filtered.length} record${filtered.length !== 1 ? 's' : ''}`,
+      sheetName: 'Residents',
+      columns: cols.map((c) => c.header),
+      rows,
+      user,
+      filename: `residents-${label}`,
+    })
+      .then(() => toast.success(`Exported ${filtered.length} record${filtered.length !== 1 ? 's' : ''}`))
+      .catch(() => toast.error('Excel export failed'));
   };
 
   return (
@@ -542,7 +537,7 @@ export default function CaptainResidence() {
             }}
           >
             <FiDownload size={14} />
-            Export{filter !== 'All' ? ` (${filter})` : ''} CSV
+            Export{filter !== 'All' ? ` (${filter})` : ''} Excel
           </button>
         </div>
 

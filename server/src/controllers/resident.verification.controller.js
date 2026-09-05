@@ -1,7 +1,17 @@
 const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
+const { listPuroks, isKnownPurok } = require('../../lib/purokFee');
 const { verifyIdentity }      = require('../utils/groqVerify');
 const { azureVerifyIdentity } = require('../utils/azureFaceVerify');
+
+/* ── GET /api/verification/puroks ────────────────────────── */
+exports.getPuroks = async (req, res) => {
+  try {
+    res.json(await listPuroks());
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 async function uploadBuffer(buffer, folder) {
   return new Promise((resolve, reject) => {
@@ -29,17 +39,32 @@ exports.step1 = async (req, res) => {
     const {
       firstName, middleName, lastName,
       birthday, gender, civilStatus, yearsAtAddress,
-      houseNo, street, barangay, city,
+      purok, houseNo, street, barangay, city,
       motherName, fatherName,
       isPwd, isSenior, isIndigent, age,
+      isSoloParent, isIndigenousPeople, isPregnant, isNonResident, ethnicGroup,
     } = req.body;
+
+    const asBool = (v) => v === 'true' || v === true;
 
     if (!firstName || !lastName || !birthday || !gender || !street || !barangay || !city) {
       return res.status(400).json({ message: 'Required fields are missing' });
     }
 
+    // Purok decides the clearance fee and which Purok Leader reviews the
+    // request, so it is validated against the configured list rather than
+    // accepted as text — "Purok9" or "Purok 22" would otherwise be stored and
+    // then silently resolve to a zero fee.
+    if (!purok) {
+      return res.status(400).json({ message: 'Please select your purok' });
+    }
+    if (!(await isKnownPurok(purok))) {
+      return res.status(400).json({ message: `"${purok}" is not a recognised purok` });
+    }
+
     const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
-    const address  = [houseNo, street, barangay, city].filter(Boolean).join(', ');
+    // Purok leads the display address, matching the format already on file.
+    const address  = [purok, houseNo, street, barangay, city].filter(Boolean).join(', ');
 
     // Upload optional proof files
     let pwdProofUrl = null;
@@ -60,11 +85,17 @@ exports.step1 = async (req, res) => {
       civilStatus,
       yearsAtAddress: Number(yearsAtAddress) || 0,
       address,
+      purok: String(purok).trim(),
       motherName: motherName ?? '',
       fatherName: fatherName ?? '',
-      isPwd: isPwd === 'true' || isPwd === true,
-      isSenior: isSenior === 'true' || isSenior === true,
-      isIndigent: isIndigent === 'true' || isIndigent === true,
+      isPwd: asBool(isPwd),
+      isSenior: asBool(isSenior),
+      isIndigent: asBool(isIndigent),
+      isSoloParent: asBool(isSoloParent),
+      isIndigenousPeople: asBool(isIndigenousPeople),
+      isPregnant: asBool(isPregnant),
+      isNonResident: asBool(isNonResident),
+      ethnicGroup: ethnicGroup?.trim() || null,
       ...(pwdProofUrl && { pwdProof: pwdProofUrl }),
       ...(indigentProofUrl && { indigentProof: indigentProofUrl }),
       status: 'submitted',

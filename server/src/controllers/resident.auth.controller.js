@@ -6,6 +6,7 @@ const prisma     = require('../../lib/prisma');
 const { toApi }  = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
 const sendSms    = require('../utils/sendSms');
+const sendEmail  = require('../utils/sendEmail');
 
 // Kept at 12 rounds, as before — deliberately stronger than the shared
 // lib/password helper (10) used elsewhere. bcrypt stores the cost in the hash,
@@ -198,12 +199,51 @@ exports.forgotPassword = async (req, res) => {
       },
     });
 
+    // Delivery is awaited and reported honestly. The previous version fired the
+    // SMS fire-and-forget and always answered "OTP sent", so a resident whose
+    // message failed (right now: every one, the UNISMS account has no sender_id)
+    // waited forever for a code that never came. SMS is the primary channel;
+    // email is a fallback for the residents who have one on file.
     const smsText = `Your iRequestD password reset code is: ${otp}. Valid for 10 minutes. -Brgy. Dologon`;
-    sendSms({ to: contactNumber, message: smsText }).catch((e) =>
-      console.error('[forgotPassword] SMS failed:', e.message)
-    );
 
-    res.json({ message: 'OTP sent', userId: user.id });
+    let channel = null;
+    let smsError = null;
+    try {
+      await sendSms({ to: contactNumber, message: smsText });
+      channel = 'sms';
+    } catch (e) {
+      smsError = e.message;
+      console.error('[forgotPassword] SMS failed:', e.message);
+    }
+
+    if (!channel && user.email) {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: 'iRequestDologon password reset code',
+          html: `<p>Your password reset code is <strong style="font-size:20px;letter-spacing:2px">${otp}</strong>.</p>
+                 <p>It is valid for 10 minutes. If you did not request this, you can ignore this email.</p>
+                 <p style="color:#888;font-size:12px">Barangay Dologon &ndash; iRequestDologon</p>`,
+        });
+        channel = 'email';
+      } catch (e) {
+        console.error('[forgotPassword] email fallback failed:', e.message);
+      }
+    }
+
+    if (!channel) {
+      // Nothing reached the resident. Tell them, instead of pretending it sent.
+      return res.status(502).json({
+        message:
+          'We could not send your reset code right now. Please try again later or visit the barangay office.',
+      });
+    }
+
+    const sentTo =
+      channel === 'sms'
+        ? 'your registered mobile number'
+        : `your email (${user.email.replace(/(.{2}).*(@.*)/, '$1***$2')})`;
+    res.json({ message: `Reset code sent to ${sentTo}`, userId: user.id, channel });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

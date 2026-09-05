@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  FiPlus, FiKey, FiTrash2, FiX, FiEye, FiEyeOff, FiUser,
+  FiPlus, FiKey, FiSlash, FiCheckCircle, FiX, FiEye, FiEyeOff, FiUser, FiEdit2,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
@@ -30,7 +30,7 @@ function RoleBadge({ role }) {
 
 /* ── Create Account Modal ── */
 function CreateModal({ onClose, onCreated }) {
-  const [form,    setForm]    = useState({ fullName: '', email: '', password: '', role: 'Secretary', purok: '' });
+  const [form,    setForm]    = useState({ fullName: '', email: '', password: '', role: 'Secretary', purok: '', contactNumber: '', notifyEmail: '' });
   const [showPw,  setShowPw]  = useState(false);
   const [saving,  setSaving]  = useState(false);
 
@@ -42,6 +42,10 @@ function CreateModal({ onClose, onCreated }) {
     }
     if (form.password.length < 6) { toast.error('Password must be at least 6 characters.'); return; }
     if (form.role === 'Purok Leader' && !form.purok) { toast.error('Select a purok for this leader.'); return; }
+    // A Purok Leader needs a way to be reached for SMS approvals.
+    if (form.role === 'Purok Leader' && !form.contactNumber && !form.notifyEmail) {
+      toast.error('Add a contact number (for SMS approvals) or a notify email for this leader.'); return;
+    }
     setSaving(true);
     try {
       const { data } = await api.post('/users', form);
@@ -151,6 +155,40 @@ function CreateModal({ onClose, onCreated }) {
             </div>
           )}
 
+          {/* Contact number — used to SMS a Purok Leader an approval link */}
+          <div>
+            <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>
+              Contact Number {form.role === 'Purok Leader' && <span style={{ color: '#DC2626' }}>*</span>}
+              <span style={{ color: '#B9AEAE', fontSize: 11 }}> — for SMS approvals</span>
+            </label>
+            <input
+              type="tel"
+              value={form.contactNumber}
+              onChange={(e) => set('contactNumber', e.target.value)}
+              placeholder="e.g. 09171234567"
+              className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+              style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: '#333' }}
+            />
+          </div>
+
+          {/* Notify email — where notifications actually reach them (login email
+              is institutional and may not receive mail). Optional. */}
+          {form.role === 'Purok Leader' && (
+            <div>
+              <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>
+                Notify Email <span style={{ color: '#B9AEAE', fontSize: 11 }}>— optional, a reachable inbox</span>
+              </label>
+              <input
+                type="email"
+                value={form.notifyEmail}
+                onChange={(e) => set('notifyEmail', e.target.value)}
+                placeholder="e.g. leader.personal@gmail.com"
+                className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+                style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: '#333' }}
+              />
+            </div>
+          )}
+
         </div>
 
         <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #F0EAEA' }}>
@@ -163,6 +201,107 @@ function CreateModal({ onClose, onCreated }) {
             className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60"
             style={{ fontFamily: "'Hahmlet', sans-serif", background: '#156D07' }}>
             {saving ? 'Creating…' : 'Create Account'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Edit Account Modal ── */
+function EditModal({ target, onClose, onSaved }) {
+  const isLeader = target.role === 'Purok Leader';
+  const [form, setForm] = useState({
+    fullName: target.fullName || '',
+    contactNumber: target.contactNumber || '',
+    notifyEmail: target.notifyEmail || '',
+    purok: target.purok || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSave = async () => {
+    if (!form.fullName.trim()) { toast.error('Full name is required.'); return; }
+    if (isLeader && !form.contactNumber && !form.notifyEmail) {
+      toast.error('A Purok Leader needs a contact number (for SMS approvals) or a notify email.'); return;
+    }
+    setSaving(true);
+    try {
+      const { data } = await api.patch(`/users/${target._id}`, form);
+      toast.success(`${data.fullName} updated`);
+      onSaved(data);
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update account');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field = (label, key, opts = {}) => (
+    <div>
+      <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>
+        {label}{opts.required && <span style={{ color: '#DC2626' }}> *</span>}
+        {opts.hint && <span style={{ color: '#B9AEAE', fontSize: 11 }}> — {opts.hint}</span>}
+      </label>
+      <input
+        type={opts.type || 'text'}
+        value={form[key]}
+        onChange={(e) => set(key, e.target.value)}
+        placeholder={opts.placeholder || ''}
+        className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+        style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: '#333' }}
+      />
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-md rounded-3xl overflow-hidden flex flex-col"
+        style={{ background: '#FFFFFF', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F0EAEA' }}>
+          <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 18 }}>Edit Account</p>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100">
+            <FiX size={18} color="#827575" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <div className="flex items-center gap-3 p-3 rounded-2xl" style={{ background: '#F9F7F7' }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: '#156D07' }}>
+              {target.fullName?.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#333', fontSize: 13, fontWeight: 600 }}>{target.role}</p>
+              <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 11 }}>{target.email}</p>
+            </div>
+          </div>
+
+          {field('Full Name', 'fullName', { required: true })}
+          {isLeader && (
+            <div>
+              <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>Assigned Purok</label>
+              <select value={form.purok} onChange={(e) => set('purok', e.target.value)}
+                className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+                style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: form.purok ? '#333' : '#A18D8D' }}>
+                <option value="">Select a purok…</option>
+                {PUROKS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          )}
+          {field('Contact Number', 'contactNumber', { type: 'tel', placeholder: 'e.g. 09171234567', hint: 'for SMS approvals', required: isLeader })}
+          {field('Notify Email', 'notifyEmail', { type: 'email', placeholder: 'e.g. leader.personal@gmail.com', hint: 'optional, a reachable inbox' })}
+        </div>
+
+        <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #F0EAEA' }}>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+            style={{ fontFamily: "'Hahmlet', sans-serif", color: '#827575', background: '#F5F0F0' }}>Cancel</button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60"
+            style={{ fontFamily: "'Hahmlet', sans-serif", background: '#156D07' }}>
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -270,7 +409,8 @@ export default function CaptainUsers() {
   const [loading,     setLoading]     = useState(true);
   const [showCreate,  setShowCreate]  = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
-  const [deleting,    setDeleting]    = useState(null);
+  const [editTarget,  setEditTarget]  = useState(null);
+  const [toggling,    setToggling]    = useState(null);
 
   const fetchUsers = () => {
     api.get('/users')
@@ -283,17 +423,23 @@ export default function CaptainUsers() {
 
   const handleCreated = (newUser) => setUsers((prev) => [newUser, ...prev]);
 
-  const handleDelete = async (u) => {
-    if (!window.confirm(`Delete account for ${u.fullName}? This cannot be undone.`)) return;
-    setDeleting(u._id);
+  const handleToggleActive = async (u) => {
+    const deactivating = u.active !== false;
+    const verb = deactivating ? 'Deactivate' : 'Reactivate';
+    if (!window.confirm(
+      deactivating
+        ? `Deactivate ${u.fullName}? They will be signed out and cannot log in until reactivated. Their records are kept.`
+        : `Reactivate ${u.fullName}? They will be able to log in again.`
+    )) return;
+    setToggling(u._id);
     try {
-      await api.delete(`/users/${u._id}`);
-      toast.success(`${u.fullName}'s account deleted`);
-      setUsers((prev) => prev.filter((x) => x._id !== u._id));
+      const { data } = await api.patch(`/users/${u._id}/active`, { active: !deactivating });
+      toast.success(`${u.fullName} ${deactivating ? 'deactivated' : 'reactivated'}`);
+      setUsers((prev) => prev.map((x) => (x._id === u._id ? { ...x, ...data } : x)));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete');
+      toast.error(err.response?.data?.message || `Failed to ${verb.toLowerCase()}`);
     } finally {
-      setDeleting(null);
+      setToggling(null);
     }
   };
 
@@ -359,6 +505,11 @@ export default function CaptainUsers() {
                           <div>
                             <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#333', fontSize: 13, fontWeight: 600 }}>
                               {u.fullName} {isMe && <span style={{ color: '#156D07', fontSize: 10 }}>(you)</span>}
+                              {u.active === false && (
+                                <span className="ml-2 px-2 py-0.5 rounded-full" style={{ background: '#F3F4F6', color: '#9CA3AF', fontSize: 10, fontWeight: 700 }}>
+                                  INACTIVE
+                                </span>
+                              )}
                             </p>
                             <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 11 }}>
                               {new Date(u.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })}
@@ -382,20 +533,36 @@ export default function CaptainUsers() {
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-center gap-2">
                           <button
+                            onClick={() => setEditTarget(u)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                            style={{ fontFamily: "'Hahmlet', sans-serif", background: '#F0FDF4', color: '#156D07', border: '1px solid #BBF7D0' }}
+                          >
+                            <FiEdit2 size={12} /> Edit
+                          </button>
+                          <button
                             onClick={() => setResetTarget(u)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
                             style={{ fontFamily: "'Hahmlet', sans-serif", background: '#EFF6FF', color: '#1D6DB5', border: '1px solid #BFDBFE' }}
                           >
                             <FiKey size={12} /> Reset PW
                           </button>
-                          <button
-                            onClick={() => handleDelete(u)}
-                            disabled={isMe || deleting === u._id}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-40"
-                            style={{ fontFamily: "'Hahmlet', sans-serif", background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3' }}
-                          >
-                            <FiTrash2 size={12} /> {deleting === u._id ? '…' : 'Delete'}
-                          </button>
+                          {(() => {
+                            const isActive = u.active !== false;
+                            const label = toggling === u._id ? '…' : (isActive ? 'Deactivate' : 'Activate');
+                            const style = isActive
+                              ? { background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3' }
+                              : { background: '#F0FDF4', color: '#156D07', border: '1px solid #BBF7D0' };
+                            return (
+                              <button
+                                onClick={() => handleToggleActive(u)}
+                                disabled={isMe || toggling === u._id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-40"
+                                style={{ fontFamily: "'Hahmlet', sans-serif", ...style }}
+                              >
+                                {isActive ? <FiSlash size={12} /> : <FiCheckCircle size={12} />} {label}
+                              </button>
+                            );
+                          })()}
                         </div>
                       </td>
                     </tr>
@@ -416,6 +583,8 @@ export default function CaptainUsers() {
       </div>
 
       {showCreate  && <CreateModal onClose={() => setShowCreate(false)}  onCreated={handleCreated} />}
+      {editTarget  && <EditModal   onClose={() => setEditTarget(null)}  target={editTarget}
+                        onSaved={(updated) => setUsers((prev) => prev.map((x) => (x._id === updated._id ? { ...x, ...updated } : x)))} />}
       {resetTarget && <ResetModal  onClose={() => setResetTarget(null)} target={resetTarget} />}
     </CaptainLayout>
   );

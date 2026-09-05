@@ -1,12 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import { FiRefreshCw, FiDownload, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import useAuthStore from '../../store/authStore';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
 import CollectorLayout from '../../components/layouts/CollectorLayout';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
 import { getAuditLogs } from '../../services/audit.service';
+import { exportReportPDF, exportReportXLSX } from '../../utils/reportExport';
 
 const LAYOUTS = {
   Secretary: SecretaryLayout,
@@ -43,52 +42,29 @@ function formatTime(iso) {
   });
 }
 
-function exportPDF(rows, dateFrom, dateTo) {
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+function logsReport(rows, dateFrom, dateTo, withRole, user) {
+  const columns = withRole
+    ? ['Time', 'User', 'Role', 'Action', 'Details']
+    : ['Time', 'User', 'Action', 'Details'];
+  const body = rows.map((log) => [
+    formatTime(log.createdAt),
+    log.username || '—',
+    ...(withRole ? [log.role || '—'] : []),
+    log.action || '—',
+    log.details || '—',
+  ]);
+  const subtitle = dateFrom || dateTo
+    ? `Activity Logs · ${dateFrom || 'start'} → ${dateTo || 'now'}`
+    : 'Activity Logs · All time';
+  return { title: 'Activity Logs', subtitle, columns, rows: body, user, filename: 'activity-logs' };
+}
 
-  // Header
-  doc.setFontSize(14);
-  doc.setTextColor(21, 109, 7);
-  doc.text('iRequestDologon – Activity Logs', 14, 14);
+function exportPDF(rows, dateFrom, dateTo, withRole = true, user) {
+  return exportReportPDF({ ...logsReport(rows, dateFrom, dateTo, withRole, user), orientation: 'landscape' });
+}
 
-  doc.setFontSize(9);
-  doc.setTextColor(130, 117, 117);
-  const rangeLabel =
-    dateFrom || dateTo
-      ? `Date range: ${dateFrom || 'start'} → ${dateTo || 'now'}`
-      : 'Date range: All time';
-  doc.text(`Generated: ${new Date().toLocaleString('en-PH', { hour12: true })}   ${rangeLabel}`, 14, 20);
-
-  autoTable(doc, {
-    startY: 25,
-    head: [['Time', 'User', 'Role', 'Action', 'Details']],
-    body: rows.map((log) => [
-      formatTime(log.createdAt),
-      log.username || '—',
-      log.role || '—',
-      log.action || '—',
-      log.details || '—',
-    ]),
-    headStyles: {
-      fillColor: [21, 109, 7],
-      textColor: 255,
-      fontSize: 9,
-      fontStyle: 'bold',
-    },
-    bodyStyles: { fontSize: 8, textColor: [55, 65, 81] },
-    alternateRowStyles: { fillColor: [245, 250, 245] },
-    columnStyles: {
-      0: { cellWidth: 38 },
-      1: { cellWidth: 32 },
-      2: { cellWidth: 32 },
-      3: { cellWidth: 44 },
-      4: { cellWidth: 'auto' },
-    },
-    margin: { left: 14, right: 14 },
-    styles: { overflow: 'linebreak' },
-  });
-
-  doc.save(`activity-logs-${new Date().toISOString().slice(0, 10)}.pdf`);
+function exportExcel(rows, dateFrom, dateTo, withRole = true, user) {
+  return exportReportXLSX({ ...logsReport(rows, dateFrom, dateTo, withRole, user), sheetName: 'Activity Logs' });
 }
 
 export default function Logs() {
@@ -116,7 +92,15 @@ export default function Logs() {
   // Reset to page 1 whenever any filter changes
   useEffect(() => { setPage(1); }, [search, roleFilter, dateFrom, dateTo]);
 
+  // The server scopes non-Captain roles to their own actions, so the role
+  // tabs — and the Role column — are only meaningful for the Captain, who sees
+  // everyone's trail. For everyone else every row is their own role.
+  const isCaptain = user?.role === 'Barangay Captain';
   const roles = ['All', 'Secretary', 'Collector', 'Barangay Captain'];
+  const gridCols = isCaptain ? '170px 140px 130px 1fr 1fr' : '170px 160px 1fr 1fr';
+  const headers  = isCaptain
+    ? ['TIME', 'USER', 'ROLE', 'ACTION', 'DETAILS']
+    : ['TIME', 'USER', 'ACTION', 'DETAILS'];
 
   const filtered = useMemo(() => {
     const from = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
@@ -171,7 +155,7 @@ export default function Logs() {
             style={inputStyle}
           />
 
-          <div className="flex gap-1 bg-white rounded-xl p-1" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+          <div className="flex gap-1 bg-white rounded-xl p-1" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: isCaptain ? undefined : 'none' }}>
             {roles.map((r) => (
               <button
                 key={r}
@@ -231,7 +215,16 @@ export default function Logs() {
           )}
 
           <button
-            onClick={() => exportPDF(filtered, dateFrom, dateTo)}
+            onClick={() => exportExcel(filtered, dateFrom, dateTo, isCaptain, user)}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-40"
+            style={{ background: '#F0FDF4', color: '#156D07', fontFamily: "'Hanken Grotesk', sans-serif", boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
+          >
+            <FiDownload size={15} />
+            Export Excel
+          </button>
+          <button
+            onClick={() => exportPDF(filtered, dateFrom, dateTo, isCaptain, user)}
             disabled={filtered.length === 0}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-40"
             style={{ background: '#156D07', color: '#fff', fontFamily: "'Hanken Grotesk', sans-serif", boxShadow: '0 2px 6px rgba(21,109,7,0.25)' }}
@@ -247,9 +240,9 @@ export default function Logs() {
           {/* Header */}
           <div
             className="grid gap-3 px-5 py-3"
-            style={{ gridTemplateColumns: '170px 140px 130px 1fr 1fr', borderBottom: '1px solid #F0EAEA' }}
+            style={{ gridTemplateColumns: gridCols, borderBottom: '1px solid #F0EAEA' }}
           >
-            {['TIME', 'USER', 'ROLE', 'ACTION', 'DETAILS'].map((h) => (
+            {headers.map((h) => (
               <span key={h} style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 11, fontWeight: 700 }}>
                 {h}
               </span>
@@ -271,7 +264,7 @@ export default function Logs() {
                 <li
                   key={log._id}
                   className="grid gap-3 px-5 py-3 items-center hover:bg-gray-50 transition-colors"
-                  style={{ gridTemplateColumns: '170px 140px 130px 1fr 1fr', borderBottom: '1px solid #FAF7F7' }}
+                  style={{ gridTemplateColumns: gridCols, borderBottom: '1px solid #FAF7F7' }}
                 >
                   <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#374151', fontSize: 11, lineHeight: 1.4 }}>
                     {formatTime(log.createdAt)}
@@ -289,7 +282,7 @@ export default function Logs() {
                     </span>
                   </div>
 
-                  <RoleBadge role={log.role} />
+                  {isCaptain && <RoleBadge role={log.role} />}
 
                   <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#156D07', fontSize: 12, fontWeight: 600 }}>
                     {log.action || '—'}

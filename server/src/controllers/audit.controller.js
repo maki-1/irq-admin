@@ -3,9 +3,16 @@ const { toApi } = require('../../lib/serialize');
 const auditLog = require('../utils/auditLog');
 
 // GET /api/audit
+// The Barangay Captain oversees everyone, so they see the whole trail. Every
+// other role sees only the actions they themselves performed — the log is
+// scoped to their own account rather than the barangay's full activity.
 exports.getAuditTrail = async (req, res) => {
   try {
+    const isCaptain = req.user?.role === 'Barangay Captain';
+    const where = isCaptain ? {} : { adminId: req.user?.id };
+
     const logs = await prisma.auditTrail.findMany({
+      where,
       include: { admin: { select: { id: true, fullName: true, role: true } } },
       orderBy: { createdAt: 'desc' },
       take: 500,
