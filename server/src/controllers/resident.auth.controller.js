@@ -7,6 +7,7 @@ const { toApi }  = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
 const sendSms    = require('../utils/sendSms');
 const sendEmail  = require('../utils/sendEmail');
+const withTimeout = require('../../lib/withTimeout');
 
 // Kept at 12 rounds, as before — deliberately stronger than the shared
 // lib/password helper (10) used elsewhere. bcrypt stores the cost in the hash,
@@ -209,7 +210,9 @@ exports.forgotPassword = async (req, res) => {
     let channel = null;
     let smsError = null;
     try {
-      await sendSms({ to: contactNumber, message: smsText });
+      // Hard deadline on top of sendSms's own axios timeout — belt and
+      // suspenders, so this can never be the reason the request hangs.
+      await withTimeout(sendSms({ to: contactNumber, message: smsText }), 12000, 'SMS send');
       channel = 'sms';
     } catch (e) {
       smsError = e.message;
@@ -218,13 +221,13 @@ exports.forgotPassword = async (req, res) => {
 
     if (!channel && user.email) {
       try {
-        await sendEmail({
+        await withTimeout(sendEmail({
           to: user.email,
           subject: 'iRequestDologon password reset code',
           html: `<p>Your password reset code is <strong style="font-size:20px;letter-spacing:2px">${otp}</strong>.</p>
                  <p>It is valid for 10 minutes. If you did not request this, you can ignore this email.</p>
                  <p style="color:#888;font-size:12px">Barangay Dologon &ndash; iRequestDologon</p>`,
-        });
+        }), 12000, 'Email send');
         channel = 'email';
       } catch (e) {
         console.error('[forgotPassword] email fallback failed:', e.message);

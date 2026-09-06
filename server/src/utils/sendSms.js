@@ -23,6 +23,10 @@ const sendSms = async ({ to, message }) => {
       {
         auth: { username: process.env.UNISMS_API_KEY, password: '' },
         headers: { 'Content-Type': 'application/json' },
+        // Without this, a stalled connection hangs the request indefinitely —
+        // and anything awaiting sendSms (e.g. forgotPassword) hangs with it
+        // until the host's own proxy kills it (a bare 502, no error message).
+        timeout: 10000,
       }
     );
     return data;
