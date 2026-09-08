@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import PasswordStrengthMeter from '../../components/common/PasswordStrengthMeter';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Logo from '../../components/common/Logo';
 
 function useDebounce(value, delay = 500) {
   const [debounced, setDebounced] = useState(value);
@@ -88,16 +89,14 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-mint flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-              <span className="text-white font-extrabold text-xl">i</span>
-            </div>
-            <span className="font-extrabold text-2xl text-primary">iRequestD</span>
+            <Logo size={44} />
+            <span className="font-extrabold text-2xl text-forest">iRequestD</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-800">Create account</h1>
+          <h1 className="text-2xl font-bold text-ink">Create account</h1>
           <p className="text-gray-500 text-sm mt-1">Join your barangay's digital portal</p>
         </div>
 

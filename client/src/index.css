@@ -6,46 +6,85 @@
   * {
     box-sizing: border-box;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    color: #1a1a1a;
-    background-color: #f9fafb;
+    color: #14231c;
+    background-color: #edf4ec;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   input, select, textarea {
     font-size: 16px; /* Prevent iOS auto-zoom */
+  }
+  ::selection {
+    background-color: rgba(47, 163, 85, 0.18);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white font-semibold py-3 px-6 rounded-xl hover:bg-green-800 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 bg-primary text-white font-semibold py-3 px-6 rounded-full shadow-sm hover:bg-primary-700 hover:shadow active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
   }
   .btn-outline {
-    @apply border-2 border-primary text-primary font-semibold py-3 px-6 rounded-xl hover:bg-primary hover:text-white active:scale-95 transition-all duration-150;
+    @apply inline-flex items-center justify-center gap-2 border-2 border-primary text-primary font-semibold py-3 px-6 rounded-full hover:bg-primary hover:text-white active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 bg-ink text-white font-semibold py-3 px-6 rounded-full hover:bg-forest active:scale-95 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2;
   }
   .input-field {
-    @apply w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-150 bg-white;
+    @apply w-full border border-gray-200 rounded-2xl px-4 py-3 bg-white placeholder:text-gray-400 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-150 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed;
   }
   .label {
     @apply block text-sm font-medium text-gray-700 mb-1;
   }
+  /* Soft, lifted white card — the core surface of the theme */
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-5;
+    @apply bg-white rounded-4xl border border-black/[0.04] shadow-card p-5;
+  }
+  /* Near-black "feature" card, per the reference dashboard */
+  .card-dark {
+    @apply bg-ink text-white rounded-4xl shadow-card-dark p-5;
+  }
+  /* Big stat figure + muted unit suffix */
+  .stat-value {
+    @apply text-4xl font-extrabold tracking-tight text-ink;
+  }
+  .stat-unit {
+    @apply text-xl font-semibold text-gray-400;
   }
   .status-pending {
-    @apply bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+    @apply inline-flex items-center bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
   }
   .status-processing {
-    @apply bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+    @apply inline-flex items-center bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
   }
   .status-ready {
-    @apply bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+    @apply inline-flex items-center bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
   }
   .status-rejected {
-    @apply bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+    @apply inline-flex items-center bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full;
   }
   .status-claimed {
-    @apply bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+    @apply inline-flex items-center bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
   }
 }

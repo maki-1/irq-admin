@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import StepProgress from '../../components/common/StepProgress';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Logo from '../../components/common/Logo';
 import useAuthStore from '../../store/authStore';
 import VerifyLayout from '../../components/layout/VerifyLayout';
 
@@ -86,13 +87,11 @@ export default function Step1() {
 
   return (
     <VerifyLayout>
-    <div className="min-h-screen bg-gray-50 px-4 py-8 lg:px-16 xl:px-32 lg:py-12">
+    <div className="min-h-screen bg-mint px-4 py-8 lg:px-16 xl:px-32 lg:py-12">
       <div className="max-w-lg mx-auto lg:max-w-3xl">
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-extrabold text-sm">i</span>
-            </div>
+            <Logo size={34} rounded="rounded-xl" />
             <span className="font-extrabold text-xl text-primary">iRequestDologon</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Complete your profile</h1>
@@ -212,7 +211,7 @@ export default function Step1() {
               )}
 
               <label className="flex items-center gap-3 cursor-pointer">
-                <div className={`w-12 h-6 rounded-full transition-colors relative ${isSenior ? 'bg-primary' : 'bg-gray-200'}`}>
+                <div className={`w-12 h-6 rounded-full transition-colors relative ${isSenior ? 'bg-primary' : 'bg-gray-300'}`}>
                   <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow ${isSenior ? 'left-7' : 'left-1'}`} />
                 </div>
                 <span className="text-sm text-gray-700">Senior Citizen</span>

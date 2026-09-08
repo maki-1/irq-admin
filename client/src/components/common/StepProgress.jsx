@@ -5,7 +5,11 @@ export default function StepProgress({ current, total = 3 }) {
         <div key={step} className="flex items-center flex-1 last:flex-none">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-colors
-              ${step < current ? 'bg-primary text-white' : step === current ? 'bg-primary text-white ring-4 ring-green-200' : 'bg-gray-200 text-gray-500'}`}
+              ${step < current
+                ? 'bg-primary text-white'
+                : step === current
+                  ? 'bg-primary text-white ring-4 ring-accent/25'
+                  : 'bg-gray-200 text-gray-500'}`}
           >
             {step < current ? '✓' : step}
           </div>

@@ -22,7 +22,7 @@ function ClaimSlip({ doc }) {
   return (
     <div className="card mb-3 overflow-hidden p-0">
       {/* Header strip */}
-      <div className="bg-primary px-5 py-3">
+      <div className="bg-forest px-5 py-3">
         <p className="text-white text-xs font-semibold tracking-widest uppercase opacity-80">
           Barangay Dologon — iRequestDologon
         </p>
@@ -236,18 +236,18 @@ export default function Requests() {
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">My Requests</h1>
+        <h1 className="text-2xl font-bold text-ink">My Requests</h1>
         <p className="text-gray-500 text-sm mt-1">Track all your document requests</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-gray-100 rounded-xl p-1 mb-6 gap-1">
+      <div className="flex bg-white border border-black/[0.04] shadow-sm rounded-full p-1 mb-6 gap-1">
         {TABS.map((t, i) => (
           <button
             key={t}
             onClick={() => setTab(i)}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all
-              ${tab === i ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-2 px-3 rounded-full text-sm font-semibold transition-all
+              ${tab === i ? 'bg-forest text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             {t}
           </button>

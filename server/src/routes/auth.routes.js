@@ -59,8 +59,14 @@ router.get('/me', async (req, res) => {
     });
     if (admin) return res.json(toApi(admin));
 
+    // Route residents through the same controller as the JWT path, so the
+    // derived isVerified/accountStatus match production instead of returning
+    // the raw (possibly stale) User row.
     const resident = await prisma.user.findUnique({ where: { id: token } });
-    if (resident) return res.json(toApi(resident));
+    if (resident) {
+      req.resident = resident;
+      return residentCtrl.getMe(req, res);
+    }
 
     res.status(401).json({ message: 'Token invalid or expired' });
   } catch (err) {

@@ -6,6 +6,7 @@ import { MdCameraAlt, MdCheckCircle, MdRefresh } from 'react-icons/md';
 import api from '../../services/api';
 import StepProgress from '../../components/common/StepProgress';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Logo from '../../components/common/Logo';
 import useAuthStore from '../../store/authStore';
 import VerifyLayout from '../../components/layout/VerifyLayout';
 
@@ -154,13 +155,11 @@ export default function Step3() {
 
   return (
     <VerifyLayout>
-    <div className="min-h-screen bg-gray-50 px-4 py-8 lg:px-16 xl:px-32 lg:py-12">
+    <div className="min-h-screen bg-mint px-4 py-8 lg:px-16 xl:px-32 lg:py-12">
       <div className="max-w-lg mx-auto lg:max-w-3xl">
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-extrabold text-sm">i</span>
-            </div>
+            <Logo size={34} rounded="rounded-xl" />
             <span className="font-extrabold text-xl text-primary">iRequestD</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-800">ID & Face Verification</h1>

@@ -251,15 +251,34 @@ exports.review = async (req, res) => {
     }
     if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
 
-    const profile = await prisma.verificationProfile
-      .update({
-        where: { id: req.params.id },
-        data: {
-          status,
-          remarks: remarks || '',
-          reviewedById: req.user.id,
-          reviewedAt: new Date(),
-        },
+    // Store the status lower-cased. The mobile app compares it exactly
+    // (`status == 'approved'`), so a capitalised "Approved" would fail to route
+    // an approved resident to their dashboard.
+    const normalised = status.toLowerCase();
+
+    const profile = await prisma
+      .$transaction(async (tx) => {
+        const p = await tx.verificationProfile.update({
+          where: { id: req.params.id },
+          data: {
+            status: normalised,
+            remarks: remarks || '',
+            reviewedById: req.user.id,
+            reviewedAt: new Date(),
+          },
+        });
+        // Keep the User record in step with the decision. The web portal reads
+        // User.isVerified while the mobile app reads this profile status; when
+        // only the profile was written the two drifted, and a resident put back
+        // "under review" kept their web access.
+        await tx.user.update({
+          where: { id: p.userId },
+          data: {
+            isVerified: normalised === 'approved',
+            verificationStatus: normalised,
+          },
+        });
+        return p;
       })
       .catch((e) => {
         if (e.code === 'P2025') return null;

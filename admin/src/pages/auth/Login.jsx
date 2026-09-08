@@ -63,24 +63,25 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-green-rich px-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden bg-gradient-to-b from-forest-700 via-forest to-forest-deep">
       {/* Background */}
-      <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url(${assets.BARANGAYHALL})` }} />
-      <div className="absolute inset-0 bg-green-rich/70" />
+      <div className="absolute inset-0 bg-cover bg-center opacity-15" style={{ backgroundImage: `url(${assets.BARANGAYHALL})` }} />
+      <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-white/5" />
+      <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-white/5" />
 
       <div className="relative w-full max-w-md card">
         <div className="text-center mb-8">
           <img
             src={assets.DOLOGONLOGO}
             alt="Barangay Dologon"
-            className="w-20 h-20 rounded-full mx-auto mb-4 border-2 border-gold object-cover shadow-lg"
+            className="w-20 h-20 rounded-full mx-auto mb-4 ring-2 ring-accent/25 object-cover shadow-lg"
           />
-          <h1 className="font-garamond text-3xl font-bold text-gold">iRequestDologon</h1>
-          <p className="text-white/50 text-sm mt-1">Barangay Dologon Staff Portal</p>
+          <h1 className="font-garamond text-3xl font-bold text-forest">iRequestDologon</h1>
+          <p className="text-gray-500 text-sm mt-1">Barangay Dologon Staff Portal</p>
         </div>
 
         {loginError && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg bg-red-500/15 border border-red-500/40 px-4 py-3 text-sm text-red-400">
+          <div className="mb-4 flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mt-0.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
@@ -93,7 +94,7 @@ export default function Login() {
             <label className="label">Email Address</label>
             <input
               type="email"
-              className={`input ${errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+              className={`input ${errors.email ? 'border-red-400 focus:ring-red-400' : ''}`}
               placeholder="staff@dologon.gov.ph"
               value={form.email}
               onChange={(e) => handleChange('email', e.target.value)}
@@ -102,14 +103,14 @@ export default function Login() {
               onPaste={e => e.preventDefault()}
             />
             {errors.email && (
-              <p className="mt-1 text-xs text-red-400">{errors.email}</p>
+              <p className="mt-1 text-xs text-red-500">{errors.email}</p>
             )}
           </div>
           <div>
             <label className="label">Password</label>
             <input
               type="password"
-              className={`input ${errors.password ? 'border-red-500 focus:border-red-500' : ''}`}
+              className={`input ${errors.password ? 'border-red-400 focus:ring-red-400' : ''}`}
               placeholder="••••••••"
               value={form.password}
               onChange={(e) => handleChange('password', e.target.value)}
@@ -118,7 +119,7 @@ export default function Login() {
               onPaste={e => e.preventDefault()}
             />
             {errors.password && (
-              <p className="mt-1 text-xs text-red-400">{errors.password}</p>
+              <p className="mt-1 text-xs text-red-500">{errors.password}</p>
             )}
           </div>
           <button
@@ -130,7 +131,7 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-center text-white/30 text-xs mt-8">
+        <p className="text-center text-gray-400 text-xs mt-8">
           Barangay Dologon · Maramag, Bukidnon
         </p>
       </div>

@@ -28,7 +28,24 @@ exports.listIssued = async (req, res) => {
         issuedById: req.user.id,
         ...(status ? { status } : {}),
       },
-      select: { ...ISSUED_SHAPE, requests: { select: { id: true, documentType: true } } },
+      select: {
+        ...ISSUED_SHAPE,
+        // The documents processed on this clearance. One clearance covers one
+        // kiosk visit, so a resident may pull several documents under it — this
+        // is the record of exactly what was taken and when.
+        requests: {
+          select: {
+            id: true,
+            documentType: true,
+            purpose: true,
+            orNumber: true,
+            status: true,
+            purokLeaderStatus: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
       orderBy: { issuedAt: 'desc' },
       take: 200,
     });

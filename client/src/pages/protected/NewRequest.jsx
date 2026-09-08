@@ -105,7 +105,7 @@ export default function NewRequest() {
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Request Documents</h1>
+        <h1 className="text-2xl font-bold text-ink">Request Documents</h1>
         <p className="text-gray-500 text-sm mt-1">Fill in the details for each document you need</p>
         {isFree && (
           <div className="mt-2 inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
@@ -182,14 +182,14 @@ export default function NewRequest() {
         <button
           type="button"
           onClick={() => setItems((prev) => [...prev, newItem()])}
-          className="w-full border-2 border-dashed border-gray-300 text-gray-500 rounded-xl py-3 flex items-center justify-center gap-2 hover:border-primary hover:text-primary transition-colors text-sm font-medium"
+          className="w-full border-2 border-dashed border-gray-300 text-gray-500 rounded-2xl py-3 flex items-center justify-center gap-2 hover:border-primary hover:text-primary transition-colors text-sm font-medium"
         >
           <MdAdd size={20} /> Add Another Document
         </button>
 
         {/* Price summary */}
-        <div className="card bg-gray-50">
-          <p className="font-bold text-gray-800 mb-3">Order Summary</p>
+        <div className="card bg-mint-100">
+          <p className="font-bold text-ink mb-3">Order Summary</p>
           {items.map((item) => item.type && (
             <div key={item.id} className="flex justify-between text-sm mb-1.5">
               <span className="text-gray-600">{item.type}</span>

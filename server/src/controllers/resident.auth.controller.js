@@ -29,6 +29,27 @@ function safeUser(u) {
   return rest;
 }
 
+// The review decision lives on the VerificationProfile — that is what barangay
+// staff actually set, and what the mobile app gates on (it reads the same value
+// as `accountStatus`). `User.isVerified` is only a cached mirror of it and can
+// go stale: a resident moved back to "under review" after being approved keeps
+// the boolean set, which used to leave the web portal open while the mobile app
+// correctly showed "under review". Derive both here so the two clients agree.
+async function withAccountState(user) {
+  const base = safeUser(user);
+  if (!base) return base;
+  const profile = await prisma.verificationProfile.findUnique({
+    where: { userId: user.id },
+    select: { status: true },
+  });
+  const status = (profile?.status || '').toLowerCase();
+  return {
+    ...base,
+    accountStatus: profile?.status || null,
+    isVerified: status === 'approved',
+  };
+}
+
 /* ── GET /api/auth/check-username ───────────────────────── */
 exports.checkUsername = async (req, res) => {
   try {
@@ -298,7 +319,7 @@ exports.residentLogin = async (req, res) => {
 
     res.json({
       token,
-      user: safeUser(user),
+      user: await withAccountState(user),
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -308,7 +329,7 @@ exports.residentLogin = async (req, res) => {
 /* ── GET /api/auth/me (resident) ────────────────────────── */
 exports.getMe = async (req, res) => {
   try {
-    res.json(safeUser(req.resident));
+    res.json(await withAccountState(req.resident));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

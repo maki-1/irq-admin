@@ -69,6 +69,9 @@ app.use('/api/verification', residentVerificationRoutes); // step1/2/3/status
 app.use('/api/my/requests',  residentRequestRoutes);      // resident-only requests (avoids conflict with admin /api/requests)
 app.use('/api/payment',      residentPaymentRoutes);      // create-session
 
+// API Routes — Walk-in kiosk (no login; a pre-issued purok clearance is the credential)
+app.use('/api/kiosk',        require('./routes/kiosk.routes'));
+
 // Prices alias for public portal
 app.get('/api/admin/prices', async (req, res) => {
   try {

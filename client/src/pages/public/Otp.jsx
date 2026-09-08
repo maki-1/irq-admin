@@ -3,14 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Logo from '../../components/common/Logo';
 import useAuthStore from '../../store/authStore';
 
-const LOGO_URL = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776609755/irequestd/avatars/failcg8kkyyqn1knmhu1.jpg';
 const ICON_URL = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1779908544/ChatGPT_Image_May_28_2026_02_45_11_AM_dlrlcc.png';
 
 function IllustrationPanel() {
   return (
-    <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center bg-primary px-10 py-12 relative overflow-hidden">
+    <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center bg-gradient-to-b from-forest-700 via-forest to-forest-deep px-10 py-12 relative overflow-hidden">
       {/* Background blobs */}
       <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full bg-white/5" />
       <div className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full bg-white/5" />
@@ -125,8 +125,8 @@ export default function Otp() {
         {/* Middle — OTP form */}
         <div className="w-full max-w-sm flex flex-col items-center gap-6">
           <div className="text-center">
-            <img src={LOGO_URL} alt="iRequestDologon" className="w-36 h-36 rounded-2xl object-cover shadow-md border border-gray-100 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-800">Verify with OTP</h1>
+            <Logo size={144} rounded="rounded-3xl" className="border border-gray-100 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-ink">Verify with OTP</h1>
             <p className="text-gray-400 text-sm mt-2 leading-relaxed">
               To ensure your security, please enter the One-Time Password<br className="hidden sm:block" />
               (OTP) sent to <span className="text-gray-600 font-medium">{maskedContact}</span> below.
@@ -176,8 +176,8 @@ export default function Otp() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-primary text-white font-semibold text-sm
-                         hover:bg-green-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-full bg-primary text-white font-semibold text-sm
+                         hover:bg-primary-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               {loading ? <LoadingSpinner size="sm" /> : 'Submit'}
             </button>
@@ -186,8 +186,8 @@ export default function Otp() {
             <button
               type="button"
               onClick={() => navigate('/signup')}
-              className="w-full py-3.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold text-sm
-                         hover:border-gray-300 hover:bg-gray-50 active:scale-[0.98] transition-all"
+              className="w-full py-3.5 rounded-full border-2 border-gray-200 text-gray-600 font-semibold text-sm
+                         hover:border-gray-300 hover:bg-mint-100 active:scale-[0.98] transition-all"
             >
               Cancel
             </button>

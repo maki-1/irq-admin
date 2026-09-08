@@ -270,8 +270,14 @@ export default function PurokLeaderRequests() {
                         {(page - 1) * PAGE_SIZE + idx + 1}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-sm font-semibold" style={{ color: '#1E1E1E', fontFamily: "'Kaisei Decol', serif" }}>
+                        <p className="text-sm font-semibold flex items-center gap-1.5" style={{ color: '#1E1E1E', fontFamily: "'Kaisei Decol', serif" }}>
                           {r.profile?.fullName || r.user?.username || '—'}
+                          {r.channel === 'kiosk' && (
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                              style={{ background: '#EFF6FF', color: '#2563EB', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                              KIOSK
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs" style={{ color: '#A18D8D', fontFamily: "'Hanken Grotesk', sans-serif" }}>
                           {r.profile?.address || '—'}

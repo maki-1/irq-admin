@@ -41,7 +41,7 @@ export default function Waiting() {
 
   return (
     <VerifyLayout>
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-mint flex items-center justify-center px-4">
       <div className="max-w-sm w-full text-center">
         <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 ${isRejected ? 'bg-red-100' : 'bg-primary/10'}`}>
           {isRejected ? (

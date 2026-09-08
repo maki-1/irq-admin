@@ -29,14 +29,14 @@ export default function PaymentSuccess() {
 
   if (status === 'checking') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-mint flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-mint flex items-center justify-center px-4">
       <div className="max-w-sm w-full text-center">
         <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 ${status === 'paid' ? 'bg-green-100' : 'bg-yellow-50'}`}>
           {status === 'paid'

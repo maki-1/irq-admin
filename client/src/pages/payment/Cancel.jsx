@@ -3,7 +3,7 @@ import { MdCancel } from 'react-icons/md';
 
 export default function PaymentCancel() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-mint flex items-center justify-center px-4">
       <div className="max-w-sm w-full text-center">
         <div className="w-24 h-24 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
           <MdCancel size={56} className="text-red-500" />

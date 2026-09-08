@@ -24,28 +24,28 @@ function SidebarContent({ onNavClick }) {
 
   return (
     <>
-      <div className="flex flex-col items-center mb-6 pt-6 px-4">
+      <div className="flex flex-col items-center mb-2 pt-7 px-4">
         <img
           src={assets.DOLOGONLOGO}
           alt="Dologon"
-          className="rounded-full object-cover mb-2"
-          style={{ width: 80, height: 80 }}
+          className="rounded-full object-cover mb-3 ring-2 ring-white/15"
+          style={{ width: 72, height: 72 }}
         />
         <span style={{
           fontFamily: "'Kaisei Decol', serif",
-          color: '#156D07', fontSize: 18, fontWeight: 700, letterSpacing: 2,
+          color: '#FFFFFF', fontSize: 18, fontWeight: 700, letterSpacing: 2,
         }}>
           DOLOGON
         </span>
-        <span style={{
-          fontFamily: "'Hanken Grotesk', sans-serif",
-          color: '#A18D8D', fontSize: 11, marginTop: 2,
-        }}>
+        <span className="text-[11px] mt-0.5 text-white/50">
           {user?.role || 'Barangay Captain'}
         </span>
       </div>
 
-      <nav className="w-full flex flex-col gap-1 px-3 mt-6">
+      <p className="px-5 mt-6 mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+        Navigation
+      </p>
+      <nav className="w-full flex flex-col gap-1.5 px-3">
         {NAV.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
@@ -53,25 +53,19 @@ function SidebarContent({ onNavClick }) {
             end={to === '/captain'}
             onClick={onNavClick}
             className={({ isActive }) =>
-              `relative flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive ? '' : 'hover:bg-gray-50'
+              `group flex items-center gap-3 rounded-full pl-1.5 pr-4 py-1.5 transition-all duration-150 ${
+                isActive ? 'bg-white shadow-sm' : 'hover:bg-white/10'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                {isActive && (
-                  <span
-                    className="absolute right-0 top-2 bottom-2 w-1 rounded-l-full"
-                    style={{ background: '#156D07' }}
-                  />
-                )}
-                <Icon size={20} style={{ color: isActive ? '#156D07' : '#827575', flexShrink: 0 }} />
-                <span style={{
-                  fontFamily: "'Kaisei Decol', serif",
-                  fontSize: 15, fontWeight: 400,
-                  color: isActive ? '#156D07' : '#827575',
-                }}>
+                <span className={`flex items-center justify-center w-9 h-9 rounded-full shrink-0 transition-colors ${
+                  isActive ? 'bg-forest text-white' : 'bg-white/10 text-white/80 group-hover:bg-white/15'
+                }`}>
+                  <Icon size={17} />
+                </span>
+                <span className={`text-sm font-medium ${isActive ? 'text-forest' : 'text-white/75'}`}>
                   {label}
                 </span>
               </>
@@ -99,7 +93,7 @@ function TopBar({ title, onHamburger }) {
         </button>
         <h1 style={{
           fontFamily: "'Kaisei Decol', serif",
-          color: '#156D07',
+          color: '#0B3D2E',
           fontSize: 'clamp(18px, 2.5vw, 26px)',
           fontWeight: 400,
         }}>
@@ -187,12 +181,13 @@ export default function CaptainLayout({ title, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen" style={{ background: '#D9D9D9' }}>
+    <div className="min-h-screen lg:p-4" style={{ background: '#082A20' }}>
+     <div className="lg:flex lg:gap-4 lg:items-start">
 
-      {/* Desktop sidebar */}
+      {/* Floating desktop sidebar */}
       <aside
-        className="hidden lg:flex flex-col shrink-0"
-        style={{ width: 220, background: '#FFFFFF', boxShadow: '2px 0 6px rgba(0,0,0,0.07)', minHeight: '100vh' }}
+        className="hidden lg:flex flex-col shrink-0 sticky top-4 h-[calc(100vh-2rem)] rounded-[24px] overflow-y-auto shadow-2xl bg-gradient-to-b from-forest-700 via-forest to-forest-deep"
+        style={{ width: 224 }}
       >
         <SidebarContent />
       </aside>
@@ -208,25 +203,29 @@ export default function CaptainLayout({ title, children }) {
 
       {/* Mobile drawer */}
       <div
-        className={`fixed top-0 left-0 z-50 h-full flex flex-col lg:hidden transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-50 h-full flex flex-col lg:hidden transition-transform duration-300 ease-in-out bg-gradient-to-b from-forest-700 via-forest to-forest-deep ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{ width: 240, background: '#FFFFFF', boxShadow: '4px 0 16px rgba(0,0,0,0.15)' }}
+        style={{ width: 240, boxShadow: '4px 0 16px rgba(0,0,0,0.25)' }}
       >
         <button
-          className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
           onClick={() => setSidebarOpen(false)}
         >
-          <FiX size={22} color="#827575" />
+          <FiX size={22} color="#FFFFFF" />
         </button>
         <SidebarContent onNavClick={() => setSidebarOpen(false)} />
       </div>
 
       {/* Main area */}
-      <div className="flex flex-col flex-1 min-w-0 p-4 sm:p-5 overflow-auto">
+      <div
+        className="flex flex-col flex-1 min-w-0 min-h-screen lg:min-h-[calc(100vh-2rem)] lg:rounded-[24px] lg:shadow-xl p-4 sm:p-6 overflow-auto"
+        style={{ background: '#EDF4EC' }}
+      >
         <TopBar title={title} onHamburger={() => setSidebarOpen(true)} />
         {children}
       </div>
+     </div>
     </div>
   );
 }

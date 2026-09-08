@@ -8,3 +8,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Shared secret every kiosk terminal sends as the X-Kiosk-Key header.
+      # Set the value in the Render dashboard; must match the Flutter kiosk
+      # build's --dart-define=KIOSK_KEY=...
+      - key: KIOSK_KEY
+        sync: false

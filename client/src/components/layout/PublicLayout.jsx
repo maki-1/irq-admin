@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import Logo from '../common/Logo';
 
 export default function PublicLayout({ children }) {
   const { token } = useAuthStore();
@@ -7,10 +8,8 @@ export default function PublicLayout({ children }) {
     <div className="min-h-screen bg-white">
       <header className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-white font-extrabold">i</span>
-          </div>
-          <span className="font-extrabold text-lg text-primary">iRequestD</span>
+          <Logo size={34} rounded="rounded-xl" />
+          <span className="font-extrabold text-lg text-forest">iRequestD</span>
         </Link>
         {!token && (
           <div className="flex gap-3">

@@ -13,9 +13,11 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 function Section({ icon: Icon, title, children }) {
   return (
     <div className="card mb-4">
-      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
-        <Icon size={20} className="text-primary" />
-        <h2 className="font-bold text-gray-800">{title}</h2>
+      <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-gray-100">
+        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-accent/10 text-primary">
+          <Icon size={18} />
+        </span>
+        <h2 className="font-bold text-ink">{title}</h2>
       </div>
       {children}
     </div>
@@ -83,7 +85,7 @@ const { register, handleSubmit, watch, reset, formState: { errors } } = useForm(
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Profile & Settings</h1>
+        <h1 className="text-2xl font-bold text-ink">Profile &amp; Settings</h1>
         <p className="text-gray-500 text-sm mt-1">Manage your account information</p>
       </div>
 
@@ -91,7 +93,7 @@ const { register, handleSubmit, watch, reset, formState: { errors } } = useForm(
       <Section icon={MdPerson} title="Profile Info">
         <div className="flex items-center gap-5 mb-5">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+            <div className="w-20 h-20 rounded-full bg-accent/10 ring-2 ring-accent/20 flex items-center justify-center overflow-hidden">
               {user?.avatar ? (
                 <img src={user.avatar} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -101,14 +103,14 @@ const { register, handleSubmit, watch, reset, formState: { errors } } = useForm(
             <button
               onClick={() => fileRef.current?.click()}
               disabled={avatarLoading}
-              className="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center text-white shadow hover:bg-green-800 transition-colors"
+              className="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center text-white shadow hover:bg-primary-700 transition-colors"
             >
               {avatarLoading ? <LoadingSpinner size="sm" /> : <MdCamera size={14} />}
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
           <div>
-            <p className="font-bold text-lg text-gray-800">{fullName || user?.username}</p>
+            <p className="font-bold text-lg text-ink">{fullName || user?.username}</p>
             {fullName && <p className="text-sm text-gray-500">{user?.username}</p>}
             <p className="text-sm text-gray-500">{user?.contactNumber}</p>
             {user?.email && <p className="text-sm text-gray-500">{user.email}</p>}
