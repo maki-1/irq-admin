@@ -68,12 +68,24 @@ model User {
   isVerified    Boolean  @default(false)
   avatar        String   @default("")
 
+  // Whether the registration OTP was actually entered. Deliberately separate
+  // from `isVerified`, which mirrors the barangay's review of the submitted
+  // documents: owning the phone number and being an approved resident are two
+  // different facts, and conflating them is what previously let an account that
+  // cancelled out of the OTP screen sign in anyway. Login is gated on this.
+  contactVerified   Boolean   @default(false)
+  contactVerifiedAt DateTime?
+
   // Written by the admin portal's resident flow, which keeps a single in-flight
   // OTP on the user rather than using the otp_codes table the Flutter backend
   // uses. Both mechanisms coexist against the same row.
   otp        String?
   otpExpires DateTime?
   otpType    String?
+  // Wrong guesses against the current `otp`. Six digits with unlimited tries is
+  // guessable in minutes, so the code is burned after OTP_MAX_ATTEMPTS and the
+  // resident has to request a new one. Reset on every issue and on success.
+  otpAttempts Int @default(0)
   // Password-reset handshake used by the portal's resident flow. No document
   // carries these yet, so they are declared from its controller rather than
   // discovered in the data.

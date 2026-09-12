@@ -47,7 +47,24 @@ export default function Login() {
         navigate(getVerifyRoute(user));
       }
     } catch (err) {
-      setLoginError(err.response?.data?.message || 'Invalid username or password');
+      const data = err.response?.data;
+      // The account exists and the password was right, but its registration OTP
+      // was never entered. No token comes back — send them to finish that
+      // instead of leaving them retrying a login that can never succeed.
+      if (data?.requiresOtpVerification && data.userId) {
+        toast.error(data.message || 'Please verify your account first');
+        navigate('/otp', {
+          state: {
+            userId: data.userId,
+            maskedContact: data.maskedContact,
+            // A code was just issued (or one is still live), so start the
+            // resend cooldown rather than offering an instant resend.
+            otpAlreadySent: data.otpSent !== false,
+          },
+        });
+        return;
+      }
+      setLoginError(data?.message || 'Invalid username or password');
     } finally {
       setLoading(false);
     }

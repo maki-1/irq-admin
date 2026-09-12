@@ -57,6 +57,7 @@ export default function Step1() {
     try {
       const fd = new FormData();
       Object.entries(values).forEach(([k, v]) => fd.append(k, v));
+      fd.set('street', values.purok);
       fd.set('barangay', 'Dologon');
       fd.set('city', 'Maramag');
       fd.set('isPwd', isPwd);
@@ -171,11 +172,11 @@ export default function Step1() {
                 </div>
                 <div>
                   <label className="label">Purok</label>
-                  <select {...register('street', { required: 'Required' })} className="input-field">
+                  <select {...register('purok', { required: 'Required' })} className="input-field">
                     <option value="">Select Purok</option>
                     {PUROKS.map((p) => <option key={p}>{p}</option>)}
                   </select>
-                  {errors.street && <p className="text-red-500 text-xs mt-1">{errors.street.message}</p>}
+                  {errors.purok && <p className="text-red-500 text-xs mt-1">{errors.purok.message}</p>}
                 </div>
               </div>
             </div>
@@ -192,7 +193,7 @@ export default function Step1() {
             </div>
 
             <div className="border-t border-gray-100 pt-4 space-y-3">
-              <p className="text-sm font-semibold text-gray-700">Special Categories <span className="text-primary text-xs">(Free document requests)</span></p>
+              <p className="text-sm font-semibold text-gray-700">Special Categories <span className="text-primary text-xs">(Activate if applicable to you)</span></p>
 
               <label className="flex items-center gap-3 cursor-pointer">
                 <div

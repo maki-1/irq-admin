@@ -64,6 +64,16 @@ router.get('/me', async (req, res) => {
     // the raw (possibly stale) User row.
     const resident = await prisma.user.findUnique({ where: { id: token } });
     if (resident) {
+      // This path builds req.resident itself instead of going through
+      // residentProtect, so it has to repeat that middleware's OTP gate —
+      // otherwise a bare user id is a way around it in development.
+      if (!resident.contactVerified) {
+        return res.status(403).json({
+          message: 'Your account is not verified yet. Enter the code we sent you to finish signing up.',
+          requiresOtpVerification: true,
+          userId: resident.id,
+        });
+      }
       req.resident = resident;
       return residentCtrl.getMe(req, res);
     }

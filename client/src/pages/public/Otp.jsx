@@ -48,7 +48,12 @@ export default function Otp() {
 
   const userId = state?.userId;
   const contact = state?.contact || '';
-  const maskedContact = contact ? contact.slice(0, 4) + '***' + contact.slice(-3) : 'your registered mobile number/email';
+  // Signup knows the number it just typed; arriving here from login it is the
+  // server that says where the code went, already masked — it must not hand
+  // back the full contact just because a password was correct.
+  const maskedContact =
+    state?.maskedContact ||
+    (contact ? contact.slice(0, 4) + '***' + contact.slice(-3) : 'your registered mobile number/email');
 
   useEffect(() => {
     if (!userId) { navigate('/signup'); return; }
@@ -91,7 +96,16 @@ export default function Otp() {
       toast.success('Phone verified! Complete your profile.');
       navigate('/verify/step1');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Invalid OTP');
+      const data = err.response?.data;
+      const left = data?.attemptsRemaining;
+      toast.error(
+        typeof left === 'number' && left > 0
+          ? `${data.message} — ${left} attempt${left === 1 ? '' : 's'} left`
+          : data?.message || 'Invalid OTP'
+      );
+      // The code is burned once the attempts run out, so let them resend now
+      // instead of sitting out the remaining cooldown on a dead code.
+      if (left === 0) setCountdown(0);
       setDigits(Array(6).fill(''));
       refs.current[0]?.focus();
     } finally {
@@ -103,8 +117,8 @@ export default function Otp() {
     if (countdown > 0) return;
     setResendLoading(true);
     try {
-      await api.post('/auth/resend-otp', { userId });
-      toast.success('OTP resent!');
+      const { data } = await api.post('/auth/resend-otp', { userId });
+      toast.success(data?.message || 'OTP resent!');
       setCountdown(60);
       setDigits(Array(6).fill(''));
     } catch (err) {

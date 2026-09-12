@@ -28,6 +28,19 @@ const residentProtect = async (req, res, next) => {
 
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
     if (!user) return res.status(401).json({ message: 'User not found' });
+
+    // Belt and braces behind the login gate. Tokens live seven days, so the
+    // ones handed out before login checked this are still presentable, and the
+    // dev fallback above will mint one from any bare user id. An account that
+    // never entered its registration OTP gets nothing either way.
+    if (!user.contactVerified) {
+      return res.status(403).json({
+        message: 'Your account is not verified yet. Enter the code we sent you to finish signing up.',
+        requiresOtpVerification: true,
+        userId: user.id,
+      });
+    }
+
     req.resident = user;
     next();
   } catch {
