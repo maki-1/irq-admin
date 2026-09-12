@@ -50,7 +50,7 @@ export default function Landing() {
     <PublicLayout>
       <div className="min-h-[calc(100vh-64px)] flex flex-col">
         {/* Hero Carousel */}
-        <div className={`flex-1 bg-gradient-to-br ${slide.color} relative flex flex-col items-center justify-center px-6 py-16 overflow-hidden transition-all duration-700`}>
+        <div className={`flex-1 bg-gradient-to-br ${slide.color} relative flex flex-col items-center justify-center px-6 py-10 sm:py-16 overflow-hidden transition-all duration-700`}>
           {/* Background pattern */}
           <div className="absolute inset-0 opacity-10">
             {[...Array(20)].map((_, i) => (
@@ -101,16 +101,16 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Prev/Next arrows */}
+          {/* Prev/Next arrows — hidden on small phones to avoid crowding the slide text; dots + autoplay still work */}
           <button
             onClick={() => setCurrent((c) => (c - 1 + SLIDES.length) % SLIDES.length)}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
+            className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full items-center justify-center text-white transition-colors"
           >
             <MdArrowBack size={20} />
           </button>
           <button
             onClick={() => setCurrent((c) => (c + 1) % SLIDES.length)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
+            className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full items-center justify-center text-white transition-colors"
           >
             <MdArrowForward size={20} />
           </button>
@@ -118,13 +118,13 @@ export default function Landing() {
 
         {/* Feature strip */}
         <div className="bg-white border-t border-gray-100 px-6 py-8">
-          <div className="max-w-4xl mx-auto grid grid-cols-3 gap-6 text-center">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 divide-gray-100 text-center">
             {[
               { label: 'Barangay Clearance', desc: 'For employment & legal needs' },
               { label: 'Certificate of Residency', desc: 'Proof of address in barangay' },
               { label: 'Certificate of Indigency', desc: 'For financial assistance' },
             ].map((item) => (
-              <div key={item.label}>
+              <div key={item.label} className="pt-3 first:pt-0 sm:pt-0">
                 <p className="font-bold text-gray-800 text-sm md:text-base">{item.label}</p>
                 <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
               </div>

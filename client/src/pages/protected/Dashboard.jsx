@@ -10,9 +10,10 @@ import useAuthStore from '../../store/authStore';
 
 function SummaryCard({ icon: Icon, label, count, color }) {
   return (
-    <div className="card flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${color}`}>
-        <Icon size={24} className="text-white" />
+    <div className="card flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ${color}`}>
+        <Icon size={20} className="text-white sm:hidden" />
+        <Icon size={24} className="text-white hidden sm:block" />
       </div>
       <div className="min-w-0">
         <p className="stat-value leading-none">{count ?? '—'}</p>

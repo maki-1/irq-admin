@@ -134,7 +134,7 @@ export default function Otp() {
       <IllustrationPanel />
 
       {/* Right — form */}
-      <div className="flex-1 lg:w-1/2 flex flex-col items-center justify-center bg-white px-8 py-12 lg:px-16">
+      <div className="flex-1 lg:w-1/2 flex flex-col items-center justify-center bg-white px-4 sm:px-8 py-12 lg:px-16">
 
         {/* Middle — OTP form */}
         <div className="w-full max-w-sm flex flex-col items-center gap-6">
@@ -149,7 +149,7 @@ export default function Otp() {
 
           <form onSubmit={handleSubmit} className="w-full flex flex-col items-center gap-6">
             {/* OTP Boxes */}
-            <div className="flex gap-3 justify-center" onPaste={handlePaste}>
+            <div className="flex gap-2 sm:gap-3 justify-center" onPaste={handlePaste}>
               {digits.map((d, i) => (
                 <input
                   key={i}
@@ -159,7 +159,7 @@ export default function Otp() {
                   onKeyDown={(e) => handleKeyDown(i, e)}
                   maxLength={1}
                   inputMode="numeric"
-                  className={`w-11 h-14 rounded-xl text-center text-xl font-bold transition-all outline-none
+                  className={`w-9 h-12 sm:w-11 sm:h-14 rounded-xl text-center text-xl font-bold transition-all outline-none
                     ${d
                       ? 'border-2 border-primary bg-primary/5 text-primary'
                       : 'border-0 bg-gray-100 text-gray-800'

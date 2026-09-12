@@ -266,7 +266,7 @@ export default function Step3() {
             {livenessComplete && capturedPhoto ? (
               <div className="text-center">
                 <div className="relative inline-block">
-                  <img src={capturedPhoto} alt="Captured" className="w-48 h-48 object-cover rounded-full border-4 border-primary mx-auto" />
+                  <img src={capturedPhoto} alt="Captured" className="w-40 h-40 sm:w-48 sm:h-48 object-cover rounded-full border-4 border-primary mx-auto" />
                   <div className="absolute bottom-0 right-0 w-10 h-10 bg-primary rounded-full flex items-center justify-center">
                     <MdCheckCircle className="text-white" size={24} />
                   </div>
@@ -289,7 +289,7 @@ export default function Step3() {
                     screenshotFormat="image/jpeg"
                     onUserMediaError={() => setCameraError(true)}
                     videoConstraints={{ facingMode: 'user', width: 300, height: 300 }}
-                    className="w-64 h-64 object-cover rounded-full"
+                    className="w-52 h-52 sm:w-64 sm:h-64 object-cover rounded-full"
                   />
                   <div className="absolute inset-0 rounded-full border-4 border-primary pointer-events-none" />
                   <div className={`absolute inset-0 rounded-full border-4 pointer-events-none transition-colors
