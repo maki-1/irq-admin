@@ -7,5 +7,6 @@ router.use(protect);
 router.get('/',         requireRole('Secretary', 'Barangay Captain', 'Collector'), ctrl.getAll);
 router.get('/:id',     requireRole('Secretary', 'Barangay Captain', 'Collector'), ctrl.getOne);
 router.patch('/:id/status', requireRole('Secretary', 'Barangay Captain'), ctrl.updateStatus);
+router.patch('/:id/collect-payment', requireRole('Collector'), ctrl.collectPayment);
 
 module.exports = router;

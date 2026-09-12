@@ -167,3 +167,74 @@ exports.updateStatus = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// PATCH /api/requests/:id/collect-payment — Collector records a cash payment
+//
+// Kiosk-only. A kiosk resident is standing in the barangay office with no
+// reason to pay online, and their purok clearance already proves the Purok
+// Leader's part is settled — cash at the counter is the natural next step.
+// A web/app request keeps its existing online-only path (payApproved →
+// PayMongo): letting a Collector wave one through in cash here would bypass
+// that resident's own payment step, which this endpoint is not meant to do.
+// This mirrors payApproved's amount (document price + any still-owed purok
+// clearance fee) but records it as a cash collection instead of starting a
+// checkout session.
+exports.collectPayment = async (req, res) => {
+  try {
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
+
+    const request = await prisma.request.findUnique({ where: { id: req.params.id } });
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+    if (request.channel !== 'kiosk') {
+      return res.status(400).json({ message: 'Cash collection is only available for kiosk walk-ins. This request must be paid online.' });
+    }
+    if (request.purokLeaderStatus !== 'approved') {
+      return res.status(400).json({ message: 'This request has not been approved by the Purok Leader yet.' });
+    }
+    if (request.paymentStatus === 'paid') {
+      return res.status(400).json({ message: 'This request is already paid.' });
+    }
+    if (request.paymentStatus === 'free') {
+      return res.status(400).json({ message: 'This document is free — there is nothing to collect.' });
+    }
+
+    const priceDoc = await prisma.documentPrice.findUnique({
+      where: { documentType: request.documentType },
+    });
+    const docCentavos = priceDoc ? priceDoc.pricecentavos : 10000;
+    // purokClearanceFee is a Decimal; kiosk-issued requests already have it
+    // zeroed (paid in cash to the Purok Leader), so this only adds anything
+    // for an online-channel request the leader approved with a fee attached.
+    const purokFeeCentavos = Math.round(Number(request.purokClearanceFee || 0) * 100);
+    const totalPesos = (docCentavos + purokFeeCentavos) / 100;
+
+    const [updated] = await prisma.$transaction([
+      prisma.request.update({
+        where: { id: request.id },
+        data: { paymentStatus: 'paid', status: 'Processing', amountPaid: totalPesos },
+        include: REQUEST_INCLUDE,
+      }),
+      prisma.payment.create({
+        data: {
+          adminId: req.user.id,
+          userId: request.userId,
+          documentType: request.documentType,
+          amount: totalPesos,
+          provider: 'manual',
+          status: 'paid',
+          requests: { connect: [{ id: request.id }] },
+        },
+      }),
+    ]);
+
+    await auditLog({
+      user: req.user,
+      action: 'Collected Cash Payment',
+      details: `Request ${request.id} (${request.documentType}) — ₱${totalPesos.toFixed(2)} collected in cash`,
+    });
+
+    res.json(shape(updated));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { FiPrinter, FiFileText } from 'react-icons/fi';
+import { FiPrinter, FiFileText, FiDollarSign, FiX } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 import CollectorLayout from '../../components/layouts/CollectorLayout';
 import PrintReceiptModal from '../../components/common/PrintReceiptModal';
 import { getRequests } from '../../services/request.service';
@@ -29,62 +30,97 @@ function StatusBadge({ status }) {
   );
 }
 
+// Confirms a cash collection before it's recorded — the amount is computed
+// server-side (document price + any outstanding purok clearance fee) so this
+// modal doesn't duplicate that math and risk drifting from it.
+function CollectPaymentModal({ req, residentName, onClose, onCollected }) {
+  const [saving, setSaving] = useState(false);
+
+  async function confirm() {
+    setSaving(true);
+    try {
+      const { data } = await api.patch(`/requests/${req.id || req._id}/collect-payment`);
+      toast.success(`₱${Number(data.amountPaid).toLocaleString('en-PH', { minimumFractionDigits: 2 })} collected from ${residentName}`);
+      onCollected(data);
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not record the payment');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-sm rounded-3xl overflow-hidden" style={{ background: '#FFFFFF', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F0EAEA' }}>
+          <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 18 }}>Collect Cash Payment</p>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100">
+            <FiX size={18} color="#827575" />
+          </button>
+        </div>
+        <div className="px-6 py-5" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
+          <p style={{ color: '#555', fontSize: 13, marginBottom: 4 }}>
+            <strong>{residentName}</strong> — {req.documentType}
+          </p>
+          <p style={{ color: '#A18D8D', fontSize: 12 }}>OR No. {req.orNumber || '—'}</p>
+          <p style={{ color: '#555', fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
+            Kiosk walk-in — the purok clearance already settled the Purok Leader's fee.
+            Confirms the resident paid in cash for the document itself. The exact amount
+            is the barangay's current price for <strong>{req.documentType}</strong> —
+            checked at the counter, not guessed here.
+          </p>
+        </div>
+        <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #F0EAEA' }}>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+            style={{ fontFamily: "'Hahmlet', sans-serif", color: '#827575', background: '#F5F0F0' }}>
+            Cancel
+          </button>
+          <button onClick={confirm} disabled={saving}
+            className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60"
+            style={{ fontFamily: "'Hahmlet', sans-serif", background: '#156D07' }}>
+            {saving ? 'Recording…' : 'Cash received'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CollectorPayments() {
   const { user } = useAuthStore();
   const [requests, setRequests] = useState([]);
-  const [feeMap,   setFeeMap]   = useState({}); // purokName.toLowerCase() -> feecentavos
   const [tab, setTab]           = useState('All');
   const [search, setSearch]     = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo,   setDateTo]   = useState('');
   const [loading, setLoading]   = useState(true);
   const [printReq, setPrintReq] = useState(null);
+  const [collectReq, setCollectReq] = useState(null);
 
   useEffect(() => {
     setLoading(true);
-    Promise.allSettled([
-      getRequests(),
-      api.get('/purok-clearance/all-fees'),
-    ])
-      .then(([reqResult, feeResult]) => {
-        if (reqResult.status === 'fulfilled') {
-          setRequests(reqResult.value.data);
-        } else {
-          console.error('Failed to load requests:', reqResult.reason);
-        }
-        if (feeResult.status === 'fulfilled') {
-          const map = {};
-          (feeResult.value.data || []).forEach((f) => {
-            if (f.purokName) map[f.purokName.toLowerCase()] = f.feecentavos;
-          });
-          setFeeMap(map);
-        }
-      })
+    getRequests()
+      .then(({ data }) => setRequests(data))
+      .catch((err) => console.error('Failed to load requests:', err))
       .finally(() => setLoading(false));
   }, []);
 
   const residentName = (req) => req.profile?.fullName || req.user?.username || '—';
 
-  // Net amount collector receives: amountPaid minus the purok clearance fee
+  // Net amount collector receives: amountPaid minus whatever purok clearance
+  // fee was actually bundled into *this* payment. Read straight off the
+  // request rather than re-derived from the purok's configured rate — a kiosk
+  // payment never bundles one in (it's already settled with the Purok Leader
+  // in cash, so purokClearanceFee is 0 here), while an online payment does
+  // (payApproved charges document price + fee together). Using the request's
+  // own field keeps both cases correct instead of double-subtracting a fee
+  // the kiosk payment never included.
   const netAmount = (req) => {
     if (req.paymentStatus !== 'paid' || req.amountPaid == null) return null;
-    const purok = (req.profile?.purok || req.profile?.address || '').toLowerCase();
-
-    // exact match first
-    let feecentavos = feeMap[purok];
-
-    // partial match: feeMap key contained in purok string or vice versa
-    if (feecentavos == null) {
-      for (const [key, val] of Object.entries(feeMap)) {
-        if (purok.includes(key) || key.includes(purok)) {
-          feecentavos = val;
-          break;
-        }
-      }
-    }
-
-    const fee = feecentavos != null ? feecentavos / 100 : 0;
-    return Math.max(0, req.amountPaid - fee);
+    return Math.max(0, req.amountPaid - Number(req.purokClearanceFee || 0));
   };
 
   const filtered = useMemo(() => requests.filter((r) => {
@@ -408,6 +444,21 @@ export default function CollectorPayments() {
                             Print
                           </button>
                         )}
+                        {/* Kiosk-only: a web/app request keeps its own online PayMongo
+                            path (payApproved), so cash collection here would bypass
+                            that resident's own payment step instead of standing in
+                            for the Purok Leader fee the kiosk already settled. */}
+                        {req.channel === 'kiosk' && req.paymentStatus === 'unpaid' && req.purokLeaderStatus === 'approved' && (
+                          <button
+                            onClick={() => setCollectReq(req)}
+                            title="Collect cash payment (kiosk walk-in)"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                            style={{ background: '#156D07', color: '#FFFFFF', fontFamily: "'Hahmlet', sans-serif" }}
+                          >
+                            <FiDollarSign size={13} />
+                            Collect
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -431,6 +482,16 @@ export default function CollectorPayments() {
           req={printReq}
           residentName={residentName(printReq)}
           onClose={() => setPrintReq(null)}
+        />
+      )}
+      {collectReq && (
+        <CollectPaymentModal
+          req={collectReq}
+          residentName={residentName(collectReq)}
+          onClose={() => setCollectReq(null)}
+          onCollected={(updated) =>
+            setRequests((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)))
+          }
         />
       )}
     </CollectorLayout>

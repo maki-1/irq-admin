@@ -30,6 +30,24 @@ const DOCUMENT_TYPES = [
   'Certificate of Indigency',
 ];
 
+// Same fallback the resident-facing flow uses (resident.payment.controller.js)
+// when a document type has no row in document_prices.
+const FALLBACK_CENTAVOS = {
+  'Certificate of Residency': 5000,
+  'Certificate of Indigency': 0,
+};
+
+// The purok clearance only covers the Purok Leader's own fee, settled in cash
+// at issuance — it is not the price of the document itself. That still has to
+// be paid, in cash, at the barangay Collector's counter (see
+// request.controller.js `collectPayment`), since a kiosk resident is already
+// on-site rather than paying online like the app/portal flow.
+async function priceCentavosFor(documentType, client = prisma) {
+  const priceDoc = await client.documentPrice.findUnique({ where: { documentType } });
+  if (priceDoc) return priceDoc.pricecentavos;
+  return FALLBACK_CENTAVOS[documentType] ?? 10000; // default ₱100
+}
+
 // Fire-and-forget: a resident is standing at the counter, so tell their Purok
 // Leader a request is waiting. `channel:'kiosk'` makes purokNotify mark them as
 // physically present. Never allowed to fail the submission.
@@ -184,6 +202,7 @@ exports.submitRequests = async (req, res) => {
     // Sequential: each create draws the next OR number from the shared counter.
     const created = [];
     for (const item of items) {
+      const priceCentavos = await priceCentavosFor(item.documentType);
       created.push(
         await prisma.request.create({
           data: {
@@ -193,8 +212,11 @@ exports.submitRequests = async (req, res) => {
             additionalDetails: item.additionalDetails ? String(item.additionalDetails) : '',
             deliveryMethod: 'Pick up at Barangay Office',
             status: 'Pending',
-            paymentStatus: 'free',
-            amountPaid: 0,
+            // Only free when the document's own price is actually ₱0 — the
+            // purok clearance fee is a separate charge, already settled with
+            // the Purok Leader, and never substitutes for the document fee.
+            paymentStatus: priceCentavos === 0 ? 'free' : 'unpaid',
+            amountPaid: priceCentavos / 100,
             requestPhoto: '',
             purokLeaderStatus: 'pending',
             orNumber: await generateORNumber(),
@@ -226,10 +248,17 @@ exports.submitRequests = async (req, res) => {
       orderBy: { createdAt: 'asc' },
     });
 
+    // What's still owed, in pesos — the document fee(s), collectible in cash
+    // at the barangay Collector's counter. Zero once every document is free.
+    const totalDue = requests
+      .filter((r) => r.paymentStatus === 'unpaid')
+      .reduce((sum, r) => sum + Number(r.amountPaid || 0), 0);
+
     res.status(201).json({
       ok: true,
       controlNo: clearance.controlNo,
       requests: toApi(requests),
+      totalDue,
     });
 
     announceToPurokLeader(userId, requests.map((r) => r.documentType));
