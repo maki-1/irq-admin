@@ -1,14 +1,15 @@
 const axios = require('axios');
 const prisma = require('../../lib/prisma');
 const { isUuid } = require('../../lib/ids');
+const { clientOriginFor } = require('../../lib/clientOrigin');
 
 // POST /api/payments/paymongo/checkout
 exports.createPayMongoSession = async (req, res) => {
   try {
     const { documentId, amount, documentType } = req.body;
-    // CLIENT_URL is a comma-separated CORS allowlist; take the first origin as
-    // the redirect base so success_url/cancel_url are not the whole list joined.
-    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5174').split(',')[0].trim();
+    // Return to whichever allowlisted portal started the checkout — see
+    // lib/clientOrigin.js.
+    const clientUrl = clientOriginFor(req);
     const response = await axios.post(
       'https://api.paymongo.com/v1/checkout_sessions',
       {

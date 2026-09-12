@@ -1,9 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MdCheckCircle, MdHourglassEmpty, MdRefresh } from 'react-icons/md';
 import api from '../../services/api';
 
+// Seconds spent on this page before the resident is taken back into their
+// account. Long enough to read the confirmation, short enough that nobody is
+// left wondering whether the payment registered.
+const CONTINUE_AFTER_MS = 3000;
+
 export default function PaymentSuccess() {
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const requestId = params.get('refs');
   const [status, setStatus]   = useState('checking');
@@ -20,6 +26,15 @@ export default function PaymentSuccess() {
   }, [requestId]);
 
   useEffect(() => { verify(); }, [verify]);
+
+  // PayMongo drops the resident back here, not in the app. Once the payment is
+  // confirmed, carry on to their requests so they land in their own account
+  // rather than on a standalone receipt page.
+  useEffect(() => {
+    if (status !== 'paid') return;
+    const t = setTimeout(() => navigate('/requests', { replace: true }), CONTINUE_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [status, navigate]);
 
   async function handleRetry() {
     setRetrying(true);
@@ -47,9 +62,10 @@ export default function PaymentSuccess() {
         {status === 'paid' ? (
           <>
             <h1 className="text-2xl font-extrabold text-gray-800 mb-2">Payment Successful!</h1>
-            <p className="text-gray-500 text-sm mb-8">
+            <p className="text-gray-500 text-sm mb-2">
               Your payment was received. Barangay staff will process your request and notify you when it's ready for pickup.
             </p>
+            <p className="text-gray-400 text-xs mb-8">Taking you to your requests…</p>
           </>
         ) : (
           <>

@@ -4,6 +4,7 @@ const prisma     = require('../../lib/prisma');
 const { isUuid } = require('../../lib/ids');
 const { notifyPurokLeader } = require('../../lib/purokNotify');
 const { normalizePurpose } = require('../../lib/purpose');
+const { clientOriginFor } = require('../../lib/clientOrigin');
 const generateORNumber = require('../utils/generateORNumber');
 const sendSmsRaw = require('../utils/sendSms');
 const sendEmail = require('../utils/sendEmail');
@@ -157,11 +158,10 @@ exports.payApproved = async (req, res) => {
     const purokFeeCentavos = Math.round(Number(request.purokClearanceFee || 0) * 100);
     const totalCentavos    = docCentavos + purokFeeCentavos;
 
-    // CLIENT_URL is a comma-separated CORS allowlist (see app.js). Used raw as a
-    // redirect base it produces a malformed success_url — the whole list joined
-    // into one string — so PayMongo redirects the paid resident to a dead page.
-    // Take the first configured origin as the return base.
-    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5174').split(',')[0].trim();
+    // Return the resident to the portal they paid from, so the success page
+    // loads inside their own session and can confirm the payment. See
+    // lib/clientOrigin.js for why the CORS list's first entry is not used.
+    const clientUrl = clientOriginFor(req);
 
     const response = await axios.post(
       'https://api.paymongo.com/v1/checkout_sessions',
@@ -173,7 +173,9 @@ exports.payApproved = async (req, res) => {
               ...(purokFeeCentavos > 0 ? [{ currency: 'PHP', amount: purokFeeCentavos, name: 'Purok Clearance Fee', quantity: 1 }] : []),
             ],
             payment_method_types: ['gcash', 'card'],
-            success_url: `${clientUrl}/payment/success?refs=${requestId}&sid={{SESSION_ID}}`,
+            // No session id in the URL: PayMongo substitutes nothing, and the
+            // page looks the payment up by request id anyway.
+            success_url: `${clientUrl}/payment/success?refs=${requestId}`,
             cancel_url:  `${clientUrl}/payment/cancel`,
             description: `iRequestD — ${request.documentType}`,
           },
