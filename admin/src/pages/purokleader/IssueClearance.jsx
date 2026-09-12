@@ -525,7 +525,7 @@ export default function PurokLeaderIssueClearance() {
                 { key: 'void', label: `Cancelled ${counts.void || 0}` },
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => setStatusFilter(key)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-semibold"
                   style={{
                     fontFamily: "'Hahmlet', sans-serif",
                     background: statusFilter === key ? '#156D07' : '#F5F0F0',
@@ -739,7 +739,7 @@ export default function PurokLeaderIssueClearance() {
             </p>
             <div className="flex gap-1 flex-wrap">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
                 style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
                 ‹ Prev
               </button>
@@ -748,7 +748,7 @@ export default function PurokLeaderIssueClearance() {
                   <span key={`e${i}`} className="px-2 py-1.5 text-xs" style={{ color: '#A18D8D' }}>…</span>
                 ) : (
                   <button key={p} onClick={() => setPage(p)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                    className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium"
                     style={{
                       background: p === safePage ? '#156D07' : '#FFFFFF',
                       color:      p === safePage ? '#FFFFFF' : '#555',
@@ -760,7 +760,7 @@ export default function PurokLeaderIssueClearance() {
                 )
               )}
               <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
                 style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
                 Next ›
               </button>

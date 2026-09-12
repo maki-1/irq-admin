@@ -57,8 +57,8 @@ function Tags({ r }) {
 
 function StatCard({ icon: Icon, label, value, color }) {
   return (
-    <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: '#FFFFFF' }}>
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${color}20` }}>
+    <div className="rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 min-w-0" style={{ background: '#FFFFFF' }}>
+      <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl flex items-center justify-center" style={{ background: `${color}20` }}>
         <Icon size={24} style={{ color }} />
       </div>
       <div>
@@ -246,7 +246,7 @@ export default function PurokLeaderResidence() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard icon={FiUsers}       label={`Residents in ${purok || 'your purok'}`} value={stats.total}    color="#156D07" />
         <StatCard icon={FiCheckCircle} label="Verified"                                 value={stats.approved} color="#2563EB" />
         <StatCard icon={FiClock}       label="Awaiting Review"                          value={stats.waiting}  color="#B45309" />
@@ -379,7 +379,7 @@ export default function PurokLeaderResidence() {
             </p>
             <div className="flex gap-1 flex-wrap">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
                 style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
                 ‹ Prev
               </button>
@@ -388,7 +388,7 @@ export default function PurokLeaderResidence() {
                   <span key={`e${i}`} className="px-2 py-1.5 text-xs" style={{ color: '#A18D8D' }}>…</span>
                 ) : (
                   <button key={p} onClick={() => setPage(p)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                    className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium"
                     style={{
                       background: p === safePage ? '#156D07' : '#FFFFFF',
                       color:      p === safePage ? '#FFFFFF' : '#555',
@@ -400,7 +400,7 @@ export default function PurokLeaderResidence() {
                 )
               )}
               <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
                 style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
                 Next ›
               </button>

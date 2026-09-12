@@ -31,8 +31,8 @@ function PesoIcon({ size = 24, style }) {
 
 function StatCard({ icon: Icon, label, value, color }) {
   return (
-    <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: '#FFFFFF' }}>
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${color}20` }}>
+    <div className="rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 min-w-0" style={{ background: '#FFFFFF' }}>
+      <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl flex items-center justify-center" style={{ background: `${color}20` }}>
         <Icon size={24} style={{ color }} />
       </div>
       <div>
@@ -175,7 +175,7 @@ export default function PurokLeaderFeeReport() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard icon={PesoIcon}      label="Total Fees Assessed" value={peso(totals.assessed)}  color="#156D07" />
         <StatCard icon={FiCheckCircle} label="Collected"           value={peso(totals.collected)} color="#2563EB" />
         <StatCard icon={FiClock}       label="Outstanding"         value={peso(totals.pending)}   color="#B45309" />
@@ -277,12 +277,12 @@ export default function PurokLeaderFeeReport() {
                   Page {safePage} of {totalPages}
                 </span>
                 <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                  className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
                   style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
                   ‹ Prev
                 </button>
                 <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                  className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
                   style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
                   Next ›
                 </button>

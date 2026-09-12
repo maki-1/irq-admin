@@ -138,7 +138,7 @@ export default function PurokLeaderLayout({ title, children }) {
       )}
       <div className={`fixed top-0 left-0 z-50 h-full flex flex-col lg:hidden transition-transform duration-300 ease-in-out bg-gradient-to-b from-forest-700 via-forest to-forest-deep ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{ width: 240, boxShadow: '4px 0 16px rgba(0,0,0,0.25)' }}>
-        <button className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/10" onClick={() => setSidebarOpen(false)}>
+        <button className="absolute top-4 right-4 p-2.5 rounded-full hover:bg-white/10" onClick={() => setSidebarOpen(false)}>
           <FiX size={22} color="#FFFFFF" />
         </button>
         <SidebarContent onNavClick={() => setSidebarOpen(false)} />

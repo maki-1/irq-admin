@@ -363,13 +363,13 @@ export default function PurokLeaderRequests() {
                           <div className="flex gap-1.5">
                             <button
                               onClick={() => setModal({ request: r, action: 'approve' })}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap"
+                              className="flex items-center gap-1 px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap"
                               style={{ background: '#156D07', fontFamily: "'Hahmlet', sans-serif" }}>
                               <FiCheckCircle size={12} /> Approve
                             </button>
                             <button
                               onClick={() => setModal({ request: r, action: 'reject' })}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap"
+                              className="flex items-center gap-1 px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap"
                               style={{ background: '#FEF2F2', color: '#DC2626', fontFamily: "'Hahmlet', sans-serif" }}>
                               <FiXCircle size={12} /> Reject
                             </button>
@@ -392,7 +392,7 @@ export default function PurokLeaderRequests() {
             </p>
             <div className="flex gap-1 flex-wrap">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
                 style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
                 ‹ Prev
               </button>
@@ -401,7 +401,7 @@ export default function PurokLeaderRequests() {
                   <span key={`e${i}`} className="px-2 py-1.5 text-xs" style={{ color: '#A18D8D' }}>…</span>
                 ) : (
                   <button key={p} onClick={() => setPage(p)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                    className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium"
                     style={{
                       background: p === page ? '#156D07' : '#FFFFFF',
                       color:      p === page ? '#FFFFFF' : '#555',
@@ -413,7 +413,7 @@ export default function PurokLeaderRequests() {
                 )
               )}
               <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                className="px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
                 style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
                 Next ›
               </button>
