@@ -5,6 +5,7 @@ const { toApi } = require('../../lib/serialize');
 const { verifyClearance, redeemClearance } = require('../../lib/purokClearance');
 const generateORNumber = require('../utils/generateORNumber');
 const { notifyPurokLeader } = require('../../lib/purokNotify');
+const { normalizePurpose } = require('../../lib/purpose');
 const sendSmsRaw = require('../utils/sendSms');
 const sendEmail = require('../utils/sendEmail');
 
@@ -188,6 +189,12 @@ exports.submitRequests = async (req, res) => {
       if (!item.purpose || !String(item.purpose).trim()) {
         return res.status(400).json({ message: 'Each document needs a purpose' });
       }
+      // Picking "Other" only counts once the resident typed what it is.
+      const checkedPurpose = normalizePurpose(item.purpose);
+      if (!checkedPurpose.ok) {
+        return res.status(400).json({ message: checkedPurpose.message });
+      }
+      item.purpose = checkedPurpose.value;
     }
 
     // Re-check server-side; never trust the client's earlier verify.
@@ -208,7 +215,7 @@ exports.submitRequests = async (req, res) => {
           data: {
             userId,
             documentType: item.documentType,
-            purpose: String(item.purpose).trim(),
+            purpose: item.purpose,
             additionalDetails: item.additionalDetails ? String(item.additionalDetails) : '',
             deliveryMethod: 'Pick up at Barangay Office',
             status: 'Pending',

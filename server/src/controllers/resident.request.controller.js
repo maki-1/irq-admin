@@ -3,6 +3,7 @@ const prisma     = require('../../lib/prisma');
 const { toApi }  = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
 const { notifyPurokLeader } = require('../../lib/purokNotify');
+const { normalizePurpose } = require('../../lib/purpose');
 const generateORNumber = require('../utils/generateORNumber');
 const sendSmsRaw = require('../utils/sendSms');
 const sendEmail = require('../utils/sendEmail');
@@ -155,6 +156,14 @@ exports.createBulk = async (req, res) => {
     }
 
     if (!docs.length) return res.status(400).json({ message: 'No documents provided' });
+
+    // A purpose of "Other" is only accepted with the resident's own 1-2 word
+    // answer, which is what gets stored and printed on the certificate.
+    for (const doc of docs) {
+      const checkedPurpose = normalizePurpose(doc.purpose);
+      if (!checkedPurpose.ok) return res.status(400).json({ message: checkedPurpose.message });
+      doc.purpose = checkedPurpose.value;
+    }
 
     const created = [];
     for (let i = 0; i < docs.length; i++) {

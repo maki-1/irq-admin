@@ -4,7 +4,7 @@ import {
   FiSearch, FiEye, FiX,
   FiUser, FiMapPin, FiPhone, FiMail,
   FiCalendar, FiBriefcase, FiCheckCircle, FiXCircle, FiClock,
-  FiCreditCard, FiDownload, FiAlertTriangle, FiTrash2, FiRotateCcw, FiArchive,
+  FiCreditCard, FiDownload, FiAlertTriangle, FiRotateCcw, FiArchive,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
@@ -406,20 +406,6 @@ export default function CaptainResidence() {
     }
   };
 
-  const handleArchive = async (p) => {
-    if (!window.confirm(`Remove ${p.fullName} from the active residence list? Their record is kept and can be restored anytime from the Archived tab.`)) return;
-    setArchiving(p._id);
-    try {
-      await api.patch(`/verifications/${p._id}/archive`);
-      toast.success(`${p.fullName} archived`);
-      setProfiles((prev) => prev.filter((x) => x._id !== p._id));
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to archive resident');
-    } finally {
-      setArchiving(null);
-    }
-  };
-
   const handleRestore = async (p) => {
     setArchiving(p._id);
     try {
@@ -685,30 +671,19 @@ export default function CaptainResidence() {
                             {archiving === p._id ? 'Restoring…' : 'Restore'}
                           </button>
                         ) : (
-                          <>
-                            <button
-                              onClick={() => setSelected(p)}
-                              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-medium transition-colors"
-                              style={{
-                                fontFamily: "'Hahmlet', sans-serif",
-                                background: '#F0FDF4',
-                                color: '#156D07',
-                                border: '1px solid #BBF7D0',
-                              }}
-                            >
-                              <FiEye size={13} />
-                              Review
-                            </button>
-                            <button
-                              onClick={() => handleArchive(p)}
-                              disabled={archiving === p._id}
-                              title="Archive resident"
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl transition-colors disabled:opacity-50"
-                              style={{ background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3' }}
-                            >
-                              <FiTrash2 size={13} />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => setSelected(p)}
+                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                            style={{
+                              fontFamily: "'Hahmlet', sans-serif",
+                              background: '#F0FDF4',
+                              color: '#156D07',
+                              border: '1px solid #BBF7D0',
+                            }}
+                          >
+                            <FiEye size={13} />
+                            Review
+                          </button>
                         )}
                       </div>
                     </td>

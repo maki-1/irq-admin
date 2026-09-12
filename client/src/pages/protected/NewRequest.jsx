@@ -9,6 +9,36 @@ import useAuthStore from '../../store/authStore';
 
 const PURPOSES = ['Employment', 'Travel', 'Bank', 'Scholarship', 'Government Assistance', 'Legal', 'Other'];
 
+// "Other" is not an answer on its own: the resident types what the purpose
+// actually is, and that text — not the word "Other" — is submitted, stored and
+// printed on the certificate ("for <purpose> purposes"). 1-2 words keeps the
+// printed line readable.
+const OTHER = 'Other';
+const OTHER_MAX_WORDS = 2;
+const OTHER_MAX_CHARS = 40;
+const OTHER_WORD = /^[A-Za-z0-9]+(?:[-'./&][A-Za-z0-9]+)*$/;
+
+function cleanOther(raw) {
+  return (raw || '').trim().replace(/\s+/g, ' ');
+}
+
+/** Reason the typed "Other" purpose is not acceptable yet, or '' when it is. */
+function otherPurposeError(raw) {
+  const value = cleanOther(raw);
+  if (!value) return 'Please specify the purpose (1-2 words)';
+  if (/^others?$/i.test(value)) return 'Type the actual purpose, not "Other"';
+  if (value.length > OTHER_MAX_CHARS) return `Keep it within ${OTHER_MAX_CHARS} characters`;
+  const words = value.split(' ');
+  if (words.length > OTHER_MAX_WORDS) return `Use ${OTHER_MAX_WORDS} words at most`;
+  if (!words.every((w) => OTHER_WORD.test(w))) return 'Letters and numbers only';
+  return '';
+}
+
+/** What to submit as the purpose for one item. */
+function resolvePurpose(item) {
+  return item.purpose === OTHER ? cleanOther(item.otherPurpose) : item.purpose;
+}
+
 const BASE_DOCS = [
   { type: 'Barangay Clearance', basePrice: 100 },
   { type: 'Certificate of Residency', basePrice: 50 },
@@ -16,7 +46,7 @@ const BASE_DOCS = [
 ];
 
 function newItem() {
-  return { type: '', purpose: '', details: '', id: Date.now() };
+  return { type: '', purpose: '', otherPurpose: '', details: '', id: Date.now() };
 }
 
 export default function NewRequest() {
@@ -65,6 +95,10 @@ export default function NewRequest() {
     for (const item of items) {
       if (!item.type) return toast.error('Select a document type for each request');
       if (!item.purpose) return toast.error('Select a purpose for each request');
+      if (item.purpose === OTHER) {
+        const err = otherPurposeError(item.otherPurpose);
+        if (err) return toast.error(err);
+      }
     }
 
     setLoading(true);
@@ -72,7 +106,7 @@ export default function NewRequest() {
       const fd = new FormData();
       items.forEach((item, i) => {
         fd.append(`documents[${i}][type]`, item.type);
-        fd.append(`documents[${i}][purpose]`, item.purpose);
+        fd.append(`documents[${i}][purpose]`, resolvePurpose(item));
         fd.append(`documents[${i}][details]`, item.details || '');
       });
 
@@ -162,6 +196,24 @@ export default function NewRequest() {
                   <option value="">Select purpose</option>
                   {PURPOSES.map((p) => <option key={p}>{p}</option>)}
                 </select>
+                {item.purpose === OTHER && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={item.otherPurpose}
+                      onChange={(e) => updateItem(item.id, 'otherPurpose', e.target.value)}
+                      className="input-field"
+                      maxLength={OTHER_MAX_CHARS}
+                      placeholder="Specify the purpose (1-2 words)"
+                      required
+                    />
+                    <p className={`text-xs mt-1 ${item.otherPurpose && otherPurposeError(item.otherPurpose) ? 'text-red-500' : 'text-gray-400'}`}>
+                      {item.otherPurpose
+                        ? otherPurposeError(item.otherPurpose) || 'Looks good'
+                        : 'e.g. Loan Application — 1 to 2 words'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>

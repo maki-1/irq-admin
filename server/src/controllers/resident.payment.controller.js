@@ -3,6 +3,7 @@ const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
 const { isUuid } = require('../../lib/ids');
 const { notifyPurokLeader } = require('../../lib/purokNotify');
+const { normalizePurpose } = require('../../lib/purpose');
 const generateORNumber = require('../utils/generateORNumber');
 const sendSmsRaw = require('../utils/sendSms');
 const sendEmail = require('../utils/sendEmail');
@@ -63,6 +64,14 @@ exports.createSession = async (req, res) => {
     }
 
     if (!docs.length) return res.status(400).json({ message: 'No documents provided' });
+
+    // A purpose of "Other" is only accepted with the resident's own 1-2 word
+    // answer, which is what gets stored and printed on the certificate.
+    for (const doc of docs) {
+      const checkedPurpose = normalizePurpose(doc.purpose);
+      if (!checkedPurpose.ok) return res.status(400).json({ message: checkedPurpose.message });
+      doc.purpose = checkedPurpose.value;
+    }
 
     // Upload photos and create pending requests
     const created = [];
