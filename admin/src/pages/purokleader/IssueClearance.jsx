@@ -42,58 +42,87 @@ const LABEL = { fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize:
 
 const EMPTY = { userId: null, fullName: '', address: '', birthday: '', contactNumber: '', validDays: 30, feePaid: true };
 
-/* ── Printable slip — opens a clean window, mirrors PrintReceiptModal ── */
-function printSlip(clearance, purok, officerName) {
-  const rows = [
-    ['Control Number', clearance.controlNo],
-    ['Full Name', clearance.fullName],
-    ['Address', clearance.address || '—'],
-    ['Purok', clearance.purok || purok],
-    ['Date Issued', dt(clearance.issuedAt)],
-    ['Valid Until', dt(clearance.validUntil)],
-    ['Clearance Fee', `${pesoFromCentavos(clearance.feecentavos)} — ${clearance.feePaid ? 'PAID' : 'UNPAID'}`],
-  ];
-  const win = window.open('', '_blank', 'width=640,height=800');
+/* ── Printable slip ──────────────────────────────────────────────────────
+ *
+ * Reproduces the barangay's actual paper "Purok Clearance" (the no
+ * money/property-accountability certificate the Purok Treasurer and Purok
+ * President sign) rather than a system-styled receipt, so the printed slip
+ * is the same document residents already recognise.
+ *
+ * Sized to a quarter of a short (letter, 8.5x11in) bond sheet — 4.25 x 5.5in
+ * — which is how the barangay already cuts these: one bond sheet yields four
+ * slips. The digital control number takes the place of the form's
+ * hand-written "Control No." and doubles as the code typed at the kiosk.
+ */
+function printSlip(clearance, purok, officerName, treasurerName, purokPresident) {
+  const purokDisplay = clearance.purok || purok || '—';
+  // The Purok President is who "notes" the clearance on the paper form. Use
+  // the purok's recorded President if the Captain has set one; otherwise the
+  // issuing Purok Leader is the closest stand-in (same role, same person, in
+  // most puroks) rather than leaving it blank.
+  const notedBy = purokPresident || officerName || '';
+  const win = window.open('', '_blank', 'width=430,height=560');
   if (!win) { toast.error('Allow pop-ups to print the slip'); return; }
   win.document.write(`
     <html>
       <head>
+        <meta charset="utf-8" />
         <title>Purok Clearance ${clearance.controlNo}</title>
         <style>
           *{box-sizing:border-box}
-          body{margin:0;padding:14mm;font-family:'Times New Roman',Times,serif;color:#000}
-          h1{font-size:15px;letter-spacing:2px;margin:0}
-          .sub{font-size:11px;color:#333;margin-top:2px}
-          .card{border:1.5px solid #000;border-radius:10px;padding:14px 16px;margin-top:14px}
-          .code{font-size:30px;font-weight:bold;letter-spacing:3px;text-align:center;margin:6px 0 12px;font-family:Consolas,'Courier New',monospace}
-          table{width:100%;border-collapse:collapse;font-size:12px}
-          td{padding:5px 4px;vertical-align:top}
-          td.k{width:38%;color:#555;text-transform:uppercase;font-size:10px;letter-spacing:.5px}
-          .note{font-size:10px;color:#555;margin-top:12px;line-height:1.5}
-          .sign{margin-top:34px;text-align:right;font-size:11px}
-          .sign .line{display:inline-block;border-top:1px solid #000;padding-top:3px;min-width:200px;text-align:center}
-          @media print{@page{size:A5 portrait;margin:10mm}}
+          body{margin:0;padding:8mm;font-family:'Courier New',Courier,monospace;color:#000;font-size:9.5px;line-height:1.55}
+          .addr{text-align:center;line-height:1.5}
+          .metarow{display:flex;justify-content:space-between;margin-top:10px;font-size:8.5px}
+          .title{text-align:center;font-weight:bold;font-size:13px;letter-spacing:2px;margin:12px 0 14px;text-decoration:underline}
+          .towhom{font-weight:bold;margin:0 0 6px}
+          p{margin:0 0 9px;text-align:justify}
+          .fill{border-bottom:1px solid #000;padding:0 2px;font-weight:bold}
+          .signatures{display:flex;justify-content:space-between;margin-top:30px}
+          .sig{width:46%;text-align:center}
+          .noted-label{font-size:8.5px;text-align:left;margin-bottom:14px}
+          .sig-line{border-top:1px solid #000;padding-top:3px;min-height:11px;font-weight:bold}
+          .sig-label{font-size:8px;color:#333;margin-top:1px}
+          .kiosk-note{margin-top:18px;padding-top:6px;border-top:1px dashed #999;font-size:7.5px;color:#555;font-style:italic;line-height:1.5}
+          @media print{@page{size:4.25in 5.5in;margin:8mm}}
         </style>
       </head>
       <body>
-        <div style="text-align:center">
-          <h1>BARANGAY DOLOGON</h1>
-          <div class="sub">Maramag, Bukidnon &bull; Office of the Purok Leader</div>
-          <div class="sub" style="margin-top:6px;font-weight:bold">PUROK CLEARANCE</div>
+        <div class="addr">
+          Republic of the Philippines<br/>
+          Municipality of Maramag<br/>
+          Barangay Dologon
         </div>
-        <div class="card">
-          <div class="code">${clearance.controlNo}</div>
-          <table><tbody>
-            ${rows.map(([k, v]) => `<tr><td class="k">${k}</td><td>${v ?? '—'}</td></tr>`).join('')}
-          </tbody></table>
+        <div class="metarow">
+          <span>Control No. <span class="fill">${clearance.controlNo}</span></span>
+          <span>Date: <span class="fill">${dt(clearance.issuedAt)}</span></span>
         </div>
-        <div class="note">
-          Present this slip at the Barangay Document Kiosk. Type the control number
-          above, confirm your surname, and choose the documents you need. The fee
-          shown is settled in cash with the Purok Leader and is not charged again
-          at the kiosk. This clearance is valid for one transaction only.
+        <div class="title">PUROK CLEARANCE</div>
+        <p class="towhom">TO WHOM IT MAY CONCERN:</p>
+        <p>
+          This is to certify that <span class="fill">${clearance.fullName}</span> of
+          <span class="fill">${purokDisplay}</span>, Dologon, Maramag, Bukidnon has no
+          money/property accountability to the Purok.
+        </p>
+        <p>
+          This certification is issued upon the request of the above-named person
+          for whatever purpose that may serve him/her best.
+        </p>
+        <div class="signatures">
+          <div class="sig">
+            <div class="sig-line">${treasurerName || '&nbsp;'}</div>
+            <div class="sig-label">Purok Treasurer</div>
+          </div>
+          <div class="sig">
+            <div class="noted-label">Noted by:</div>
+            <div class="sig-line">${notedBy || '&nbsp;'}</div>
+            <div class="sig-label">Purok President</div>
+          </div>
         </div>
-        <div class="sign"><span class="line">${officerName || 'Purok Leader'}<br/><span style="font-size:10px;color:#555">Issuing Purok Leader</span></span></div>
+        <div class="kiosk-note">
+          Control No. ${clearance.controlNo} is your Barangay Document Kiosk code.
+          Present this slip and type it at the kiosk to request your documents —
+          valid until ${dt(clearance.validUntil)}, one-time use.
+        </div>
       </body>
     </html>
   `);
@@ -173,8 +202,9 @@ export default function PurokLeaderIssueClearance() {
   const [searching, setSearching] = useState(false);
   const searchTimer = useRef(null);
 
-  // fee for this purok
+  // fee + signatories for this purok (from PurokClearanceFee — set by the Barangay Captain)
   const [feeCentavos, setFeeCentavos] = useState(null);
+  const [purokOfficers, setPurokOfficers] = useState({ treasurerName: '', purokPresident: '' });
 
   // issued register
   const [register, setRegister] = useState([]);
@@ -213,8 +243,15 @@ export default function PurokLeaderIssueClearance() {
           (f) => String(f.purokName).trim().toLowerCase() === String(user?.purok || '').trim().toLowerCase()
         );
         setFeeCentavos(row ? row.feecentavos : 0);
+        setPurokOfficers({
+          treasurerName: row?.treasurerName || '',
+          purokPresident: row?.purokPresident || '',
+        });
       })
-      .catch(() => setFeeCentavos(null));
+      .catch(() => {
+        setFeeCentavos(null);
+        setPurokOfficers({ treasurerName: '', purokPresident: '' });
+      });
   }, [user?.purok]);
 
   // debounced resident lookup
@@ -327,7 +364,7 @@ export default function PurokLeaderIssueClearance() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => printSlip(issued, user?.purok, user?.fullName)}
+              <button onClick={() => printSlip(issued, user?.purok, user?.fullName, purokOfficers.treasurerName, purokOfficers.purokPresident)}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
                 style={{ background: '#156D07', fontFamily: "'Hahmlet', sans-serif" }}>
                 <FiPrinter size={14} /> Print slip
@@ -553,7 +590,7 @@ export default function PurokLeaderIssueClearance() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap align-top">
-                          <button onClick={() => printSlip(c, user?.purok, user?.fullName)}
+                          <button onClick={() => printSlip(c, user?.purok, user?.fullName, purokOfficers.treasurerName, purokOfficers.purokPresident)}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
                             style={{ background: '#F0FDF4', color: '#156D07', fontFamily: "'Hahmlet', sans-serif" }}>
                             <FiPrinter size={12} /> Slip
