@@ -566,6 +566,10 @@ model VerificationProfile {
   submittedAt     DateTime?
   reviewedAt      DateTime?
   reviewedById    String?  @db.Uuid
+  // Soft-delete for the Captain's Residence list: "Delete" archives the
+  // profile instead of dropping it, so it can be restored later.
+  archived        Boolean   @default(false)
+  archivedAt      DateTime?
   // Groq/Llama and Azure Face results, written during step 3. Kept as JSON
   // rather than columns because the shape is owned by the AI utilities.
   aiVerification  Json?
@@ -576,5 +580,6 @@ model VerificationProfile {
   reviewedBy Admin? @relation("ProfileReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([status])
+  @@index([archived])
   @@map("verification_profiles")
 }

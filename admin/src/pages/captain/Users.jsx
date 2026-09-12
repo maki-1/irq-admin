@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FiPlus, FiKey, FiSlash, FiCheckCircle, FiX, FiEye, FiEyeOff, FiUser, FiEdit2,
+  FiChevronLeft, FiChevronRight,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
@@ -17,6 +18,7 @@ const ROLE_COLORS = {
 };
 
 const PUROKS = Array.from({ length: 21 }, (_, i) => `Purok ${i + 1}`);
+const PAGE_SIZE = 10;
 
 function RoleBadge({ role }) {
   const cfg = ROLE_COLORS[role] || { bg: '#F5F5F5', color: '#888' };
@@ -411,6 +413,11 @@ export default function CaptainUsers() {
   const [resetTarget, setResetTarget] = useState(null);
   const [editTarget,  setEditTarget]  = useState(null);
   const [toggling,    setToggling]    = useState(null);
+  const [page,        setPage]        = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paged      = users.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const fetchUsers = () => {
     api.get('/users')
@@ -421,7 +428,7 @@ export default function CaptainUsers() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const handleCreated = (newUser) => setUsers((prev) => [newUser, ...prev]);
+  const handleCreated = (newUser) => { setUsers((prev) => [newUser, ...prev]); setPage(1); };
 
   const handleToggleActive = async (u) => {
     const deactivating = u.active !== false;
@@ -488,13 +495,13 @@ export default function CaptainUsers() {
                 {!loading && users.length === 0 && (
                   <tr><td colSpan={6} className="py-10 text-center text-sm" style={{ color: '#C0B0B0' }}>No accounts found</td></tr>
                 )}
-                {!loading && users.map((u, idx) => {
+                {!loading && paged.map((u, idx) => {
                   const isMe = u._id === me?._id;
                   return (
                     <tr key={u._id} className="transition-colors hover:bg-gray-50"
                       style={{ borderBottom: '1px solid #FAF7F7' }}>
 
-                      <td className="px-5 py-3" style={{ color: '#C0B0B0', fontSize: 13 }}>{idx + 1}</td>
+                      <td className="px-5 py-3" style={{ color: '#C0B0B0', fontSize: 13 }}>{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
 
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
@@ -573,10 +580,33 @@ export default function CaptainUsers() {
           </div>
 
           {!loading && (
-            <div className="px-5 py-3" style={{ borderTop: '1px solid #F5F0F0' }}>
+            <div className="flex items-center justify-between flex-wrap gap-2 px-5 py-3" style={{ borderTop: '1px solid #F5F0F0' }}>
               <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#C0B0B0', fontSize: 12 }}>
                 {users.length} account{users.length !== 1 ? 's' : ''} in admins collection
               </p>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
+                    Page {safePage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border transition-colors"
+                    style={{ borderColor: '#E8E0E0', background: safePage === 1 ? '#F9F9F9' : '#FFFFFF', color: safePage === 1 ? '#C0B0B0' : '#156D07' }}
+                  >
+                    <FiChevronLeft size={15} />
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border transition-colors"
+                    style={{ borderColor: '#E8E0E0', background: safePage === totalPages ? '#F9F9F9' : '#FFFFFF', color: safePage === totalPages ? '#C0B0B0' : '#156D07' }}
+                  >
+                    <FiChevronRight size={15} />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

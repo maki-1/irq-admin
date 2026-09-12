@@ -6,21 +6,28 @@ const auditLog   = require('../utils/auditLog');
 
 const USER_BRIEF = { select: { id: true, username: true, email: true, contactNumber: true } };
 
-/* Helper — get user IDs belonging to a purok.
+/* Which verification profiles belong to a purok.
  *
  * Prefers the stored `purok` field. The address `contains` match is kept only
  * as a fallback for profiles predating that column, and is deliberately narrow:
  * a substring test on address matches "Purok 20" for a leader of "Purok 2".
+ *
+ * Every purok-scoped query goes through this one clause, so the roster and the
+ * request queue can never disagree about who belongs to a leader's purok.
  */
+function purokProfileWhere(purok) {
+  return {
+    OR: [
+      { purok: { equals: purok, mode: 'insensitive' } },
+      { AND: [{ purok: null }, { address: { contains: purok, mode: 'insensitive' } }] },
+    ],
+  };
+}
+
 async function getUserIdsForPurok(purok) {
   if (!purok) return [];
   const profiles = await prisma.verificationProfile.findMany({
-    where: {
-      OR: [
-        { purok: { equals: purok, mode: 'insensitive' } },
-        { AND: [{ purok: null }, { address: { contains: purok, mode: 'insensitive' } }] },
-      ],
-    },
+    where: purokProfileWhere(purok),
     select: { userId: true },
   });
   return profiles.map((p) => p.userId).filter(Boolean);
@@ -52,6 +59,81 @@ exports.getDashboard = async (req, res) => {
     });
 
     res.json({ purok, residents: userIds.length, stats });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* GET /api/purok-leader/residents
+ *
+ * The roster of residents in the signed-in leader's own purok. The purok comes
+ * from req.user, never from the query string: a leader must not be able to read
+ * another purok's residents by asking for one.
+ *
+ * Deliberately a narrower projection than the Secretary's /verifications list.
+ * A Purok Leader attests that someone lives in their purok, which needs names,
+ * addresses, contacts and exemption flags — not ID scans, face photos or the AI
+ * verification output, so those are not selected here at all.
+ */
+exports.getResidents = async (req, res) => {
+  try {
+    const purok = req.user.purok;
+    if (!purok) {
+      return res.status(400).json({
+        message: 'No purok is assigned to your account. Ask the Barangay Captain to set one.',
+      });
+    }
+
+    const profiles = await prisma.verificationProfile.findMany({
+      where: purokProfileWhere(purok),
+      select: {
+        id: true,
+        userId: true,
+        fullName: true,
+        address: true,
+        purok: true,
+        birthday: true,
+        age: true,
+        gender: true,
+        yearsAtAddress: true,
+        yearsOfResidency: true,
+        contactNumber: true,
+        email: true,
+        isPwd: true,
+        isSenior: true,
+        isIndigent: true,
+        currentStep: true,
+        status: true,
+        submittedAt: true,
+        reviewedAt: true,
+        createdAt: true,
+        // Contact details live on the resident account when the profile was
+        // filled in without them — see the fallback below.
+        user: { select: { id: true, username: true, email: true, contactNumber: true, avatar: true } },
+      },
+      orderBy: { fullName: 'asc' },
+    });
+
+    const residents = profiles.map((p) => {
+      const obj = toApi(p);
+      const user = obj.user || null;
+      delete obj.user;
+      return {
+        ...obj,
+        username: user?.username || null,
+        avatar: user?.avatar || '',
+        // The profile's own copies are near-always blank; the account is where
+        // these actually live. Falling back here keeps the roster usable
+        // instead of showing a column of dashes.
+        contactNumber: obj.contactNumber || user?.contactNumber || null,
+        email: obj.email || user?.email || null,
+        // Two columns record the same thing under different names — the int one
+        // holds essentially all the data, the text one a couple of old rows.
+        yearsAtAddress: obj.yearsAtAddress ?? (obj.yearsOfResidency ? Number(obj.yearsOfResidency) || null : null),
+      };
+    });
+
+    res.json({ purok, total: residents.length, residents });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

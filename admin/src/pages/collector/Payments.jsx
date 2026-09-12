@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { FiPrinter, FiFileText, FiDollarSign, FiX } from 'react-icons/fi';
+import { FiPrinter, FiFileText, FiDollarSign, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import CollectorLayout from '../../components/layouts/CollectorLayout';
 import PrintReceiptModal from '../../components/common/PrintReceiptModal';
@@ -11,6 +11,7 @@ const DOLOGON_LOGO = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776233
 const MARAMAG_LOGO  = 'https://res.cloudinary.com/dvw7ky1xq/image/upload/v1776233358/irequestdologon/assets/MARAMAGLOGO.jpg';
 
 const TABS = ['All', 'Paid', 'Unpaid'];
+const PAGE_SIZE = 10;
 
 const STATUS_STYLE = {
   paid:   { bg: '#F0FDF4', color: '#156D07' },
@@ -99,6 +100,7 @@ export default function CollectorPayments() {
   const [loading, setLoading]   = useState(true);
   const [printReq, setPrintReq] = useState(null);
   const [collectReq, setCollectReq] = useState(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     setLoading(true);
@@ -141,6 +143,12 @@ export default function CollectorPayments() {
 
     return matchTab && matchSearch && matchFrom && matchTo;
   }), [requests, tab, search, dateFrom, dateTo]);
+
+  useEffect(() => { setPage(1); }, [tab, search, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paged      = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const exportPDF = () => {
     const dateLabel = dateFrom || dateTo
@@ -388,7 +396,7 @@ export default function CollectorPayments() {
                     </td>
                   </tr>
                 )}
-                {!loading && filtered.map((req, idx) => {
+                {!loading && paged.map((req, idx) => {
                   const net = netAmount(req);
                   return (
                     <tr
@@ -397,7 +405,7 @@ export default function CollectorPayments() {
                       className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-5 py-3" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#C0B0B0', fontSize: 12 }}>
-                        {idx + 1}
+                        {(safePage - 1) * PAGE_SIZE + idx + 1}
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
@@ -467,12 +475,35 @@ export default function CollectorPayments() {
             </table>
           </div>
 
-          {/* Footer count */}
+          {/* Footer count + pagination */}
           {!loading && (
-            <div className="px-5 py-3" style={{ borderTop: '1px solid #F5F0F0' }}>
+            <div className="flex items-center justify-between flex-wrap gap-2 px-5 py-3" style={{ borderTop: '1px solid #F5F0F0' }}>
               <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#C0B0B0', fontSize: 12 }}>
-                Showing {filtered.length} of {requests.length} records
+                Showing {filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length} records
               </p>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
+                    Page {safePage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border transition-colors"
+                    style={{ borderColor: '#E8E0E0', background: safePage === 1 ? '#F9F9F9' : '#FFFFFF', color: safePage === 1 ? '#C0B0B0' : '#156D07' }}
+                  >
+                    <FiChevronLeft size={15} />
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border transition-colors"
+                    style={{ borderColor: '#E8E0E0', background: safePage === totalPages ? '#F9F9F9' : '#FFFFFF', color: safePage === totalPages ? '#C0B0B0' : '#156D07' }}
+                  >
+                    <FiChevronRight size={15} />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -49,7 +49,7 @@ function ActionModal({ request, action, onClose, onDone }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.45)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-sm rounded-3xl overflow-hidden"
+      <div className="w-full max-w-sm rounded-3xl overflow-y-auto max-h-[90dvh]"
         style={{ background: '#FFFFFF', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F0EAEA' }}>
           <p style={{ fontFamily: "'Kaisei Decol', serif", color: isApprove ? '#156D07' : '#DC2626', fontSize: 18 }}>
@@ -249,7 +249,62 @@ export default function PurokLeaderRequests() {
         </div>
       ) : (
         <>
-          <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #F0EAEA' }}>
+          {/* Phones get stacked cards. This is the screen a Purok Leader acts on
+              most, so Approve/Reject are full-width taps rather than two small
+              buttons at the far end of a sideways-scrolling row. */}
+          <div className="sm:hidden flex flex-col gap-3">
+            {paginated.map((r, idx) => (
+              <div key={r._id} className="rounded-2xl p-4"
+                style={{ background: '#FFFFFF', border: '1px solid #F0EAEA', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                <div className="flex items-start justify-between gap-3 mb-1">
+                  <p className="text-sm font-semibold flex items-center gap-1.5 flex-wrap min-w-0"
+                    style={{ color: '#1E1E1E', fontFamily: "'Kaisei Decol', serif" }}>
+                    <span style={{ color: '#A18D8D', fontFamily: "'Hanken Grotesk', sans-serif", fontWeight: 400 }}>
+                      {(page - 1) * PAGE_SIZE + idx + 1}.
+                    </span>
+                    <span className="break-words">{r.profile?.fullName || r.user?.username || '—'}</span>
+                    {r.channel === 'kiosk' && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0"
+                        style={{ background: '#EFF6FF', color: '#2563EB' }}>KIOSK</span>
+                    )}
+                  </p>
+                  <span className="shrink-0"><StatusBadge status={r.purokLeaderStatus} /></span>
+                </div>
+
+                <p className="text-xs mb-2 break-words" style={{ color: '#A18D8D' }}>{r.profile?.address || '—'}</p>
+
+                <div className="text-xs flex flex-col gap-1 mb-3" style={{ color: '#555' }}>
+                  <span><strong style={{ color: '#827575' }}>Document:</strong> {r.documentType || '—'}</span>
+                  <span className="break-words"><strong style={{ color: '#827575' }}>Purpose:</strong> {r.purpose || '—'}</span>
+                  <span><strong style={{ color: '#827575' }}>Date:</strong>{' '}
+                    {new Date(r.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </span>
+                  {r.purokLeaderRemarks && (
+                    <span className="break-words"><strong style={{ color: '#827575' }}>Remarks:</strong> {r.purokLeaderRemarks}</span>
+                  )}
+                </div>
+
+                {r.purokLeaderStatus?.toLowerCase() === 'pending' && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setModal({ request: r, action: 'approve' })}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold text-white"
+                      style={{ background: '#156D07', fontFamily: "'Hahmlet', sans-serif" }}>
+                      <FiCheckCircle size={14} /> Approve
+                    </button>
+                    <button
+                      onClick={() => setModal({ request: r, action: 'reject' })}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold"
+                      style={{ background: '#FEF2F2', color: '#DC2626', fontFamily: "'Hahmlet', sans-serif" }}>
+                      <FiXCircle size={14} /> Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden sm:block rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #F0EAEA' }}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px]">
                 <thead>

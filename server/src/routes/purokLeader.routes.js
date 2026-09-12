@@ -5,6 +5,7 @@ const { protect, requireRole } = require('../middleware/auth');
 router.use(protect, requireRole('Purok Leader'));
 
 router.get('/dashboard',              ctrl.getDashboard);
+router.get('/residents',              ctrl.getResidents);
 router.get('/requests',               ctrl.getRequests);
 router.patch('/requests/:id/approve', ctrl.approveRequest);
 router.patch('/requests/:id/reject',  ctrl.rejectRequest);

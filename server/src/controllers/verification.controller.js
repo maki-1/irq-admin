@@ -135,12 +135,12 @@ exports.getLatestApproved = async (req, res) => {
 };
 
 // GET /api/verifications
+// ?archived=true returns the archived list instead of the active one.
 exports.getAll = async (req, res) => {
   try {
     const { status } = req.query;
-    const where = status
-      ? { status: { equals: status, mode: 'insensitive' } }
-      : {};
+    const where = { archived: req.query.archived === 'true' };
+    if (status) where.status = { equals: status, mode: 'insensitive' };
     const profiles = await prisma.verificationProfile.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -236,6 +236,58 @@ exports.reset = async (req, res) => {
     await prisma.verificationProfile.delete({ where: { id: req.params.id } });
 
     res.json({ message: 'Verification reset. Resident has been notified to fill up again.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// PATCH /api/verifications/:id/archive
+// Soft-delete: hides the resident from the Captain's Residence list without
+// touching their data or account access. Reversible via /restore.
+exports.archive = async (req, res) => {
+  try {
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
+    const profile = await prisma.verificationProfile.update({
+      where: { id: req.params.id },
+      data: { archived: true, archivedAt: new Date() },
+    }).catch((e) => {
+      if (e.code === 'P2025') return null;
+      throw e;
+    });
+    if (!profile) return res.status(404).json({ message: 'Profile not found' });
+
+    await auditLog({
+      user: req.user,
+      action: 'Archived Residence Profile',
+      details: `Resident: ${profile.fullName}`,
+    });
+
+    res.json(toApi(profile));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// PATCH /api/verifications/:id/restore
+exports.restore = async (req, res) => {
+  try {
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
+    const profile = await prisma.verificationProfile.update({
+      where: { id: req.params.id },
+      data: { archived: false, archivedAt: null },
+    }).catch((e) => {
+      if (e.code === 'P2025') return null;
+      throw e;
+    });
+    if (!profile) return res.status(404).json({ message: 'Profile not found' });
+
+    await auditLog({
+      user: req.user,
+      action: 'Restored Residence Profile',
+      details: `Resident: ${profile.fullName}`,
+    });
+
+    res.json(toApi(profile));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

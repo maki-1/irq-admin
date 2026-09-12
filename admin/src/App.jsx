@@ -34,6 +34,7 @@ import PurokLeaderDashboard from './pages/purokleader/Dashboard';
 import PurokLeaderRequests  from './pages/purokleader/Requests';
 import PurokLeaderFeeReport from './pages/purokleader/FeeReport';
 import PurokLeaderIssueClearance from './pages/purokleader/IssueClearance';
+import PurokLeaderResidence from './pages/purokleader/Residence';
 
 // Shared
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -93,6 +94,7 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={['Purok Leader']} />}>
         <Route path="/purok-leader"                 element={<PurokLeaderDashboard />} />
         <Route path="/purok-leader/issue-clearance" element={<PurokLeaderIssueClearance />} />
+        <Route path="/purok-leader/residents"       element={<PurokLeaderResidence />} />
         <Route path="/purok-leader/requests"        element={<PurokLeaderRequests />} />
         <Route path="/purok-leader/fee-report"      element={<PurokLeaderFeeReport />} />
       </Route>

@@ -19,5 +19,7 @@ router.get('/',         requireRole('Secretary', 'Barangay Captain'), ctrl.getAl
 router.get('/:id',  requireRole('Secretary', 'Barangay Captain'), ctrl.getOne);
 router.patch('/:id/review',  requireRole('Secretary', 'Barangay Captain'), ctrl.review);
 router.delete('/:id/reset',  requireRole('Secretary', 'Barangay Captain'), ctrl.reset);
+router.patch('/:id/archive', requireRole('Barangay Captain'), ctrl.archive);
+router.patch('/:id/restore', requireRole('Barangay Captain'), ctrl.restore);
 
 module.exports = router;

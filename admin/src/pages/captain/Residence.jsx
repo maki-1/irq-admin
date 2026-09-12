@@ -4,7 +4,7 @@ import {
   FiSearch, FiEye, FiX,
   FiUser, FiMapPin, FiPhone, FiMail,
   FiCalendar, FiBriefcase, FiCheckCircle, FiXCircle, FiClock,
-  FiCreditCard, FiDownload, FiAlertTriangle,
+  FiCreditCard, FiDownload, FiAlertTriangle, FiTrash2, FiRotateCcw, FiArchive,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
@@ -367,10 +367,13 @@ export default function CaptainResidence() {
   const [filter,   setFilter]   = useState('All');
   const [selected, setSelected] = useState(null);
   const [page,     setPage]     = useState(1);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiving, setArchiving] = useState(null);
 
-  const fetchProfiles = async () => {
+  const fetchProfiles = async (archived = showArchived) => {
+    setLoading(true);
     try {
-      const { data } = await api.get('/verifications');
+      const { data } = await api.get('/verifications', { params: { archived } });
       setProfiles(data);
     } catch {
       toast.error('Failed to load profiles');
@@ -379,7 +382,7 @@ export default function CaptainResidence() {
     }
   };
 
-  useEffect(() => { fetchProfiles(); }, []);
+  useEffect(() => { fetchProfiles(showArchived); }, [showArchived]);
 
   const handleReview = async (id, status, remarks) => {
     try {
@@ -400,6 +403,33 @@ export default function CaptainResidence() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to reset verification');
       throw err;
+    }
+  };
+
+  const handleArchive = async (p) => {
+    if (!window.confirm(`Remove ${p.fullName} from the active residence list? Their record is kept and can be restored anytime from the Archived tab.`)) return;
+    setArchiving(p._id);
+    try {
+      await api.patch(`/verifications/${p._id}/archive`);
+      toast.success(`${p.fullName} archived`);
+      setProfiles((prev) => prev.filter((x) => x._id !== p._id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to archive resident');
+    } finally {
+      setArchiving(null);
+    }
+  };
+
+  const handleRestore = async (p) => {
+    setArchiving(p._id);
+    try {
+      await api.patch(`/verifications/${p._id}/restore`);
+      toast.success(`${p.fullName} restored`);
+      setProfiles((prev) => prev.filter((x) => x._id !== p._id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to restore resident');
+    } finally {
+      setArchiving(null);
     }
   };
 
@@ -427,8 +457,8 @@ export default function CaptainResidence() {
 
   const FILTERS = ['All', 'pending', 'submitted', 'under review', 'approved'];
 
-  /* Reset to page 1 when filter or search changes */
-  useEffect(() => { setPage(1); }, [filter, search]);
+  /* Reset to page 1 when filter, search, or the active/archived view changes */
+  useEffect(() => { setPage(1); }, [filter, search, showArchived]);
 
   /* Export filtered residents as a presentable Excel file */
   const handleExport = () => {
@@ -475,6 +505,28 @@ export default function CaptainResidence() {
   return (
     <CaptainLayout title="RESIDENCE">
       <div className="flex flex-col gap-4" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
+
+        {/* Active / Archived view toggle */}
+        <div className="flex gap-1 p-1 rounded-full w-fit" style={{ background: '#F5F0F0' }}>
+          {[
+            { key: false, label: 'Active Residents' },
+            { key: true,  label: 'Archived' },
+          ].map(({ key, label }) => (
+            <button
+              key={label}
+              onClick={() => setShowArchived(key)}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all"
+              style={{
+                fontFamily: "'Hahmlet', sans-serif",
+                background: showArchived === key ? '#156D07' : 'transparent',
+                color:      showArchived === key ? '#FFFFFF' : '#827575',
+              }}
+            >
+              {key ? <FiArchive size={13} /> : <FiUser size={13} />}
+              {label}
+            </button>
+          ))}
+        </div>
 
         {/* Summary chips */}
         <div className="flex flex-wrap gap-3">
@@ -537,7 +589,7 @@ export default function CaptainResidence() {
             }}
           >
             <FiDownload size={14} />
-            Export{filter !== 'All' ? ` (${filter})` : ''} Excel
+            Export{showArchived ? ' (Archived)' : filter !== 'All' ? ` (${filter})` : ''} Excel
           </button>
         </div>
 
@@ -548,10 +600,10 @@ export default function CaptainResidence() {
             <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: 560 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #F0EAEA', background: '#FAFAFA' }}>
-                  {['#', 'NAME', 'ADDRESS', 'STATUS', 'REVIEW'].map((h) => (
+                  {['#', 'NAME', 'ADDRESS', 'STATUS', 'ACTIONS'].map((h) => (
                     <th
                       key={h}
-                      className={`px-5 py-3 text-left ${h === 'REVIEW' ? 'text-center' : ''}`}
+                      className={`px-5 py-3 text-left ${h === 'ACTIONS' ? 'text-center' : ''}`}
                       style={{ fontFamily: "'Kaisei Decol', serif", color: '#A18D8D', fontSize: 13, fontWeight: 400 }}
                     >
                       {h}
@@ -570,7 +622,7 @@ export default function CaptainResidence() {
                 {!loading && visible.length === 0 && (
                   <tr>
                     <td colSpan={5} className="py-10 text-center text-sm" style={{ color: '#C0B0B0' }}>
-                      No profiles found
+                      {showArchived ? 'No archived residents' : 'No profiles found'}
                     </td>
                   </tr>
                 )}
@@ -615,20 +667,50 @@ export default function CaptainResidence() {
                       <StatusBadge status={p.status} />
                     </td>
 
-                    <td className="px-5 py-3 text-center">
-                      <button
-                        onClick={() => setSelected(p)}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-medium transition-colors"
-                        style={{
-                          fontFamily: "'Hahmlet', sans-serif",
-                          background: '#F0FDF4',
-                          color: '#156D07',
-                          border: '1px solid #BBF7D0',
-                        }}
-                      >
-                        <FiEye size={13} />
-                        Review
-                      </button>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        {showArchived ? (
+                          <button
+                            onClick={() => handleRestore(p)}
+                            disabled={archiving === p._id}
+                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
+                            style={{
+                              fontFamily: "'Hahmlet', sans-serif",
+                              background: '#EFF6FF',
+                              color: '#1D6DB5',
+                              border: '1px solid #BFDBFE',
+                            }}
+                          >
+                            <FiRotateCcw size={13} />
+                            {archiving === p._id ? 'Restoring…' : 'Restore'}
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setSelected(p)}
+                              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                              style={{
+                                fontFamily: "'Hahmlet', sans-serif",
+                                background: '#F0FDF4',
+                                color: '#156D07',
+                                border: '1px solid #BBF7D0',
+                              }}
+                            >
+                              <FiEye size={13} />
+                              Review
+                            </button>
+                            <button
+                              onClick={() => handleArchive(p)}
+                              disabled={archiving === p._id}
+                              title="Archive resident"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl transition-colors disabled:opacity-50"
+                              style={{ background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3' }}
+                            >
+                              <FiTrash2 size={13} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   );

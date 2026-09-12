@@ -42,6 +42,8 @@ const LABEL = { fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize:
 
 const EMPTY = { userId: null, fullName: '', address: '', birthday: '', contactNumber: '', validDays: 30, feePaid: true };
 
+const PAGE_SIZE = 10;
+
 /* ── Printable slip ──────────────────────────────────────────────────────
  *
  * Reproduces the barangay's actual paper "Purok Clearance" (the no
@@ -155,7 +157,7 @@ function VoidModal({ clearance, onClose, onDone }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.45)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-sm rounded-3xl overflow-hidden" style={{ background: '#FFFFFF', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div className="w-full max-w-sm rounded-3xl overflow-y-auto max-h-[90dvh]" style={{ background: '#FFFFFF', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F0EAEA' }}>
           <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#DC2626', fontSize: 18 }}>Cancel Clearance</p>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100">
@@ -212,6 +214,7 @@ export default function PurokLeaderIssueClearance() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [voidTarget, setVoidTarget] = useState(null);
   const [expanded, setExpanded] = useState(() => new Set());
+  const [page, setPage] = useState(1);
 
   const toggleRow = (id) =>
     setExpanded((prev) => {
@@ -336,6 +339,19 @@ export default function PurokLeaderIssueClearance() {
     return [...list].sort((a, b) => new Date(b.issuedAt) - new Date(a.issuedAt));
   }, [register, statusFilter]);
 
+  useEffect(() => { setPage(1); }, [statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paged      = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+    .reduce((acc, p, i, arr) => {
+      if (i > 0 && p - arr[i - 1] > 1) acc.push('…');
+      acc.push(p);
+      return acc;
+    }, []);
+
   const counts = useMemo(() => {
     const c = { total: register.length, issued: 0, used: 0, void: 0 };
     register.forEach((r) => { c[String(r.status).toLowerCase()] = (c[String(r.status).toLowerCase()] || 0) + 1; });
@@ -356,14 +372,14 @@ export default function PurokLeaderIssueClearance() {
               <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
                 New purok clearance issued
               </p>
-              <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 34, fontWeight: 700, letterSpacing: 2 }}>
+              <p className="break-all" style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 'clamp(26px, 8vw, 34px)', fontWeight: 700, letterSpacing: 2 }}>
                 {issued.controlNo}
               </p>
               <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#555', fontSize: 13 }}>
                 {issued.fullName} · {issued.purok} · valid until {dt(issued.validUntil)}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button onClick={() => printSlip(issued, user?.purok, user?.fullName, purokOfficers.treasurerName, purokOfficers.purokPresident)}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
                 style={{ background: '#156D07', fontFamily: "'Hahmlet', sans-serif" }}>
@@ -391,7 +407,7 @@ export default function PurokLeaderIssueClearance() {
           </p>
 
           {/* source toggle */}
-          <div className="flex gap-2 mb-5">
+          <div className="flex flex-wrap gap-2 mb-5">
             {[
               { key: 'registered', label: 'Registered resident', Icon: FiUserCheck },
               { key: 'walkin', label: 'Walk-in (no account)', Icon: FiUserPlus },
@@ -501,7 +517,7 @@ export default function PurokLeaderIssueClearance() {
         <div className="px-5 py-4" style={{ borderBottom: '1px solid #F0EAEA' }}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 16 }}>Clearances you issued</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {[
                 { key: 'all', label: `All ${counts.total}` },
                 { key: 'issued', label: `Not used ${counts.issued || 0}` },
@@ -526,7 +542,84 @@ export default function PurokLeaderIssueClearance() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Phones get stacked cards. The control number leads, because that is
+            what the resident types at the kiosk and what the leader reads back
+            to them over the phone. */}
+        <div className="sm:hidden">
+          {loadingRegister ? (
+            <p className="text-center py-10 text-sm" style={{ color: '#A18D8D' }}>Loading…</p>
+          ) : rows.length === 0 ? (
+            <p className="text-center py-10 text-sm" style={{ color: '#A18D8D' }}>No clearances here yet.</p>
+          ) : (
+            paged.map((c) => {
+              const id = c.id || c._id;
+              const reqs = c.requests || [];
+              const isUsed = String(c.status).toLowerCase() === 'used';
+              const open = expanded.has(id);
+              return (
+                <div key={id} className="px-4 py-3.5"
+                  style={{ borderBottom: '1px solid #F7F3F3', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold break-all"
+                      style={{ color: '#1E1E1E', fontFamily: "'Kaisei Decol', serif", fontSize: 17, letterSpacing: 1 }}>
+                      {c.controlNo}
+                    </p>
+                    <span className="shrink-0"><StatusBadge status={c.status} /></span>
+                  </div>
+
+                  <p className="text-sm font-medium mt-1 break-words" style={{ color: '#1E1E1E' }}>{c.fullName}</p>
+                  <p className="text-xs" style={{ color: '#A18D8D' }}>
+                    {c.userId ? 'Account linked' : 'Walk-in'} · issued {dt(c.issuedAt)} · valid to {dt(c.validUntil)}
+                    {isUsed && ` · used ${dtTime(c.usedAt)}`}
+                  </p>
+
+                  {reqs.length > 0 && (
+                    <button onClick={() => toggleRow(id)} className="flex items-center gap-1.5 mt-2 text-left">
+                      {open ? <FiChevronDown size={14} color="#827575" /> : <FiChevronRight size={14} color="#827575" />}
+                      <span className="text-xs font-semibold" style={{ color: '#1E1E1E' }}>
+                        {reqs.length} document{reqs.length > 1 ? 's' : ''} processed
+                      </span>
+                    </button>
+                  )}
+
+                  {open && reqs.length > 0 && (
+                    <div className="rounded-xl overflow-hidden mt-2" style={{ border: '1px solid #F0EAEA' }}>
+                      {reqs.map((r, i) => (
+                        <div key={r.id} className="px-3 py-2"
+                          style={{ background: '#FFFFFF', borderTop: i ? '1px solid #F7F3F3' : 'none' }}>
+                          <div className="flex items-center gap-1.5">
+                            <FiCheckCircle size={13} color="#156D07" className="shrink-0" />
+                            <span className="text-sm font-semibold break-words" style={{ color: '#1E1E1E' }}>{r.documentType}</span>
+                          </div>
+                          <p className="text-xs mt-0.5 break-words" style={{ color: '#A18D8D' }}>
+                            Purpose: {r.purpose || '—'} · OR: {r.orNumber || '—'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <button onClick={() => printSlip(c, user?.purok, user?.fullName, purokOfficers.treasurerName, purokOfficers.purokPresident)}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold"
+                      style={{ background: '#F0FDF4', color: '#156D07', fontFamily: "'Hahmlet', sans-serif" }}>
+                      <FiPrinter size={13} /> Slip
+                    </button>
+                    {String(c.status).toLowerCase() === 'issued' && (
+                      <button onClick={() => setVoidTarget(c)}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold"
+                        style={{ background: '#FEF2F2', color: '#DC2626', fontFamily: "'Hahmlet', sans-serif" }}>
+                        <FiSlash size={13} /> Cancel
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full min-w-[820px] text-sm" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
             <thead>
               <tr style={{ background: '#F9F7F7', borderBottom: '1px solid #F0EAEA', color: '#827575' }}>
@@ -541,7 +634,7 @@ export default function PurokLeaderIssueClearance() {
               ) : rows.length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-10" style={{ color: '#A18D8D' }}>No clearances here yet.</td></tr>
               ) : (
-                rows.map((c) => {
+                paged.map((c) => {
                   const id = c.id || c._id;
                   const reqs = c.requests || [];
                   const isUsed = String(c.status).toLowerCase() === 'used';
@@ -638,6 +731,42 @@ export default function PurokLeaderIssueClearance() {
             </tbody>
           </table>
         </div>
+
+        {rows.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2" style={{ borderTop: '1px solid #F0EAEA' }}>
+            <p className="text-xs" style={{ color: '#A18D8D', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, rows.length)} of {rows.length}
+            </p>
+            <div className="flex gap-1 flex-wrap">
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
+                ‹ Prev
+              </button>
+              {pageNumbers.map((p, i) =>
+                p === '…' ? (
+                  <span key={`e${i}`} className="px-2 py-1.5 text-xs" style={{ color: '#A18D8D' }}>…</span>
+                ) : (
+                  <button key={p} onClick={() => setPage(p)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                    style={{
+                      background: p === safePage ? '#156D07' : '#FFFFFF',
+                      color:      p === safePage ? '#FFFFFF' : '#555',
+                      border:     '1px solid #E8E0E0',
+                      fontFamily: "'Hahmlet', sans-serif",
+                    }}>
+                    {p}
+                  </button>
+                )
+              )}
+              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
+                Next ›
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </PurokLeaderLayout>
   );

@@ -2,16 +2,23 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FiGrid, FiClipboard, FiMenu, FiX,
-  FiUser, FiLogOut, FiChevronDown, FiDollarSign, FiFilePlus,
+  FiUser, FiLogOut, FiChevronDown, FiFilePlus, FiUsers,
 } from 'react-icons/fi';
 import useAuthStore from '../../store/authStore';
 import assets from '../../assets/cloudinaryAssets';
 
+// react-icons has no peso glyph, so this stands in wherever a dollar-sign
+// icon would otherwise be used for a peso-denominated nav item.
+function PesoIcon({ size = 17 }) {
+  return <span style={{ fontSize: size * 0.85, fontWeight: 700, lineHeight: 1 }}>₱</span>;
+}
+
 const NAV = [
   { to: '/purok-leader',                 label: 'DASHBOARD',       Icon: FiGrid       },
   { to: '/purok-leader/issue-clearance',  label: 'ISSUE CLEARANCE', Icon: FiFilePlus   },
+  { to: '/purok-leader/residents',        label: 'RESIDENTS',       Icon: FiUsers      },
   { to: '/purok-leader/requests',         label: 'REQUESTS',        Icon: FiClipboard  },
-  { to: '/purok-leader/fee-report',       label: 'FEE REPORT',      Icon: FiDollarSign },
+  { to: '/purok-leader/fee-report',       label: 'FEE REPORT',      Icon: PesoIcon     },
 ];
 
 function SidebarContent({ onNavClick }) {

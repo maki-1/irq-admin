@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FiDownload, FiDollarSign, FiCheckCircle, FiClock, FiFileText } from 'react-icons/fi';
+import { FiDownload, FiCheckCircle, FiClock, FiFileText } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import PurokLeaderLayout from '../../components/layouts/PurokLeaderLayout';
 import api from '../../services/api';
@@ -9,6 +9,8 @@ import { exportReportPDF, exportReportXLSX } from '../../utils/reportExport';
 const peso = (n) =>
   `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const PAGE_SIZE = 10;
+
 // The fee a Purok Leader sets is stamped onto each request when they approve it
 // (request.purokClearanceFee). This module records those assessments per purok,
 // separates what has actually been collected (the resident has paid) from what
@@ -16,6 +18,16 @@ const peso = (n) =>
 const feeOf = (r) => Number(r.purokClearanceFee || 0);
 // Approval is when the fee is assigned; fall back to createdAt for old rows.
 const dateOf = (r) => new Date(r.purokLeaderAt || r.createdAt);
+
+// react-icons has no peso glyph, so this stands in wherever FiDollarSign
+// would otherwise be used for a peso-denominated stat.
+function PesoIcon({ size = 24, style }) {
+  return (
+    <span style={{ ...style, fontSize: size * 0.75, fontWeight: 700, lineHeight: 1 }}>
+      ₱
+    </span>
+  );
+}
 
 function StatCard({ icon: Icon, label, value, color }) {
   return (
@@ -53,6 +65,7 @@ export default function PurokLeaderFeeReport() {
   const [loading, setLoading]   = useState(true);
   const [from, setFrom]         = useState('');
   const [to, setTo]             = useState('');
+  const [page, setPage]         = useState(1);
 
   async function load() {
     setLoading(true);
@@ -88,6 +101,12 @@ export default function PurokLeaderFeeReport() {
     const collected = rows.filter((r) => r.paymentStatus === 'paid').reduce((s, r) => s + feeOf(r), 0);
     return { assessed, collected, pending: assessed - collected, count: rows.length };
   }, [rows]);
+
+  useEffect(() => { setPage(1); }, [from, to]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paged      = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const nameOf = (r) => r.profile?.fullName || r.user?.username || '—';
   const purok  = user?.purok || 'Purok';
@@ -157,14 +176,53 @@ export default function PurokLeaderFeeReport() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={FiDollarSign}  label="Total Fees Assessed" value={peso(totals.assessed)}  color="#156D07" />
+        <StatCard icon={PesoIcon}      label="Total Fees Assessed" value={peso(totals.assessed)}  color="#156D07" />
         <StatCard icon={FiCheckCircle} label="Collected"           value={peso(totals.collected)} color="#2563EB" />
         <StatCard icon={FiClock}       label="Outstanding"         value={peso(totals.pending)}   color="#B45309" />
         <StatCard icon={FiFileText}    label="Approvals"           value={totals.count}           color="#7C3AED" />
       </div>
 
       <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF' }}>
-        <div className="overflow-x-auto">
+        {/* Phones get stacked cards instead of a seven-column table. */}
+        <div className="sm:hidden">
+          {loading ? (
+            <p className="text-center py-10 text-sm" style={{ color: '#A18D8D' }}>Loading…</p>
+          ) : rows.length === 0 ? (
+            <p className="text-center py-10 px-4 text-sm" style={{ color: '#A18D8D' }}>
+              No clearance fees recorded for this range.
+            </p>
+          ) : (
+            <>
+              {rows.map((r, i) => (
+                <div key={r.id || r._id} className="px-4 py-3.5"
+                  style={{ borderBottom: '1px solid #F7F3F3', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                  <div className="flex items-start justify-between gap-3 mb-1.5">
+                    <p className="text-sm font-semibold min-w-0 break-words" style={{ color: '#1E1E1E' }}>
+                      <span style={{ color: '#A18D8D', fontWeight: 400 }}>{i + 1}. </span>{nameOf(r)}
+                    </p>
+                    <span className="text-sm font-bold shrink-0" style={{ color: '#156D07' }}>{peso(feeOf(r))}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: '#555' }}>
+                    <span>{dateOf(r).toLocaleDateString('en-PH')}</span>
+                    <span className="break-words">{r.documentType || '—'}</span>
+                    {r.orNumber && <span>OR {r.orNumber}</span>}
+                    <PayBadge status={r.paymentStatus} />
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center justify-between px-4 py-3"
+                style={{ borderTop: '2px solid #F0EAEA', background: '#FBFAFA', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                <span className="text-sm font-bold" style={{ color: '#1E1E1E' }}>TOTAL</span>
+                <div className="text-right">
+                  <p className="text-sm font-bold" style={{ color: '#156D07' }}>{peso(totals.assessed)}</p>
+                  <p className="text-xs" style={{ color: '#827575' }}>Collected {peso(totals.collected)}</p>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #F0EAEA', color: '#827575' }}>
@@ -183,9 +241,9 @@ export default function PurokLeaderFeeReport() {
               ) : rows.length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-10" style={{ color: '#A18D8D' }}>No clearance fees recorded for this range.</td></tr>
               ) : (
-                rows.map((r, i) => (
+                paged.map((r, i) => (
                   <tr key={r.id || r._id} style={{ borderBottom: '1px solid #F7F3F3' }}>
-                    <td className="px-4 py-3" style={{ color: '#A18D8D' }}>{i + 1}</td>
+                    <td className="px-4 py-3" style={{ color: '#A18D8D' }}>{(safePage - 1) * PAGE_SIZE + i + 1}</td>
                     <td className="px-4 py-3" style={{ color: '#1E1E1E' }}>{dateOf(r).toLocaleDateString('en-PH')}</td>
                     <td className="px-4 py-3 font-medium" style={{ color: '#1E1E1E' }}>{nameOf(r)}</td>
                     <td className="px-4 py-3" style={{ color: '#555' }}>{r.documentType || '—'}</td>
@@ -207,6 +265,31 @@ export default function PurokLeaderFeeReport() {
             )}
           </table>
         </div>
+
+        {rows.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2" style={{ borderTop: '1px solid #F0EAEA' }}>
+            <p className="text-xs" style={{ color: '#A18D8D', fontFamily: "'Hanken Grotesk', sans-serif" }}>
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, rows.length)} of {rows.length}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#A18D8D', fontSize: 12 }}>
+                  Page {safePage} of {totalPages}
+                </span>
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                  style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
+                  ‹ Prev
+                </button>
+                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+                  style={{ background: '#FFFFFF', border: '1px solid #E8E0E0', color: '#555', fontFamily: "'Hahmlet', sans-serif" }}>
+                  Next ›
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </PurokLeaderLayout>
   );
