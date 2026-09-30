@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -31,6 +31,8 @@ const SECONDARY_ID_TYPES = [
   'Marriage Certificate',
 ];
 
+const LIVENESS_RESUME_KEY = 'irq-liveness-resume';
+
 const LIVENESS_STEPS = [
   { id: 1, instruction: 'Position your face in the circle', hint: 'Center your face in the green circle' },
   { id: 2, instruction: 'Move a bit closer', hint: 'Your face should fill most of the circle' },
@@ -60,20 +62,53 @@ export default function Step3() {
   const [secondaryId2Type, setSecondaryId2Type] = useState('');
   const [secondaryId2Front, setSecondaryId2Front] = useState(null);
 
-  // Liveness
+  // Azure confirms liveness server-side before a selfie can be submitted.
+  const [livenessStatus, setLivenessStatus] = useState('idle');
+  const [livenessProof, setLivenessProof] = useState('');
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [livenessStep, setLivenessStep] = useState(1);
   const [livenessComplete, setLivenessComplete] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resumeToken = sessionStorage.getItem(LIVENESS_RESUME_KEY);
+    if (params.get('liveness') !== 'return' || !resumeToken) return;
+
+    setLivenessStatus('checking');
+    api.post('/verification/liveness/complete', { resumeToken })
+      .then(({ data }) => {
+        sessionStorage.removeItem(LIVENESS_RESUME_KEY);
+        setLivenessProof(data.livenessProof);
+        setLivenessStatus('passed');
+        window.history.replaceState({}, '', '/verify/step3');
+      })
+      .catch((err) => {
+        sessionStorage.removeItem(LIVENESS_RESUME_KEY);
+        setLivenessStatus('failed');
+        window.history.replaceState({}, '', '/verify/step3');
+        toast.error(err.response?.data?.message || 'Secure face check was not completed');
+      });
+  }, []);
+
+  async function startLiveness() {
+    setLivenessStatus('starting');
+    try {
+      const { data } = await api.post('/verification/liveness/session');
+      sessionStorage.setItem(LIVENESS_RESUME_KEY, data.resumeToken);
+      window.location.assign(data.url);
+    } catch (err) {
+      setLivenessStatus('failed');
+      toast.error(err.response?.data?.message || 'Could not start secure face check');
+    }
+  }
+
+  // This only captures the selfie used for ID comparison after Azure has
+  // already completed the real liveness check above.
   function advanceLiveness() {
     if (livenessStep < LIVENESS_STEPS.length) {
       const next = livenessStep + 1;
       setLivenessStep(next);
-      if (next === LIVENESS_STEPS.length) {
-        setTimeout(() => {
-          capturePhoto();
-        }, 800);
-      }
+      if (next === LIVENESS_STEPS.length) setTimeout(capturePhoto, 800);
     }
   }
 
@@ -85,7 +120,7 @@ export default function Step3() {
     }
   }, [webcamRef]);
 
-  function resetLiveness() {
+  function resetFacePhoto() {
     setLivenessStep(1);
     setLivenessComplete(false);
     setCapturedPhoto(null);
@@ -112,7 +147,7 @@ export default function Step3() {
       if (!secondaryIdType || !secondaryIdFront) return toast.error('Upload the first secondary ID');
       if (!secondaryId2Type || !secondaryId2Front) return toast.error('Upload the second secondary ID');
     }
-    if (!livenessComplete || !capturedPhoto) return toast.error('Complete the liveness detection first');
+    if (!livenessProof || !capturedPhoto) return toast.error('Complete the secure face check first');
 
     setLoading(true);
     try {
@@ -136,6 +171,7 @@ export default function Step3() {
 
       const faceFile = base64ToFile(capturedPhoto, 'face.jpg');
       fd.append('facePhoto', faceFile);
+      fd.append('livenessProof', livenessProof);
 
       await api.post('/verification/step3', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -150,8 +186,6 @@ export default function Step3() {
       setLoading(false);
     }
   }
-
-  const currentStep = LIVENESS_STEPS[livenessStep - 1];
 
   return (
     <VerifyLayout>
@@ -258,12 +292,31 @@ export default function Step3() {
             )}
           </div>
 
-          {/* Part B: Liveness Detection */}
+          {/* Part B: Secure liveness and face capture */}
           <div className="card">
             <h2 className="font-bold text-gray-800 mb-2">Part B — Face Capture</h2>
             <p className="text-sm text-gray-500 mb-4">Follow the steps below to confirm your identity</p>
 
-            {livenessComplete && capturedPhoto ? (
+            {livenessStatus !== 'passed' ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Azure Secure Face Check confirms that a real person is present. A photo, video, or screen replay cannot complete this check.
+                </p>
+                {livenessStatus === 'checking' ? (
+                  <p className="text-primary font-semibold">Checking your secure face resultâ€¦</p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startLiveness}
+                    disabled={livenessStatus === 'starting'}
+                    className="btn-primary py-2 px-6 text-sm disabled:opacity-60"
+                  >
+                    {livenessStatus === 'starting' ? 'Opening secure face checkâ€¦' : 'Start Secure Face Check'}
+                  </button>
+                )}
+                {livenessStatus === 'failed' && <p className="text-xs text-red-500 mt-3">The check was not completed. Please try again.</p>}
+              </div>
+            ) : livenessComplete && capturedPhoto ? (
               <div className="text-center">
                 <div className="relative inline-block">
                   <img src={capturedPhoto} alt="Captured" className="w-40 h-40 sm:w-48 sm:h-48 object-cover rounded-full border-4 border-primary mx-auto" />
@@ -272,7 +325,7 @@ export default function Step3() {
                   </div>
                 </div>
                 <p className="text-primary font-semibold mt-3">Face captured successfully!</p>
-                <button type="button" onClick={resetLiveness} className="text-sm text-gray-500 hover:text-gray-700 mt-2 flex items-center gap-1 mx-auto">
+                <button type="button" onClick={resetFacePhoto} className="text-sm text-gray-500 hover:text-gray-700 mt-2 flex items-center gap-1 mx-auto">
                   <MdRefresh size={16} /> Retake photo
                 </button>
               </div>
@@ -324,7 +377,7 @@ export default function Step3() {
             <button type="button" onClick={() => navigate('/verify/step2')} className="btn-outline flex-1">
               ← Back
             </button>
-            <button type="submit" disabled={loading || !livenessComplete} className="btn-primary flex-1 flex items-center justify-center gap-2">
+            <button type="submit" disabled={loading || !livenessProof || !capturedPhoto} className="btn-primary flex-1 flex items-center justify-center gap-2">
               {loading ? <LoadingSpinner size="sm" /> : 'Submit for Review'}
             </button>
           </div>

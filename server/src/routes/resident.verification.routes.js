@@ -22,6 +22,8 @@ const step3Fields = multiUpload([
 
 router.post('/step1',  residentProtect, step1Fields, ctrl.step1);
 router.post('/step2',  residentProtect, step2Fields, ctrl.step2);
+router.post('/liveness/session', residentProtect, ctrl.startLiveness);
+router.post('/liveness/complete', residentProtect, ctrl.completeLiveness);
 router.post('/step3',  residentProtect, step3Fields, ctrl.step3);
 router.get('/status',  residentProtect, ctrl.getStatus);
 // Populates the purok picker in step 1 — the same list the Android app uses.
