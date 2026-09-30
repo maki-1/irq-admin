@@ -438,7 +438,7 @@ function IssuanceReport({ releases, from, to }) {
 
   const claimRadial = [
     { name: 'Claimed',  value: claimed,  fill: GREEN },
-    { name: 'Awaiting', value: awaiting, fill: '#F59E0B' },
+    { name: 'Waiting for Pickup', value: awaiting, fill: '#F59E0B' },
   ].filter((d) => d.value > 0);
 
   const byPurok = Object.entries(
@@ -450,7 +450,7 @@ function IssuanceReport({ releases, from, to }) {
     Type:    r.documentType || '—',
     Purpose: r.purpose || '—',
     Purok:   r.purok || '—',
-    Claim:   isClaimed(r.claimStatus) ? 'Claimed' : 'Awaiting claim',
+    Claim:   isClaimed(r.claimStatus) ? 'Claimed' : 'Waiting for Pickup',
     Issued:  r.completedAt ? new Date(r.completedAt).toLocaleDateString('en-PH') : '—',
   }));
   const tableRows = rel.map((r) => ([
@@ -458,7 +458,7 @@ function IssuanceReport({ releases, from, to }) {
     r.documentType || '—',
     r.purpose || '—',
     r.purok || '—',
-    isClaimed(r.claimStatus) ? 'Claimed' : 'Awaiting claim',
+    isClaimed(r.claimStatus) ? 'Claimed' : 'Waiting for Pickup',
     r.completedAt ? new Date(r.completedAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
   ]));
 
@@ -468,7 +468,7 @@ function IssuanceReport({ releases, from, to }) {
         <StatCard label="TOTAL"        sublabel="ISSUED"    value={rel.length} />
         <StatCard label="CLEARANCES"   sublabel="ISSUED"    value={clearances} />
         <StatCard label="CERTIFICATES" sublabel="ISSUED"    value={certificates} />
-        <StatCard label="AWAITING"     sublabel="CLAIM"     value={awaiting} sub={`${claimed} already claimed`} />
+        <StatCard label="WAITING FOR"  sublabel="PICKUP"    value={awaiting} sub={`${claimed} already claimed`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -486,7 +486,7 @@ function IssuanceReport({ releases, from, to }) {
           )}
         </ChartCard>
 
-        <ChartCard title="Claimed vs Awaiting Claim">
+        <ChartCard title="Claimed vs Waiting for Pickup">
           {claimRadial.length === 0 ? <NoData /> : (
             <ResponsiveContainer width="100%" height={220}>
               <RadialBarChart cx="50%" cy="50%" innerRadius="30%" outerRadius="90%" data={claimRadial} startAngle={180} endAngle={-180}>
@@ -531,7 +531,7 @@ function IssuanceReport({ releases, from, to }) {
 
       <ReportTable
         title="Clearance / Certificate Issuance Report"
-        subtitle={`${rel.length} document${rel.length !== 1 ? 's' : ''} issued · ${claimed} claimed · ${awaiting} awaiting`}
+        subtitle={`${rel.length} document${rel.length !== 1 ? 's' : ''} issued · ${claimed} claimed · ${awaiting} waiting for pickup`}
         columns={['Name', 'Document Type', 'Purpose', 'Purok', 'Claim Status', 'Date Issued']}
         rows={tableRows}
         csvRows={csvRows}

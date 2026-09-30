@@ -12,7 +12,7 @@ const NAV = [
   { to: '/secretary',           label: 'DASHBOARD', Icon: FiGrid     },
   { to: '/secretary/residents', label: 'RESIDENCE', Icon: FiHome     },
   { to: '/secretary/requests',  label: 'REQUESTS',  Icon: FiFileText },
-  { to: '/secretary/releases',  label: 'RELEASE',   Icon: FiPackage  },
+  { to: '/secretary/releases',  label: 'RELEASED',  Icon: FiPackage  },
   { to: '/secretary/logs',      label: 'LOGS',      Icon: FiActivity },
 ];
 

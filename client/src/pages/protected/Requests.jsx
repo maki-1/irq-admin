@@ -160,7 +160,7 @@ function RequestCard({ request }) {
 
       {awaitingApproval && (
         <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
-          <p className="text-xs text-amber-700 font-semibold">⏳ Awaiting Purok Leader Approval</p>
+          <p className="text-xs text-amber-700 font-semibold">⏳ Waiting for Approval</p>
           <p className="text-xs text-amber-600 mt-0.5">Payment will be enabled once your Purok Leader approves this request.</p>
         </div>
       )}

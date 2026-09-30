@@ -101,6 +101,7 @@ function FeeRow({ purok, existing, onSaved }) {
 export default function PurokFees() {
   const [fees, setFees]       = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPurok, setSelectedPurok] = useState(PUROKS[0]);
 
   async function load() {
     try {
@@ -135,15 +136,31 @@ export default function PurokFees() {
             <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#156D07', borderTopColor: 'transparent' }} />
           </div>
         ) : (
-          <div className="px-6">
-            {PUROKS.map((purok) => (
+          <div className="px-6 py-5">
+            <label
+              htmlFor="purok-fee-select"
+              className="block mb-2"
+              style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#5F5454', fontSize: 13, fontWeight: 600 }}
+            >
+              Choose a Purok
+            </label>
+            <select
+              id="purok-fee-select"
+              value={selectedPurok}
+              onChange={(e) => setSelectedPurok(e.target.value)}
+              className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
+              style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#333', background: '#F9F7F7', border: '1px solid #E8E0E0', '--tw-ring-color': '#156D07' }}
+            >
+              {PUROKS.map((purok) => <option key={purok} value={purok}>{purok}</option>)}
+            </select>
+
+            <div className="mt-4 rounded-xl px-4" style={{ background: '#FCFAFA', border: '1px solid #F5F0F0' }}>
               <FeeRow
-                key={purok}
-                purok={purok}
-                existing={feeMap[purok.toLowerCase()] || null}
+                purok={selectedPurok}
+                existing={feeMap[selectedPurok.toLowerCase()] || null}
                 onSaved={load}
               />
-            ))}
+            </div>
           </div>
         )}
       </div>

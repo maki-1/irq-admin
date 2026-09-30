@@ -429,6 +429,11 @@ export default function CaptainResidence() {
       p.address?.toLowerCase().includes(q) ||
       p.email?.toLowerCase().includes(q);
     return matchFilter && matchSearch;
+  }).sort((a, b) => {
+    // Keep residents needing action at the top of the table.
+    const aUnderReview = normStatus(a.status) === 'under review';
+    const bUnderReview = normStatus(b.status) === 'under review';
+    return Number(bUnderReview) - Number(aUnderReview);
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));

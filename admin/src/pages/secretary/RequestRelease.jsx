@@ -24,7 +24,7 @@ export default function RequestRelease() {
     setLoading(true);
     getReleases()
       .then((r) => setReleases(r.data))
-      .catch(() => toast.error('Failed to load releases'))
+      .catch(() => toast.error('Failed to load released documents'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -58,6 +58,11 @@ export default function RequestRelease() {
     const matchFrom = !dateFrom || (completed && completed >= new Date(dateFrom));
     const matchTo   = !dateTo   || (completed && completed <= new Date(dateTo + 'T23:59:59'));
     return matchSearch && matchFrom && matchTo;
+  }).sort((a, b) => {
+    // Documents still waiting for pickup need attention first.
+    const aClaimed = a.claimStatus === 'claimed';
+    const bClaimed = b.claimStatus === 'claimed';
+    return Number(aClaimed) - Number(bClaimed);
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -77,7 +82,7 @@ export default function RequestRelease() {
         : '',
     ]);
     exportReportXLSX({
-      title: 'Document Releases', sheetName: 'Releases',
+      title: 'Documents Released', sheetName: 'Released Documents',
       columns, rows, user, filename: 'releases',
     }).catch(() => toast.error('Excel export failed'));
   };
@@ -91,7 +96,7 @@ export default function RequestRelease() {
   };
 
   return (
-    <SecretaryLayout title="REQUEST RELEASE">
+    <SecretaryLayout title="REQUEST RELEASED">
       <div className="flex flex-col gap-4">
 
         {/* ── Toolbar ── */}

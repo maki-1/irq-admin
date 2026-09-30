@@ -249,7 +249,7 @@ export default function PurokLeaderResidence() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard icon={FiUsers}       label={`Residents in ${purok || 'your purok'}`} value={stats.total}    color="#156D07" />
         <StatCard icon={FiCheckCircle} label="Verified"                                 value={stats.approved} color="#2563EB" />
-        <StatCard icon={FiClock}       label="Awaiting Review"                          value={stats.waiting}  color="#B45309" />
+        <StatCard icon={FiClock}       label="Waiting for Review"                       value={stats.waiting}  color="#B45309" />
         <StatCard icon={FiAward}       label="PWD / Senior / Indigent"                  value={stats.flagged}  color="#7C3AED" />
       </div>
 

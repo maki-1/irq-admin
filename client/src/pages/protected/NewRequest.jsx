@@ -114,7 +114,7 @@ export default function NewRequest() {
         // Paid — submit for purok leader approval first
         const { data } = await multipartPost('/payment/create-session', fd);
         if (data.pendingApproval) {
-          toast.success('Request submitted! Awaiting Purok Leader approval before payment.');
+          toast.success('Request submitted! Waiting for approval before payment.');
           navigate('/requests');
         } else {
           const checkoutUrl = data.checkoutUrl || data.data?.checkoutUrl;
