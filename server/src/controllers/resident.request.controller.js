@@ -98,7 +98,7 @@ exports.getMyCompleted = async (req, res) => {
         request: {
           select: {
             id: true, documentType: true, purpose: true, paymentStatus: true,
-            orNumber: true, controlNumber: true, createdAt: true,
+            orNumber: true, createdAt: true,
           },
         },
       },

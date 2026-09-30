@@ -13,8 +13,6 @@ const requestSchema = new mongoose.Schema(
     paymentLinkId:     { type: String },
     amountPaid:        { type: Number },
     orNumber:                  { type: String },
-    freeDocumentProof:         { type: String },
-    controlNumber:  { type: String },
     requestPhoto:   { type: String },
     // Purok Leader approval
     claimCode:          { type: String, default: null },

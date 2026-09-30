@@ -11,8 +11,6 @@ import PrintReceiptModal  from '../../components/common/PrintReceiptModal';
 import useAuthStore from '../../store/authStore';
 import { exportReportXLSX } from '../../utils/reportExport';
 
-const STATUS_ORDER = ['Pending', 'Processing', 'Printing', 'Completed'];
-
 const DOC_STATUS_CFG = {
   pending:    { bg: '#FFF7ED', color: '#C2610A', label: 'Pending',    Icon: FiClock       },
   processing: { bg: '#EFF6FF', color: '#1D6DB5', label: 'Processing', Icon: FiLoader      },
@@ -24,6 +22,7 @@ const DOC_STATUS_CFG = {
 const PAY_STATUS_CFG = {
   unpaid: { bg: '#FFF7ED', color: '#C2610A', label: 'Unpaid' },
   paid:   { bg: '#F0FDF4', color: '#156D07', label: 'Paid'   },
+  free:   { bg: '#EFF6FF', color: '#1D6DB5', label: 'Free'   },
 };
 
 const norm = (s) => (s || '').toLowerCase();
@@ -105,9 +104,12 @@ export default function CaptainRequests() {
   });
 
   const sorted = [...filtered].sort((a, b) => {
-    const aCompleted = norm(a.status) === 'completed' ? 1 : 0;
-    const bCompleted = norm(b.status) === 'completed' ? 1 : 0;
-    return aCompleted - bCompleted;
+    const rank = (status) => {
+      if (norm(status) === 'rejected') return 2;
+      if (norm(status) === 'completed') return 1;
+      return 0;
+    };
+    return rank(a.status) - rank(b.status);
   });
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
@@ -122,14 +124,14 @@ export default function CaptainRequests() {
     setUpdating(id);
     try {
       await updateRequestStatus(id, { status });
-      toast.success(`Status updated to ${status}`);
+      if (status !== 'Printing') toast.success(`Status updated to ${status}`);
       fetchRequests();
       if (status === 'Printing') {
         const req = requests.find((r) => r._id === id);
         if (req) setPrinting(req);
       }
-    } catch {
-      toast.error('Failed to update status');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
     } finally {
       setUpdating(null);
     }
@@ -286,7 +288,7 @@ export default function CaptainRequests() {
               <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: 820 }}>
                 <thead>
                   <tr style={{ background: '#FAFAFA' }}>
-                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Control No.', 'Purok Clearance', 'Update Status', 'Receipt'].map((h) => (
+                    {['#', 'Request ID', 'Name', 'Contact', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date', 'Purok Clearance', 'Update Status', 'Receipt'].map((h) => (
                       <th
                         key={h}
                         className="text-left px-4 py-3"
@@ -308,7 +310,7 @@ export default function CaptainRequests() {
                   {paged.map((req, idx) => {
                     const isCompleted = norm(req.status) === 'completed';
                     const isPaid = norm(req.paymentStatus) === 'paid';
-                    const isFree = req.documentType === 'Certificate of Indigency';
+                    const isPaidOrFree = ['paid', 'free'].includes(norm(req.paymentStatus));
                     const canPrintReceipt = isPaid;
                     return (
                       <tr
@@ -368,11 +370,6 @@ export default function CaptainRequests() {
                             : '—'}
                         </td>
 
-                        {/* Control No. */}
-                        <td className="px-4 py-3 text-xs" style={{ color: '#555', fontFamily: "'Hanken Grotesk', sans-serif", whiteSpace: 'nowrap' }}>
-                          {req.controlNumber || <span style={{ color: '#C0B0B0' }}>—</span>}
-                        </td>
-
                         {/* Purok Clearance Attachment */}
                         <td className="px-4 py-3">
                           {req.requestPhoto ? (
@@ -397,33 +394,36 @@ export default function CaptainRequests() {
 
                         {/* Update Status */}
                         <td className="px-4 py-3">
-                          {(() => {
-                            const isRejected = norm(req.status) === 'rejected';
-                            const canChange = (isPaid || isFree) && !isRejected && updatingId !== req._id;
-                            const currentIdx = STATUS_ORDER.findIndex((s) => s.toLowerCase() === norm(req.status));
-                            const forwardOptions = isCompleted
-                              ? ['Completed', 'Reprint']
-                              : STATUS_ORDER.filter((_, i) => i >= currentIdx).concat(['Rejected']);
-                            return (
-                              <select
-                                disabled={!canChange}
-                                value={req.status}
-                                onChange={(e) => handleStatusChange(req._id, e.target.value)}
-                                className="text-xs rounded-lg px-2 py-1 border outline-none"
-                                style={{
-                                  color:       !canChange ? '#C0B0B0' : '#156D07',
-                                  borderColor: !canChange ? '#E8E0E0' : '#D1E8CF',
-                                  fontFamily:  "'Hanken Grotesk', sans-serif",
-                                  background:  !canChange ? '#F5F5F5' : '#FFFFFF',
-                                  cursor:      !canChange ? 'not-allowed' : 'pointer',
-                                }}
+                        {(() => {
+                          const isRejected = norm(req.status) === 'rejected';
+                          const busy = updatingId === req._id;
+                          if (isRejected) return <span className="text-xs" style={{ color: '#BE123C' }}>No further action</span>;
+                          const rejectButton = (
+                            <button disabled={busy} onClick={() => handleStatusChange(req._id, 'Rejected')} className="text-xs rounded-lg px-2 py-1 whitespace-nowrap disabled:opacity-50" style={{ background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3', fontFamily: "'Hanken Grotesk', sans-serif" }}>Reject</button>
+                          );
+                          if (!isPaidOrFree) return <div className="flex items-center gap-1.5"><span className="text-xs whitespace-nowrap" title="This request must be paid or marked free before processing." style={{ color: '#C2610A', fontFamily: "'Hanken Grotesk', sans-serif" }}>Waiting for payment</span>{rejectButton}</div>;
+
+                          const actions = {
+                            pending:    { label: 'Print document',   status: 'Printing' },
+                            processing: { label: 'Print document',   status: 'Printing' },
+                            printing:   { label: 'Mark ready',       status: 'Completed' },
+                            completed:  { label: 'Reprint',          status: 'Reprint' },
+                          };
+                          const action = actions[norm(req.status)];
+                          return action ? (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                disabled={busy}
+                                onClick={() => handleStatusChange(req._id, action.status)}
+                                className="text-xs rounded-lg px-2.5 py-1.5 font-semibold whitespace-nowrap disabled:opacity-50"
+                                style={{ background: '#F0FDF4', color: '#156D07', border: '1px solid #BBF7D0', fontFamily: "'Hanken Grotesk', sans-serif" }}
                               >
-                                {forwardOptions.map((s) => (
-                                  <option key={s} value={s}>{s}</option>
-                                ))}
-                              </select>
-                            );
-                          })()}
+                                {busy ? 'Updating…' : action.label}
+                              </button>
+                              {!isCompleted && rejectButton}
+                            </div>
+                          ) : <span className="text-xs" style={{ color: '#A18D8D' }}>—</span>;
+                        })()}
                         </td>
 
                         {/* Receipt */}

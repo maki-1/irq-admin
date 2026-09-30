@@ -374,9 +374,7 @@ model Request {
   // Was `unique, sparse` in Mongo. Generated from the `or_number_seq` sequence
   // instead of the old Counter collection — see lib/orNumber.js.
   orNumber          String?           @unique
-  freeDocumentProof String            @default("")
   requestPhoto      String            @default("")
-  controlNumber     String            @default("")
   purokLeaderStatus PurokLeaderStatus @default(pending)
   // Two distinct timestamps exist in the data: the Flutter backend writes
   // purokLeaderApprovedAt, the admin portal writes purokLeaderAt. Kept separate

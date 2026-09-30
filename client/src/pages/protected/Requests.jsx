@@ -70,11 +70,6 @@ function ClaimSlip({ doc }) {
               OR No.: <span className="font-medium text-gray-700">{doc.request.orNumber}</span>
             </p>
           )}
-          {doc.request?.controlNumber && (
-            <p className="text-xs text-gray-500">
-              Control No.: <span className="font-medium text-gray-700">{doc.request.controlNumber}</span>
-            </p>
-          )}
         </div>
 
         {/* Instructions */}
@@ -111,7 +106,6 @@ function ClaimedCard({ doc }) {
       <div className="text-xs text-gray-400 space-y-0.5">
         <p>Claim Code: <span className="font-mono font-semibold text-gray-600 tracking-widest">{doc.claimCode}</span></p>
         {doc.request?.orNumber && <p>OR No.: <span className="text-gray-600 font-medium">{doc.request.orNumber}</span></p>}
-        {doc.request?.controlNumber && <p>Control No.: <span className="text-gray-600 font-medium">{doc.request.controlNumber}</span></p>}
         <p>Claimed on: <span className="text-gray-600">{claimedAt}</span></p>
       </div>
     </div>
@@ -152,7 +146,6 @@ function RequestCard({ request }) {
 
       <div className="text-xs text-gray-400 space-y-0.5">
         {request.orNumber    && <p>OR No.: <span className="text-gray-600 font-medium">{request.orNumber}</span></p>}
-        {request.controlNumber && <p>Control No.: <span className="text-gray-600 font-medium">{request.controlNumber}</span></p>}
         {request.createdAt   && (
           <p>Requested: {new Date(request.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
         )}

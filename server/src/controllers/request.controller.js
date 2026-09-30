@@ -75,10 +75,32 @@ exports.updateStatus = async (req, res) => {
     const { status } = req.body;
     if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
 
+    const requestedStatus = String(status || '').trim();
+    const allowedStatuses = ['Processing', 'Printing', 'Completed', 'Rejected'];
+    if (!allowedStatuses.includes(requestedStatus)) {
+      return res.status(400).json({ message: 'Invalid request status.' });
+    }
+
+    const current = await prisma.request.findUnique({ where: { id: req.params.id } });
+    if (!current) return res.status(404).json({ message: 'Request not found' });
+
+    const transitions = {
+      Pending: ['Processing', 'Printing', 'Rejected'],
+      Processing: ['Printing', 'Rejected'],
+      Printing: ['Completed', 'Rejected'],
+    };
+    if (!transitions[current.status]?.includes(requestedStatus)) {
+      return res.status(400).json({ message: `Cannot change a ${current.status} request to ${requestedStatus}.` });
+    }
+
+    if (requestedStatus !== 'Rejected' && !['paid', 'free'].includes(String(current.paymentStatus).toLowerCase())) {
+      return res.status(400).json({ message: 'Payment is required before this document can be processed or printed.' });
+    }
+
     let request = await prisma.request
       .update({
         where: { id: req.params.id },
-        data: { status },
+        data: { status: requestedStatus },
         include: REQUEST_INCLUDE,
       })
       .catch((e) => {
@@ -90,11 +112,11 @@ exports.updateStatus = async (req, res) => {
     await auditLog({
       user: req.user,
       action: 'Update Request Status',
-      details: `Request ID: ${request.id}, Document: ${request.documentType}, New Status: ${status}`,
+      details: `Request ID: ${request.id}, Document: ${request.documentType}, New Status: ${requestedStatus}`,
     });
 
     // When marked Completed, create a CompletedDocument record with a claim code
-    if (String(status).toLowerCase() === 'completed') {
+    if (requestedStatus === 'Completed') {
       const alreadyDone = await prisma.completedDocument.findFirst({
         where: { requestId: request.id },
       });
