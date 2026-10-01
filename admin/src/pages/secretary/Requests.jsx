@@ -103,9 +103,12 @@ export default function SecretaryRequests() {
 
   const sorted = [...filtered].sort((a, b) => {
     const rank = (status) => {
-      if (norm(status) === 'rejected') return 2;
+      if (norm(status) === 'processing') return -3;
+      if (norm(status) === 'printing') return -2;
+      if (norm(status) === 'pending') return -1;
       if (norm(status) === 'completed') return 1;
-      return 0;
+      if (norm(status) === 'rejected') return 2;
+      return 3;
     };
     return rank(a.status) - rank(b.status);
   });
@@ -394,6 +397,16 @@ export default function SecretaryRequests() {
                               >
                                 {busy ? 'Updating…' : action.label}
                               </button>
+                              {norm(req.status) === 'printing' && (
+                                <button
+                                  disabled={busy}
+                                  onClick={() => handleStatusChange(req._id, 'Reprint')}
+                                  className="text-xs rounded-lg px-2.5 py-1.5 font-semibold whitespace-nowrap disabled:opacity-50"
+                                  style={{ background: '#EFF6FF', color: '#1D6DB5', border: '1px solid #BFDBFE', fontFamily: "'Hanken Grotesk', sans-serif" }}
+                                >
+                                  Reprint
+                                </button>
+                              )}
                               {!isCompleted && rejectButton}
                             </div>
                           ) : <span className="text-xs" style={{ color: '#A18D8D' }}>—</span>;

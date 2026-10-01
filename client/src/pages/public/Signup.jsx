@@ -40,6 +40,10 @@ export default function Signup() {
   const dUsername = useDebounce(username);
   const dContact = useDebounce(contact);
   const dEmail = useDebounce(email);
+  const contactNumberField = register('contactNumber', {
+    required: 'Required',
+    pattern: { value: /^09\d{9}$/, message: 'Must be 09XXXXXXXXX (11 digits)' },
+  });
 
   useEffect(() => {
     if (dUsername.length < 3) return;
@@ -124,10 +128,11 @@ export default function Signup() {
               <label className="label">Contact Number</label>
               <div className="relative">
                 <input
-                  {...register('contactNumber', {
-                    required: 'Required',
-                    pattern: { value: /^09\d{9}$/, message: 'Must be 09XXXXXXXXX (11 digits)' },
-                  })}
+                  {...contactNumberField}
+                  onChange={(event) => {
+                    event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '');
+                    contactNumberField.onChange(event);
+                  }}
                   className="input-field pr-10"
                   placeholder="09XXXXXXXXX"
                   type="tel"

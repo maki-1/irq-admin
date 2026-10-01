@@ -9,6 +9,11 @@ import useAuthStore from '../../store/authStore';
 import { exportReportXLSX } from '../../utils/reportExport';
 
 const PAGE_SIZE = 10;
+const formatClaimDateTime = (value) => value
+  ? new Date(value).toLocaleString('en-PH', {
+      year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    })
+  : '';
 
 export default function RequestRelease() {
   const { user } = useAuthStore();
@@ -33,9 +38,9 @@ export default function RequestRelease() {
   const handleClaimStatus = async (id, claimStatus) => {
     setUpdating(id);
     try {
-      await updateClaimStatus(id, claimStatus);
+      const { data } = await updateClaimStatus(id, claimStatus);
       setReleases((prev) =>
-        prev.map((r) => r._id === id ? { ...r, claimStatus } : r)
+        prev.map((r) => r._id === id ? { ...r, claimStatus, claimedAt: data.claimedAt } : r)
       );
       toast.success(`Marked as ${claimStatus}`);
     } catch {
@@ -54,9 +59,9 @@ export default function RequestRelease() {
       (r.documentType || '').toLowerCase().includes(q) ||
       (r.claimCode || '').toLowerCase().includes(q) ||
       (r.purpose || '').toLowerCase().includes(q);
-    const completed = r.completedAt ? new Date(r.completedAt) : null;
-    const matchFrom = !dateFrom || (completed && completed >= new Date(dateFrom));
-    const matchTo   = !dateTo   || (completed && completed <= new Date(dateTo + 'T23:59:59'));
+    const claimed = r.claimedAt ? new Date(r.claimedAt) : null;
+    const matchFrom = !dateFrom || (claimed && claimed >= new Date(dateFrom));
+    const matchTo   = !dateTo   || (claimed && claimed <= new Date(dateTo + 'T23:59:59'));
     return matchSearch && matchFrom && matchTo;
   }).sort((a, b) => {
     // Documents still waiting for pickup need attention first.
@@ -69,7 +74,7 @@ export default function RequestRelease() {
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const exportExcel = () => {
-    const columns = ['#', 'Claim Code', 'Name', 'Document Type', 'Purpose', 'Purok', 'Completed Date'];
+    const columns = ['#', 'Claim Code', 'Name', 'Document Type', 'Purpose', 'Purok', 'Claim Date and Time'];
     const rows = filtered.map((r, i) => [
       i + 1,
       r.claimCode || '',
@@ -77,9 +82,7 @@ export default function RequestRelease() {
       r.documentType || '',
       r.purpose || '',
       r.purok || '',
-      r.completedAt
-        ? new Date(r.completedAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
-        : '',
+      formatClaimDateTime(r.claimedAt),
     ]);
     exportReportXLSX({
       title: 'Documents Released', sheetName: 'Released Documents',
@@ -190,7 +193,7 @@ export default function RequestRelease() {
               <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: 700 }}>
                 <thead>
                   <tr style={{ background: '#FAFAFA' }}>
-                    {['#', 'Claim Code', 'Name', 'Document Type', 'Purpose', 'Purok', 'Completed Date', 'Action'].map((h) => (
+                    {['#', 'Claim Code', 'Name', 'Document Type', 'Purpose', 'Purok', 'Claim Date and Time', 'Action'].map((h) => (
                       <th
                         key={h}
                         className="text-left px-4 py-3"
@@ -234,9 +237,7 @@ export default function RequestRelease() {
                         {r.purok || '—'}
                       </td>
                       <td className="px-4 py-3 text-xs" style={{ color: '#A18D8D', fontFamily: "'Hanken Grotesk', sans-serif", whiteSpace: 'nowrap' }}>
-                        {r.completedAt
-                          ? new Date(r.completedAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
-                          : '—'}
+                        {formatClaimDateTime(r.claimedAt) || '—'}
                       </td>
                       <td className="px-4 py-3">
                         {r.claimStatus === 'claimed' ? (

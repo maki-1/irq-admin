@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { FiPrinter, FiFileText, FiDollarSign, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiPrinter, FiFileText, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import CollectorLayout from '../../components/layouts/CollectorLayout';
 import PrintReceiptModal from '../../components/common/PrintReceiptModal';
@@ -463,7 +463,7 @@ export default function CollectorPayments() {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
                             style={{ background: '#156D07', color: '#FFFFFF', fontFamily: "'Hahmlet', sans-serif" }}
                           >
-                            <FiDollarSign size={13} />
+                            <span aria-hidden="true" className="text-sm leading-none">₱</span>
                             Collect
                           </button>
                         )}

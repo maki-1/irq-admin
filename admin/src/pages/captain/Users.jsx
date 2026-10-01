@@ -166,7 +166,7 @@ function CreateModal({ onClose, onCreated }) {
             <input
               type="tel"
               value={form.contactNumber}
-              onChange={(e) => set('contactNumber', e.target.value)}
+              onChange={(e) => set('contactNumber', e.target.value.replace(/\D/g, ''))}
               placeholder="e.g. 09171234567"
               className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
               style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: '#333' }}
@@ -249,7 +249,7 @@ function EditModal({ target, onClose, onSaved }) {
       <input
         type={opts.type || 'text'}
         value={form[key]}
-        onChange={(e) => set(key, e.target.value)}
+        onChange={(e) => set(key, key === 'contactNumber' ? e.target.value.replace(/\D/g, '') : e.target.value)}
         placeholder={opts.placeholder || ''}
         className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
         style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: '#333' }}

@@ -421,6 +421,7 @@ model CompletedDocument {
   // reject the existing rows on import.
   claimStatus  String?
   completedAt  DateTime?
+  claimedAt    DateTime?
   // Snapshot of the resident's details at completion time, written by the
   // admin portal. These were previously swept into `metadata`.
   purpose      String?

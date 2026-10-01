@@ -28,7 +28,13 @@ exports.updateClaimStatus = async (req, res) => {
     if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Record not found' });
 
     const doc = await prisma.completedDocument
-      .update({ where: { id: req.params.id }, data: { claimStatus } })
+      .update({
+        where: { id: req.params.id },
+        data: {
+          claimStatus,
+          claimedAt: claimStatus === 'claimed' ? new Date() : null,
+        },
+      })
       .catch((e) => {
         if (e.code === 'P2025') return null;
         throw e;
