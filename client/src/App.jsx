@@ -16,7 +16,6 @@ import ResetPassword from './pages/public/ResetPassword';
 
 // Verification pages
 import Step1 from './pages/verify/Step1';
-import Step2 from './pages/verify/Step2';
 import Step3 from './pages/verify/Step3';
 import Waiting from './pages/verify/Waiting';
 
@@ -61,7 +60,7 @@ export default function App() {
       {/* ── Verification routes (logged in, not yet verified) ── */}
       <Route element={<UnverifiedRoute />}>
         <Route path="/verify/step1" element={<Step1 />} />
-        <Route path="/verify/step2" element={<Step2 />} />
+        <Route path="/verify/step2" element={<Navigate to="/verify/step3" replace />} />
         <Route path="/verify/step3" element={<Step3 />} />
         <Route path="/verify/waiting" element={<Waiting />} />
       </Route>

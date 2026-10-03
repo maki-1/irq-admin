@@ -11,6 +11,7 @@ export default function Waiting() {
   const { user, updateUser, login, token } = useAuthStore();
   const [status, setStatus] = useState(user?.verificationStatus || 'pending');
   const [rejectionReason, setRejectionReason] = useState(user?.rejectionReason || '');
+  const [fullName, setFullName] = useState('');
 
   async function pollStatus() {
     try {
@@ -19,6 +20,7 @@ export default function Waiting() {
       const reason = data.rejectionReason || data.data?.rejectionReason || '';
       setStatus(s);
       setRejectionReason(reason);
+      setFullName(data.fullName || data.data?.fullName || '');
       if (s === 'approved') {
         const { data: me } = await api.get('/auth/me');
         const updatedUser = me.user || me.data || me;
@@ -72,14 +74,14 @@ export default function Waiting() {
           <>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Under Review</h1>
             <p className="text-gray-500 text-sm mb-6">
-              Your account verification is being reviewed by the barangay staff. This usually takes 1–2 business days.
+              Your account verification is being reviewed by the barangay staff.
             </p>
 
             <div className="card text-left mb-6">
               <div className="flex items-start gap-3">
                 <MdCheckCircle className="text-primary mt-0.5 shrink-0" size={20} />
                 <div>
-                  <p className="font-semibold text-sm text-gray-800">{user?.username}</p>
+                  <p className="font-semibold text-sm text-gray-800">{fullName || 'Verification application'}</p>
                   <p className="text-xs text-gray-500">{user?.contactNumber}</p>
                 </div>
               </div>

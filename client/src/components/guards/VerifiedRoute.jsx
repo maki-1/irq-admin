@@ -6,8 +6,7 @@ function getVerifyRedirect(user) {
   if (user.verificationStatus === 'pending') return '/verify/waiting';
   const step = user.verificationStep ?? 0;
   if (step === 0) return '/verify/step1';
-  if (step === 1) return '/verify/step2';
-  if (step === 2) return '/verify/step3';
+  if (step === 1 || step === 2) return '/verify/step3';
   return '/verify/waiting';
 }
 

@@ -8,6 +8,27 @@ function verificationError(code, message, status = 503) {
   return Object.assign(new Error(message), { code, status, publicMessage: message });
 }
 
+// Compare full names exactly, allowing only case, whitespace, and equivalent
+// Unicode encodings. Do not drop middle names, initials, accents or suffixes.
+function normalizeName(value) {
+  return typeof value === 'string' ? value.normalize('NFC').trim().replace(/\s+/gu, ' ').toLowerCase() : '';
+}
+
+function requireRegisteredName(fullName) {
+  if (!normalizeName(fullName)) {
+    throw verificationError('REGISTRATION_NAME_REQUIRED', 'Go back to Step 1 and enter your full name exactly as it appears on your ID.', 422);
+  }
+}
+
+function verifiedIdName(id) {
+  if (normalizeName(id.full_name)) return id.full_name.trim();
+  // The provider's given name(s) and surname(s) are the documented fallback.
+  if (normalizeName(id.first_name) && normalizeName(id.last_name)) {
+    return `${id.first_name.trim()} ${id.last_name.trim()}`;
+  }
+  throw verificationError('ID_NAME_UNAVAILABLE', 'The full name could not be read from your ID. Start a new check with a clear ID, or contact the barangay office.', 422);
+}
+
 function config() {
   const apiKey = process.env.DIDIT_API_KEY?.trim();
   const workflowId = process.env.DIDIT_WORKFLOW_ID?.trim();
@@ -79,19 +100,25 @@ function assessDecision(report, binding) {
       throw verificationError('DIDIT_CHECKS_INCOMPLETE', 'The ID, live selfie, and face match must all pass before submission. Please contact the barangay office.', 422);
     }
   }
+  requireRegisteredName(binding.fullName);
+  const idNames = report.id_verifications.map(verifiedIdName);
+  if (idNames.some((name) => normalizeName(name) !== normalizeName(binding.fullName))) {
+    throw verificationError('ID_NAME_MISMATCH', 'The name on your ID does not match your registered full name. Go back to Step 1 and enter your full name exactly as it appears on your ID, including your middle name. You cannot submit until the names match.', 422);
+  }
   const id = report.id_verifications[0];
   const liveness = report.liveness_checks[0];
   const faceMatch = report.face_matches[0];
   return {
     status: 'approved',
     idType: id.document_type || 'Government ID',
-    idName: id.full_name || [id.first_name, id.last_name].filter(Boolean).join(' ') || '',
+    idName: idNames[0],
     idFront: mediaUrl(id.front_image),
     idBack: id.back_image ? mediaUrl(id.back_image) : '',
     facePhoto: mediaUrl(liveness.reference_image),
     summary: {
       provider: 'didit', sessionId: report.session_id, workflowId: report.workflow_id,
       status: report.status, idStatus: id.status, livenessStatus: liveness.status,
+      nameMatchStatus: 'Matched',
       livenessMethod: liveness.method || null, livenessScore: finiteScore(liveness.score),
       faceMatchStatus: faceMatch.status, faceMatchScore: finiteScore(faceMatch.score),
       checkedAt: new Date().toISOString(),
@@ -116,4 +143,4 @@ function respondError(res, err, stage) {
   return res.status(503).json({ code: 'DIDIT_UNAVAILABLE', message });
 }
 
-module.exports = { createSession, getDecision, assessDecision, respondError, verificationError, mediaUrl };
+module.exports = { createSession, getDecision, assessDecision, respondError, verificationError, mediaUrl, requireRegisteredName };

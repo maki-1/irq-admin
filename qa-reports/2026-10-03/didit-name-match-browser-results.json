@@ -1,0 +1,54 @@
+[
+  {
+    "name": "Mobile start screen and Didit redirect",
+    "passed": true
+  },
+  {
+    "name": "Server approval overrides callback text; submit clears resume state",
+    "passed": true
+  },
+  {
+    "name": "Pending cannot submit even with Approved callback; manual retry succeeds",
+    "passed": true
+  },
+  {
+    "name": "Expired resume permits a new check",
+    "passed": true
+  },
+  {
+    "name": "Missing resume token explains recovery and does not trust callback",
+    "passed": true
+  },
+  {
+    "name": "Refresh restores result; failed submission can be retried",
+    "passed": true
+  },
+  {
+    "name": "Mobile mismatched ID name blocks submit and offers Step 1 correction",
+    "passed": true
+  },
+  {
+    "name": "Missing ID name cannot submit and permits a fresh scan",
+    "passed": true
+  },
+  {
+    "name": "Name failure during final submission clears the earlier success: mismatch",
+    "passed": true
+  },
+  {
+    "name": "Name failure during final submission clears the earlier success: missing-name",
+    "passed": true
+  },
+  {
+    "name": "Under Review has no business-day estimate and displays registered name instead of username",
+    "passed": true
+  },
+  {
+    "name": "Barangay Captain sees verified document checks",
+    "passed": true
+  },
+  {
+    "name": "Secretary sees verified document checks",
+    "passed": true
+  }
+]

@@ -15,11 +15,18 @@ let state, report, calls, uploads, fault, server, base;
 const clone = (value) => structuredClone(value);
 function matches(row, where) {
   return Object.entries(where).every(([key, value]) => value && typeof value === 'object'
-    ? !value.notIn.includes(row[key]) : row[key] === value);
+    ? (value.in ? value.in.includes(row[key]) : !value.notIn.includes(row[key])) : row[key] === value);
 }
 function model(table) {
   return {
     findUnique: async ({ where }) => clone(state[table].find((row) => matches(row, where)) || null),
+    upsert: async ({ where, create, update }) => {
+      if (fault === table) throw new Error('Injected DB failure');
+      let row = state[table].find((entry) => matches(entry, where));
+      if (row) Object.assign(row, clone(update));
+      else { row = { id: pid, ...clone(create) }; state[table].push(row); }
+      return clone(row);
+    },
     updateMany: async ({ where, data }) => {
       if (fault === table) throw new Error('Injected DB failure');
       const rows = state[table].filter((row) => matches(row, where));
@@ -28,10 +35,17 @@ function model(table) {
     },
   };
 }
-const db = { user: model('users'), verificationProfile: model('profiles') };
+const db = { user: model('users'), verificationProfile: model('profiles'),
+  purokClearanceFee: { findMany: async () => [{ purokName: 'Purok 1', feecentavos: 2000 }] },
+};
 let queue = Promise.resolve();
 db.$transaction = (run) => {
   const result = queue.then(async () => {
+    if (fault === 'submit-before-draft-save') {
+      // Another request committed Step 3 after this request authenticated.
+      state.users[0].verificationStep = 3; state.users[0].verificationStatus = 'pending';
+      state.profiles[0].status = 'Pending'; fault = null;
+    }
     const saved = clone(state);
     try { return await run(db); } catch (err) { state = saved; throw err; }
   });
@@ -46,6 +60,7 @@ stub('../lib/prisma', db);
 stub('../src/config/cloudinary', { uploader: { upload: async (url, options) => {
   uploads.push({ url, options });
   if (fault === 'media') throw new Error('Injected media failure');
+  if (fault === 'name-change-during-upload' && uploads.length === 1) state.profiles[0].fullName = 'Changed Resident';
   return { secure_url: `https://res.cloudinary.com/qa/${options.public_id}.jpg` };
 } } });
 axios.post = async (url, body, options) => {
@@ -119,7 +134,7 @@ test('requires resident authentication and approved portal origin', async () => 
 test('missing configuration and earlier steps fail without contacting Didit', async () => {
   delete process.env.DIDIT_API_KEY;
   assert.equal((await start()).body.code, 'DIDIT_NOT_CONFIGURED');
-  state.users[0].verificationStep = 1;
+  state.users[0].verificationStep = 0;
   assert.equal((await start()).body.code, 'EARLIER_STEPS_REQUIRED');
   assert.equal(calls.length, 0);
 });
@@ -223,4 +238,168 @@ test('only approved provider media hosts may be imported', () => {
 test('old Azure routes tell cached clients to refresh', async () => {
   assert.equal((await call('/liveness/session')).status, 409);
   assert.equal((await call('/liveness/complete')).status, 409);
+});
+
+test('a different ID name cannot complete verification or use browser-supplied matching names', async () => {
+  const saved = clone(state);
+  report.id_verifications[0].full_name = 'Another Person';
+  const { body } = await start();
+  const result = await call('/identity/complete', { resumeToken: body.resumeToken, fullName: 'Another Person', idName: 'QA Resident' });
+  assert.equal(result.status, 422); assert.equal(result.body.code, 'ID_NAME_MISMATCH');
+  assert.equal(result.body.verificationProof, undefined); assert.match(result.body.message, /Step 1/);
+  assert.deepEqual(state, saved); assert.equal(uploads.length, 0);
+});
+
+for (const [registeredName, idName] of [
+  ['  QA   Resident ', 'qa resident'],
+  ['María De La Cruz', 'MARÍA\nDE LA CRUZ'],
+  ['José Niño', 'JOSE\u0301 NIN\u0303O'],
+]) {
+  test(`full-name matching allows formatting differences: ${registeredName}`, async () => {
+    state.profiles[0].fullName = registeredName; report.id_verifications[0].full_name = idName;
+    const result = await complete(); assert.equal(result.status, 200, JSON.stringify(result));
+    assert.equal((await call('/step3', { verificationProof: result.body.verificationProof })).status, 200);
+    assert.equal(state.profiles[0].aiVerification.nameMatchStatus, 'Matched');
+    assert.equal(state.profiles[0].fullName, registeredName);
+  });
+}
+
+for (const idName of ['Juan Cruz', 'Juan S. Cruz', 'Juan Reyes Cruz', 'Cruz Juan Santos', 'Juan Santos Cruz Jr.', 'Juan Santos Crux']) {
+  test(`full-name matching rejects omitted, abbreviated, changed or reordered names: ${idName}`, async () => {
+    state.profiles[0].fullName = 'Juan Santos Cruz'; report.id_verifications[0].full_name = idName;
+    const result = await complete(); assert.equal(result.status, 422); assert.equal(result.body.code, 'ID_NAME_MISMATCH');
+    assert.equal(result.body.verificationProof, undefined); assert.equal(uploads.length, 0);
+  });
+}
+
+test('a missing ID name blocks completion, while complete provider first/last names can match', async () => {
+  const id = report.id_verifications[0];
+  for (const value of [undefined, null, '', '   ', { name: 'QA Resident' }]) {
+    id.full_name = value;
+    const result = await complete(); assert.equal(result.status, 422); assert.equal(result.body.code, 'ID_NAME_UNAVAILABLE');
+  }
+  id.first_name = 'QA'; id.last_name = 'Resident';
+  const result = await complete(); assert.equal(result.status, 200); assert.equal(result.body.idName, 'QA Resident');
+  id.full_name = 'Different Person';
+  assert.equal((await complete()).body.code, 'ID_NAME_MISMATCH'); // Cannot prefer matching fallback over the full ID name.
+});
+
+test('a missing registered full name cannot start a paid provider session', async () => {
+  state.profiles[0].fullName = '  ';
+  const result = await start(); assert.equal(result.status, 422); assert.equal(result.body.code, 'REGISTRATION_NAME_REQUIRED');
+  assert.equal(calls.length, 0);
+});
+
+test('every approved ID in a multi-document report must match the registration name', async () => {
+  report.id_verifications.push({ ...report.id_verifications[0], full_name: 'Different Person' });
+  assert.equal((await complete()).body.code, 'ID_NAME_MISMATCH'); assert.equal(uploads.length, 0);
+});
+
+test('submission rechecks the current profile name instead of trusting an earlier proof or a request body', async () => {
+  const { body } = await complete();
+  state.profiles[0].fullName = 'Changed Resident';
+  const saved = clone(state);
+  const result = await call('/step3', { verificationProof: body.verificationProof, fullName: 'QA Resident', idName: 'Changed Resident' });
+  assert.equal(result.status, 422); assert.equal(result.body.code, 'ID_NAME_MISMATCH');
+  assert.deepEqual(state, saved); assert.equal(uploads.length, 0);
+});
+
+test('submission rechecks the authenticated ID name, including missing names, after earlier approval', async () => {
+  const { body } = await complete(); const saved = clone(state);
+  report.id_verifications[0].full_name = 'Changed Person';
+  assert.equal((await call('/step3', { verificationProof: body.verificationProof })).body.code, 'ID_NAME_MISMATCH');
+  report.id_verifications[0].full_name = null;
+  assert.equal((await call('/step3', { verificationProof: body.verificationProof })).body.code, 'ID_NAME_UNAVAILABLE');
+  assert.deepEqual(state, saved); assert.equal(uploads.length, 0);
+});
+
+test('a name change during image import cannot submit an application with mismatched names', async () => {
+  const { body } = await complete(); fault = 'name-change-during-upload';
+  const result = await call('/step3', { verificationProof: body.verificationProof });
+  assert.equal(result.status, 409); assert.equal(result.body.code, 'APPLICATION_CHANGED');
+  assert.equal(state.users[0].verificationStep, 2); assert.equal(state.users[0].verificationStatus, null);
+  assert.equal(state.profiles[0].status, 'submitted'); assert.equal(state.profiles[0].aiVerification, null);
+});
+
+const personal = { firstName: 'QA', lastName: 'Resident', birthday: '2000-01-01', gender: 'Male', purok: 'Purok 1', street: 'Purok 1', barangay: 'Dologon', city: 'Maramag' };
+const education = { educationLevel: 'College', schoolName: 'QA School', graduationYear: '2020' };
+
+test('new registration goes from personal information directly to verified ID submission', async () => {
+  state.users[0].verificationStep = 0;
+  state.profiles = [];
+  assert.equal((await call('/step1', personal)).status, 200);
+  assert.equal(state.users[0].verificationStep, 1);
+  assert.equal(state.users[0].verificationStatus, null);
+  assert.equal(state.profiles[0].status, 'submitted');
+  assert.equal(state.profiles[0].motherName, undefined);
+  assert.equal(state.profiles[0].fatherName, undefined);
+  assert.equal(state.profiles[0].educationLevel, undefined);
+  const result = await complete();
+  assert.equal(result.status, 200);
+  assert.equal((await call('/step3', { verificationProof: result.body.verificationProof })).status, 200);
+  assert.equal(state.users[0].verificationStep, 3);
+  assert.equal(state.users[0].verificationStatus, 'pending');
+});
+
+test('legacy education requests are optional and cannot alter stored data or submit for review', async () => {
+  Object.assign(state.profiles[0], { motherName: 'Historical Mother', fatherName: 'Historical Father', school: 'Historical School' });
+  assert.equal((await call('/step1', { ...personal, motherName: 'Ignored', fatherName: 'Ignored' })).status, 200);
+  assert.equal(state.profiles[0].motherName, 'Historical Mother');
+  assert.equal(state.profiles[0].fatherName, 'Historical Father');
+  const saved = clone(state);
+  for (const body of [{}, education]) {
+    assert.equal((await call('/step2', body)).status, 200);
+    assert.deepEqual(state, saved);
+  }
+});
+
+test('legacy education endpoint cannot bypass personal information', async () => {
+  state.users[0].verificationStep = 0;
+  state.profiles = [];
+  const saved = clone(state);
+  assert.equal((await call('/step2', education)).status, 409);
+  assert.deepEqual(state, saved);
+  assert.notEqual((await start()).status, 200);
+});
+
+test('a resident can correct a draft name and finish verification only after the names match', async () => {
+  state.profiles[0].fullName = 'Wrong Name';
+  const { body } = await start();
+  assert.equal((await call('/identity/complete', { resumeToken: body.resumeToken })).body.code, 'ID_NAME_MISMATCH');
+  assert.equal((await call('/step1', personal)).status, 200);
+  const result = await call('/identity/complete', { resumeToken: body.resumeToken });
+  assert.equal(result.status, 200, JSON.stringify(result));
+  assert.equal((await call('/step3', { verificationProof: result.body.verificationProof })).status, 200);
+  assert.equal(state.profiles[0].fullName, state.profiles[0].idName);
+});
+
+test('earlier-step endpoints cannot change a submitted or approved applicant name', async () => {
+  const { body } = await complete();
+  assert.equal((await call('/step3', { verificationProof: body.verificationProof })).status, 200);
+  let saved = clone(state);
+  assert.equal((await call('/step1', { ...personal, firstName: 'Wrong' })).status, 409);
+  assert.equal((await call('/step2', education)).status, 409); assert.deepEqual(state, saved);
+  state.users[0].isVerified = true; state.users[0].verificationStatus = 'approved'; state.profiles[0].status = 'approved';
+  saved = clone(state);
+  assert.equal((await call('/step1', { ...personal, firstName: 'Wrong' })).status, 409); assert.deepEqual(state, saved);
+});
+
+test('draft save checks profile status even when the resident account status is stale', async () => {
+  state.profiles[0].status = 'under review';
+  const saved = clone(state);
+  assert.equal((await call('/step1', personal)).status, 409);
+  assert.equal((await call('/step2', education)).status, 409); assert.deepEqual(state, saved);
+});
+
+test('an in-flight Step 1 cannot rename the applicant after Step 3 commits', async () => {
+  fault = 'submit-before-draft-save';
+  const result = await call('/step1', { ...personal, firstName: 'Wrong' });
+  assert.equal(result.status, 409); assert.equal(result.body.code, 'APPLICATION_CHANGED');
+  assert.equal(state.users[0].verificationStep, 3); assert.equal(state.profiles[0].status, 'Pending');
+  assert.equal(state.profiles[0].fullName, 'QA Resident');
+});
+
+test('failed draft profile save rolls back the resident step', async () => {
+  const saved = clone(state); fault = 'profiles';
+  assert.equal((await call('/step1', personal)).status, 500); assert.deepEqual(state, saved);
 });

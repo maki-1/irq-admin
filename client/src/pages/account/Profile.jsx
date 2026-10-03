@@ -8,6 +8,7 @@ import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import AppLayout from '../../components/layout/AppLayout';
 import PasswordStrengthMeter from '../../components/common/PasswordStrengthMeter';
+import { passwordClipboardHandlers } from '../../utils/passwordClipboard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 function Section({ icon: Icon, title, children }) {
@@ -146,6 +147,7 @@ const { register, handleSubmit, watch, reset, formState: { errors } } = useForm(
               <input
                 {...register('currentPassword', { required: 'Required' })}
                 type={showCurrent ? 'text' : 'password'}
+                {...passwordClipboardHandlers}
                 className="input-field pr-12"
                 placeholder="Your current password"
               />
@@ -163,6 +165,7 @@ const { register, handleSubmit, watch, reset, formState: { errors } } = useForm(
                   minLength: { value: 8, message: 'Min 8 characters' },
                 })}
                 type={showNew ? 'text' : 'password'}
+                {...passwordClipboardHandlers}
                 className="input-field pr-12"
                 placeholder="New password"
               />
@@ -178,6 +181,7 @@ const { register, handleSubmit, watch, reset, formState: { errors } } = useForm(
             <input
               {...register('confirmPassword', { required: 'Required' })}
               type="password"
+              {...passwordClipboardHandlers}
               className="input-field"
               placeholder="Re-enter new password"
             />

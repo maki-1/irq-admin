@@ -7,6 +7,7 @@ import api from '../../services/api';
 import PasswordStrengthMeter from '../../components/common/PasswordStrengthMeter';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Logo from '../../components/common/Logo';
+import { passwordClipboardHandlers } from '../../utils/passwordClipboard';
 
 function useDebounce(value, delay = 500) {
   const [debounced, setDebounced] = useState(value);
@@ -181,6 +182,7 @@ export default function Signup() {
                     },
                   })}
                   type={showPw ? 'text' : 'password'}
+                  {...passwordClipboardHandlers}
                   className="input-field pr-12"
                   placeholder="Min 8 chars, uppercase, digit, special"
                   autoComplete="new-password"
@@ -200,6 +202,7 @@ export default function Signup() {
                 <input
                   {...register('confirmPassword', { required: 'Required' })}
                   type={showConfirm ? 'text' : 'password'}
+                  {...passwordClipboardHandlers}
                   className="input-field pr-12"
                   placeholder="Re-enter your password"
                   autoComplete="new-password"

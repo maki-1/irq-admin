@@ -41,6 +41,11 @@ function model(table) {
       if (!row) throw Object.assign(new Error('Not found'), { code: 'P2025' });
       Object.assign(row, clone(data)); return clone(row);
     },
+    updateMany: async ({ where, data }) => {
+      const rows = state[table].filter((row) => matches(row, where));
+      rows.forEach((row) => Object.assign(row, clone(data)));
+      return { count: rows.length };
+    },
     upsert: async ({ where, create, update }) => {
       const row = find(where);
       if (row) { Object.assign(row, clone(update)); return clone(row); }
@@ -81,7 +86,7 @@ beforeEach(() => {
   process.env.JWT_SECRET = 'isolated-resident-improvements-test-key';
   uploads = 0; fault = null;
   state = {
-    users: [{ id: uid, active: true, contactVerified: true, sessionVersion: 0, deletedAt: null }],
+    users: [{ id: uid, active: true, contactVerified: true, sessionVersion: 0, deletedAt: null, isVerified: false, verificationStep: 0 }],
     admins: [
       { id: leaderId, fullName: 'QA Leader', role: 'Purok Leader', purok: 'Purok 1', active: true, sessionVersion: 0 },
       { id: captainId, fullName: 'QA Captain', role: 'Barangay Captain', active: true, sessionVersion: 0 },

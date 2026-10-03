@@ -9,8 +9,10 @@ const uid = '11111111-1111-4111-8111-111111111111';
 const pid = '22222222-2222-4222-8222-222222222222';
 const saved = { resumeToken: 'synthetic-resume', url: 'https://verify.didit.me/session/synthetic' };
 const key = `irq-didit-session:${uid}`;
+const mismatchMessage = 'The name on your ID does not match your registered full name. Go back to Step 1 and enter your full name exactly as it appears on your ID, including your middle name. You cannot submit until the names match.';
+const missingNameMessage = 'The full name could not be read from your ID. Start a new check with a clear ID, or contact the barangay office.';
 const results = [];
-const screenshotDir = path.join(__dirname, 'didit-screenshots');
+const screenshotDir = path.join(__dirname, 'verification-flow-screenshots');
 fs.mkdirSync(screenshotDir, { recursive: true });
 
 async function serve(dir) {
@@ -31,18 +33,26 @@ async function serve(dir) {
   const admin = await serve(process.env.DIDIT_ADMIN_BUILD || path.join(root, 'admin/dist'));
   const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   try {
-    async function scenario(name, run, { resume = true, width = 1280 } = {}) {
+    async function scenario(name, run, { resume = true, width = 1280, stage = 2, signedIn = true } = {}) {
       const context = await browser.newContext({ viewport: { width, height: 950 } });
       const errors = [], writes = [];
       let mode = 'approved', submitFails = false;
-      await context.addInitScript(({ uid, key, saved, resume }) => {
-        if (!localStorage.getItem('irequestd-auth')) localStorage.setItem('irequestd-auth', JSON.stringify({ state: { token: 'synthetic-token', user: { id: uid, isVerified: false, verificationStep: 2 } }, version: 0 }));
+      const resident = { id: uid, username: 'qa-login-name', isVerified: false, verificationStep: stage };
+      await context.addInitScript(({ resident, key, saved, resume, signedIn }) => {
+        if (signedIn && !localStorage.getItem('irequestd-auth')) localStorage.setItem('irequestd-auth', JSON.stringify({ state: { token: 'synthetic-token', user: resident }, version: 0 }));
         if (resume && !sessionStorage.getItem(key)) sessionStorage.setItem(key, JSON.stringify(saved));
-      }, { uid, key, saved, resume });
+      }, { resident, key, saved, resume, signedIn });
       await context.route('**/*', (route) => {
         const req = route.request(), url = new URL(req.url());
         if (url.pathname.startsWith('/api/')) {
           const reply = (status, json) => route.fulfill({ status, json, headers: { 'access-control-allow-origin': '*' } });
+          if (url.pathname.endsWith('/auth/login')) return reply(200, { token: 'synthetic-token', user: resident });
+          if (url.pathname.endsWith('/auth/me')) return reply(200, { user: resident });
+          if (url.pathname.endsWith('/step1')) {
+            writes.push({ path: 'personal', body: req.postData() });
+            return reply(200, { step: 1 });
+          }
+          if (url.pathname.endsWith('/step2')) throw new Error('New registration must not call the removed education endpoint');
           if (url.pathname.endsWith('/identity/session')) {
             writes.push({ path: 'start', body: req.postDataJSON() });
             return reply(200, saved);
@@ -51,13 +61,17 @@ async function serve(dir) {
             writes.push({ path: 'complete', body: req.postDataJSON() });
             if (mode === 'pending') return reply(202, { status: 'pending', message: 'Your identity check is being reviewed. Check the result later.' });
             if (mode === 'expired') return reply(403, { code: 'VERIFICATION_EXPIRED', message: 'Your verification session expired. Please start again.' });
+            if (mode === 'mismatch') return reply(422, { code: 'ID_NAME_MISMATCH', message: mismatchMessage });
+            if (mode === 'missing-name') return reply(422, { code: 'ID_NAME_UNAVAILABLE', message: missingNameMessage });
             return reply(200, { status: 'approved', verificationProof: 'synthetic-proof', idType: 'Identity Card', idName: 'QA Resident' });
           }
           if (url.pathname.endsWith('/step3')) {
             writes.push({ path: 'submit', body: req.postDataJSON() });
+            if (submitFails === 'mismatch') return reply(422, { code: 'ID_NAME_MISMATCH', message: mismatchMessage });
+            if (submitFails === 'missing-name') return reply(422, { code: 'ID_NAME_UNAVAILABLE', message: missingNameMessage });
             return submitFails ? reply(503, { message: 'Submission temporarily unavailable.' }) : reply(200, { step: 3 });
           }
-          if (url.pathname.endsWith('/status')) return reply(200, { status: 'pending', isVerified: false, verificationStep: 3 });
+          if (url.pathname.endsWith('/status')) return reply(200, { status: 'pending', isVerified: false, verificationStep: 3, fullName: 'QA Resident' });
           return reply(200, {});
         }
         if (url.hostname === 'verify.didit.me') return route.fulfill({ contentType: 'text/html', body: '<h1>Synthetic Didit page</h1>' });
@@ -70,6 +84,57 @@ async function serve(dir) {
         assert.deepEqual(errors, []);
         results.push({ name, passed: true });
       } finally { await context.close(); }
+    }
+
+    await scenario('Mobile registration goes directly from personal information to ID and face verification', async ({ page, writes, open }) => {
+      await page.goto(client.origin + '/verify/step1');
+      await page.getByText('Step 1 of 2 — Personal Information', { exact: true }).waitFor();
+      assert.equal(await page.locator('input[name="motherName"], input[name="fatherName"]').count(), 0);
+      assert.equal(await page.getByText(/Mother's Name|Father's Name|Education/i).count(), 0);
+      for (const [name, value] of Object.entries({ firstName: 'QA', lastName: 'Resident', birthday: '2000-01-01', yearsAtAddress: '5' })) {
+        await page.locator(`[name="${name}"]`).fill(value);
+      }
+      await page.locator('[name="gender"]').selectOption('Female');
+      await page.locator('[name="civilStatus"]').selectOption('Single');
+      await page.locator('[name="purok"]').selectOption('Purok 1');
+      for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
+      await page.screenshot({ path: path.join(screenshotDir, 'mobile-personal-information.png'), fullPage: true });
+      await page.getByRole('button', { name: 'Continue to Step 2' }).click();
+      await page.waitForURL('**/verify/step3');
+      await page.getByText('Step 2 of 2 — Identity Verification', { exact: true }).waitFor();
+      assert.ok(!/motherName|fatherName|educationLevel/.test(writes.find((w) => w.path === 'personal').body));
+      assert.equal(await page.getByRole('button', { name: 'Submit for Review' }).isDisabled(), true);
+      await page.getByRole('button', { name: 'Start ID & Face Check' }).click();
+      await page.waitForURL('https://verify.didit.me/**');
+      await open('?verification=return');
+      await page.getByText('Identity check completed', { exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Submit for Review' }).click();
+      await page.waitForURL('**/verify/waiting');
+    }, { resume: false, width: 390, stage: 0 });
+
+    await scenario('Old education links redirect to ID; Back goes directly to personal information', async ({ page }) => {
+      await page.goto(client.origin + '/verify/step2');
+      await page.waitForURL('**/verify/step3');
+      await page.getByText('Step 2 of 2 — Identity Verification', { exact: true }).waitFor();
+      await page.getByRole('button', { name: '← Back', exact: true }).click();
+      await page.waitForURL('**/verify/step1');
+      await page.getByText('Step 1 of 2 — Personal Information', { exact: true }).waitFor();
+    }, { resume: false });
+
+    for (const stage of [1, 2]) {
+      await scenario(`Sign-in resumes ID verification for stored stage ${stage}`, async ({ page }) => {
+        await page.goto(client.origin + '/login');
+        await page.locator('[name="username"]').fill('qa-login-name');
+        await page.locator('[name="password"]').fill('synthetic-password');
+        await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+        await page.waitForURL('**/verify/step3');
+        await page.getByText('Step 2 of 2 — Identity Verification', { exact: true }).waitFor();
+      }, { resume: false, stage, signedIn: false });
+      await scenario(`Dashboard guard resumes ID verification for stored stage ${stage}`, async ({ page }) => {
+        await page.goto(client.origin + '/dashboard');
+        await page.waitForURL('**/verify/step3');
+        await page.getByText('Step 2 of 2 — Identity Verification', { exact: true }).waitFor();
+      }, { resume: false, stage });
     }
 
     await scenario('Mobile start screen and Didit redirect', async ({ page, open, writes }) => {
@@ -127,6 +192,51 @@ async function serve(dir) {
       assert.equal(writes.filter((w) => w.path === 'submit').length, 2);
     });
 
+    await scenario('Mobile mismatched ID name blocks submit and offers Step 1 correction', async ({ page, open, writes, setMode }) => {
+      setMode('mismatch'); await open('?verification=return&status=Approved');
+      await page.getByRole('alert').filter({ hasText: mismatchMessage }).waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Submit for Review' }).isDisabled(), true);
+      assert.equal(writes.filter((w) => w.path === 'submit').length, 0);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+      await page.screenshot({ path: path.join(screenshotDir, 'mobile-name-mismatch.png'), fullPage: true });
+      await page.reload(); await page.getByRole('alert').filter({ hasText: mismatchMessage }).waitFor();
+      await page.getByRole('button', { name: 'Edit full name in Step 1' }).click();
+      await page.waitForURL('**/verify/step1');
+      await page.getByText('Enter your full name exactly as it appears on your ID, including your middle name. Different names will not pass identity verification.', { exact: true }).waitFor();
+    }, { width: 390 });
+
+    await scenario('Missing ID name cannot submit and permits a fresh scan', async ({ page, open, setMode }) => {
+      setMode('missing-name'); await open();
+      await page.getByRole('alert').filter({ hasText: missingNameMessage }).waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Submit for Review' }).isDisabled(), true);
+      await page.getByRole('button', { name: 'Start ID & Face Check' }).waitFor();
+      assert.equal(await page.evaluate((key) => sessionStorage.getItem(key), key), null);
+    });
+
+    for (const failure of ['mismatch', 'missing-name']) {
+      await scenario(`Name failure during final submission clears the earlier success: ${failure}`, async ({ page, open, failSubmit }) => {
+        await open(); await page.getByText('Identity check completed', { exact: true }).waitFor();
+        failSubmit(failure); await page.getByRole('button', { name: 'Submit for Review' }).click();
+        await page.getByRole('alert').waitFor();
+        assert.equal(await page.getByRole('button', { name: 'Submit for Review' }).isDisabled(), true);
+        assert.equal(await page.getByText('Identity check completed', { exact: true }).count(), 0);
+        assert.ok(page.url().includes('/verify/step3'));
+        if (failure === 'mismatch') await page.getByRole('button', { name: 'Edit full name in Step 1' }).waitFor();
+        else await page.getByRole('button', { name: 'Start ID & Face Check' }).waitFor();
+      });
+    }
+
+    await scenario('Under Review has no business-day estimate and displays registered name instead of username', async ({ page }) => {
+      await page.goto(client.origin + '/verify/waiting');
+      await page.getByRole('heading', { name: 'Under Review', exact: true }).waitFor();
+      await page.getByText('QA Resident', { exact: true }).waitFor();
+      assert.equal(await page.getByText('qa-login-name', { exact: true }).count(), 0);
+      assert.equal(await page.getByText(/business days/i).count(), 0);
+      await page.getByText('Your account verification is being reviewed by the barangay staff.', { exact: true }).waitFor();
+      await page.screenshot({ path: path.join(screenshotDir, 'mobile-under-review.png'), fullPage: true });
+      await page.getByRole('button', { name: 'Check now', exact: true }).click();
+    }, { width: 390, resume: false });
+
     for (const role of ['Barangay Captain', 'Secretary']) {
       const context = await browser.newContext();
       const errors = [];
@@ -150,7 +260,7 @@ async function serve(dir) {
   } finally {
     await browser.close();
     client.server.close(); admin.server.close();
-    fs.writeFileSync(path.join(__dirname, 'didit-browser-results.json'), JSON.stringify(results, null, 2));
+    fs.writeFileSync(path.join(__dirname, 'verification-flow-browser-results.json'), JSON.stringify(results, null, 2));
   }
   console.log(JSON.stringify(results, null, 2));
 })().catch((err) => { console.error(err); process.exitCode = 1; });

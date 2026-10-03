@@ -9,12 +9,8 @@ const step1Fields = multiUpload([
   { name: 'indigentProof', maxCount: 1 },
 ]);
 
-const step2Fields = multiUpload([
-  { name: 'educationCert', maxCount: 1 },
-]);
-
 router.post('/step1',  residentProtect, step1Fields, ctrl.step1);
-router.post('/step2',  residentProtect, step2Fields, ctrl.step2);
+router.post('/step2',  residentProtect, ctrl.step2);
 router.post('/identity/session', residentProtect, identity.start);
 router.post('/identity/complete', residentProtect, identity.complete);
 router.post('/liveness/session', residentProtect, identity.legacy);

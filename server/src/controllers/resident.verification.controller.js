@@ -22,24 +22,44 @@ async function uploadBuffer(buffer, folder) {
   });
 }
 
-// findOneAndUpdate({ user }, data, { upsert: true }) — userId is unique, so a
-// plain upsert is the direct equivalent.
-const upsertProfile = (userId, data) =>
-  prisma.verificationProfile.upsert({
-    where:  { userId },
-    create: { userId, ...data },
-    update: data,
+const submittedStatuses = new Set(['pending', 'under review', 'approved']);
+const draftError = (code, message) => Object.assign(new Error(message), { status: 409, code });
+
+function requireDraft(resident, profile) {
+  if (resident.isVerified || submittedStatuses.has(String(resident.verificationStatus).toLowerCase()) ||
+      submittedStatuses.has(String(profile?.status).toLowerCase())) {
+    throw draftError('ALREADY_SUBMITTED', 'Your application has already been submitted for review. Contact the barangay office to correct your information.');
+  }
+}
+
+// Take the resident row lock before saving demographics, in the same order as
+// Step 3. A Step 1 request cannot change the name after submission wins a race.
+async function saveDraftProfile(resident, profileData, userData) {
+  await prisma.$transaction(async (tx) => {
+    const changed = await tx.user.updateMany({
+      where: { id: resident.id, sessionVersion: resident.sessionVersion,
+        verificationStep: resident.verificationStep, isVerified: false, active: true, deletedAt: null },
+      data: userData,
+    });
+    if (changed.count !== 1) throw draftError('APPLICATION_CHANGED', 'Your application has changed. Reload this page to see its current status.');
+    const profile = await tx.verificationProfile.findUnique({ where: { userId: resident.id } });
+    requireDraft(resident, profile);
+    await tx.verificationProfile.upsert({
+      where: { userId: resident.id },
+      create: { userId: resident.id, ...profileData },
+      update: profileData,
+    });
   });
+}
 
 /* ── POST /api/verification/step1 ───────────────────────── */
 exports.step1 = async (req, res) => {
   try {
-    const userId = req.resident.id;
+    requireDraft(req.resident);
     const {
       firstName, middleName, lastName,
       birthday, gender, civilStatus, yearsAtAddress,
       purok, houseNo, street, barangay, city,
-      motherName, fatherName,
       isPwd, isIndigent,
       isSoloParent, isIndigenousPeople, isPregnant, isNonResident, ethnicGroup,
     } = req.body;
@@ -88,8 +108,6 @@ exports.step1 = async (req, res) => {
       yearsAtAddress: Number(yearsAtAddress) || 0,
       address,
       purok: String(purok).trim(),
-      motherName: motherName ?? '',
-      fatherName: fatherName ?? '',
       isPwd: asBool(isPwd),
       isSenior: birth.age >= 60,
       isIndigent: asBool(isIndigent),
@@ -103,54 +121,32 @@ exports.step1 = async (req, res) => {
       status: 'submitted',
     };
 
-    await upsertProfile(userId, profileData);
-
-    // Update resident user's step and special categories
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        verificationStep: 1,
-        isPwd: profileData.isPwd,
-        isSenior: profileData.isSenior,
-        isIndigent: profileData.isIndigent,
-      },
+    await saveDraftProfile(req.resident, profileData, {
+      verificationStep: 1,
+      isPwd: profileData.isPwd,
+      isSenior: profileData.isSenior,
+      isIndigent: profileData.isIndigent,
     });
 
     res.json({ message: 'Step 1 saved', step: 1 });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.status || 500).json({ code: err.code, message: err.message });
   }
 };
 
 /* ── POST /api/verification/step2 ───────────────────────── */
 exports.step2 = async (req, res) => {
   try {
-    const userId = req.resident.id;
-    const { educationLevel, schoolName, graduationYear, course } = req.body;
-
-    if (!educationLevel || !schoolName || !graduationYear) {
-      return res.status(400).json({ message: 'Education level, school name, and graduation year are required' });
+    // Older tabs may still call this endpoint. Education is no longer collected;
+    // leave the application unchanged and let them continue to identity checks.
+    const profile = await prisma.verificationProfile.findUnique({ where: { userId: req.resident.id } });
+    requireDraft(req.resident, profile);
+    if (!profile || ![1, 2].includes(req.resident.verificationStep)) {
+      return res.status(409).json({ code: 'EARLIER_STEPS_REQUIRED', message: 'Complete your personal information first.' });
     }
-
-    let educationCertUrl = null;
-    if (req.files?.educationCert?.[0]) {
-      educationCertUrl = await uploadBuffer(req.files.educationCert[0].buffer, 'irequestd/education');
-    }
-
-    await upsertProfile(userId, {
-      educationLevel,
-      school: schoolName,
-      // Stored as text — the Flutter backend writes non-numeric years too.
-      yearGraduated: String(graduationYear),
-      course: course || '',
-      ...(educationCertUrl && { educationCertificate: educationCertUrl }),
-    });
-
-    await prisma.user.update({ where: { id: userId }, data: { verificationStep: 2 } });
-
-    res.json({ message: 'Step 2 saved', step: 2 });
+    res.json({ message: 'Continue to ID verification', step: req.resident.verificationStep });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.status || 500).json({ code: err.code, message: err.message });
   }
 };
 

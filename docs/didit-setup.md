@@ -1,10 +1,11 @@
 # Didit resident verification
 
-Step 3 uses a published Didit **Free KYC** workflow containing ID Verification,
+The second and final verification screen uses a published Didit **Free KYC** workflow containing ID Verification,
 Passive Liveness, and Face Match. Didit captures the document and selfie together.
 The resident returns to the same browser and selects **Submit for Review**.
 The backend retrieves the authenticated decision, requires all three checks to
-be Approved, copies the verified images to Cloudinary, and saves the application
+be Approved and the ID name to match the registered full name, copies the verified
+images to Cloudinary, and saves the application
 as Pending for the existing barangay staff review. It never automatically grants
 resident approval. Captain and Secretary review screens show the Didit checks.
 
@@ -37,11 +38,25 @@ uploaded to Render. This change does not require a database migration.
 - The callback is built from the allowed request origin and returns to
   `/verify/step3?verification=return`. Callback query parameters are never
   evidence of approval. No webhook configuration is needed for this integration.
+- The server compares the authenticated ID report's full name against the current
+  Step 1 full name both when issuing submission proof and on final submission.
+  Matching ignores capitalization, extra whitespace, and equivalent Unicode
+  encodings only. Middle names, suffixes, accents, spelling, and name order must
+  match; initials do not substitute for full names. Every ID in a multi-document
+  report must match. Missing/unreadable ID names also block submission.
+- A mismatch keeps the application unsubmitted and shows a link to correct Step 1.
+  A clear new ID scan is required when no complete name can be read. The provider's
+  documented first/last name fields are used only if its full-name field is empty
+  and both parts are available; names supplied by the browser are never evidence.
+- The final database update checks that the registered full name has not changed
+  during verification. Steps 1 and 2 save transactionally and cannot rename or
+  reopen a submitted/approved application. Staff must handle corrections after
+  submission through the existing review/reset process.
 - Signed session tokens bind the resident, account session version, application
   profile, Didit session, and configured workflow. A reset application invalidates
   the old binding. Resume tokens last one hour; submit proofs last 15 minutes.
 - The resume token stays in that browser tab's session storage, scoped to the
-  resident. Refreshing Step 3 checks the result again. If Didit is processing or
+  resident. Refreshing the identity screen checks the result again. If Didit is processing or
   reviewing the check, use **Check result** later in the same browser. An expired
   resume token requires a new check.
 - Sandbox approvals cannot verify residents. Use isolated test fixtures for
@@ -73,7 +88,12 @@ They cover approval requirements, pending/declined/expired decisions, forged or
 cross-resident tokens, application resets, sandbox results, rechecking decisions,
 media failures, submission retries, and transactional rollback.
 
-For a live acceptance test, use a resident who has completed steps 1 and 2.
+For a live acceptance test, use a resident who has completed personal information.
+Parent names and education are no longer collected. Identity verification keeps
+the `/verify/step3` callback and `/verification/step3` submission endpoint for
+compatibility; `/verify/step2` now redirects to identity verification. Stored
+resident stages 1 (personal information saved) and 2 (legacy education saved)
+both permit identity verification. Final submission still writes stage 3.
 Start the Didit check, complete the supported photo ID and live selfie steps,
 return to the portal, and submit. Confirm the ID front/back and verified selfie
 appear in staff review and the resident stays Pending until staff approve them.
@@ -91,3 +111,4 @@ deployment are still required.
 References: [create session](https://docs.didit.me/sessions-api/create-session),
 [retrieve decision](https://docs.didit.me/sessions-api/retrieve-session), and
 [workflow setup](https://help.didit.me/workflows/build-a-verification-workflow).
+Name field reference: [Didit ID verification data model](https://docs.didit.me/reference/data-models#id-verification).

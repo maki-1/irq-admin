@@ -74,7 +74,7 @@ export default function Step1() {
 
       updateUser({ verificationStep: 1 });
       toast.success('Step 1 saved!');
-      navigate('/verify/step2');
+      navigate('/verify/step3');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save step 1');
     } finally {
@@ -92,10 +92,10 @@ export default function Step1() {
             <span className="font-extrabold text-xl text-primary">iRequestDologon</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Complete your profile</h1>
-          <p className="text-gray-500 text-sm mt-1">Step 1 of 3 — Personal Information</p>
+          <p className="text-gray-500 text-sm mt-1">Step 1 of 2 — Personal Information</p>
         </div>
 
-        <StepProgress current={1} />
+        <StepProgress current={1} total={2} />
 
         <div className="card">
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -115,6 +115,8 @@ export default function Step1() {
                 {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName.message}</p>}
               </div>
             </div>
+
+            <p className="text-sm text-gray-600">Enter your full name exactly as it appears on your ID, including your middle name. Different names will not pass identity verification.</p>
 
             <label className="flex items-start gap-3 cursor-pointer select-none">
               <input
@@ -177,17 +179,6 @@ export default function Step1() {
                   </select>
                   {errors.purok && <p className="text-red-500 text-xs mt-1">{errors.purok.message}</p>}
                 </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="label">Mother's Name</label>
-                <input {...register('motherName')} className="input-field" placeholder="Full name" />
-              </div>
-              <div>
-                <label className="label">Father's Name</label>
-                <input {...register('fatherName')} className="input-field" placeholder="Full name" />
               </div>
             </div>
 

@@ -15,6 +15,7 @@ export default function Step3() {
   const storageKey = `irq-didit-session:${user?.id || user?._id}`;
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [session, setSession] = useState(null);
   const [verified, setVerified] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,6 +30,7 @@ export default function Step3() {
   const checkResult = useCallback(async (saved) => {
     setStatus('checking');
     setMessage('');
+    setErrorCode('');
     setVerified(null);
     try {
       const { data } = await api.post('/verification/identity/complete', {
@@ -45,8 +47,9 @@ export default function Step3() {
       }
     } catch (err) {
       const code = err.response?.data?.code;
+      setErrorCode(code || '');
       if (code === 'ALREADY_SUBMITTED') return finishSubmission();
-      if (['VERIFICATION_EXPIRED', 'INVALID_VERIFICATION', 'DIDIT_NOT_APPROVED', 'DIDIT_CHECKS_INCOMPLETE', 'APPLICATION_CHANGED'].includes(code)) {
+      if (['VERIFICATION_EXPIRED', 'INVALID_VERIFICATION', 'DIDIT_NOT_APPROVED', 'DIDIT_CHECKS_INCOMPLETE', 'APPLICATION_CHANGED', 'ID_NAME_UNAVAILABLE'].includes(code)) {
         sessionStorage.removeItem(storageKey);
         setSession(null);
       }
@@ -76,6 +79,7 @@ export default function Step3() {
   async function startVerification() {
     setStatus('starting');
     setMessage('');
+    setErrorCode('');
     setVerified(null);
     try {
       const { data } = await api.post('/verification/identity/session', {}, { timeout: 25000 });
@@ -86,6 +90,7 @@ export default function Step3() {
       window.location.assign(data.url);
     } catch (err) {
       if (err.response?.data?.code === 'ALREADY_SUBMITTED') return finishSubmission();
+      setErrorCode(err.response?.data?.code || '');
       setStatus('failed');
       setMessage(err.response?.data?.message || 'Could not open verification. Please allow browser storage and try again.');
     }
@@ -100,10 +105,16 @@ export default function Step3() {
       toast.success('Verification submitted for review!');
       finishSubmission();
     } catch (err) {
+      const code = err.response?.data?.code;
+      setErrorCode(code || '');
       setMessage(err.response?.data?.message || 'Submission failed. Please try again.');
-      if (['VERIFICATION_EXPIRED', 'VERIFICATION_PENDING', 'DIDIT_NOT_APPROVED', 'DIDIT_CHECKS_INCOMPLETE', 'INVALID_VERIFICATION', 'APPLICATION_CHANGED'].includes(err.response?.data?.code)) {
+      if (['VERIFICATION_EXPIRED', 'VERIFICATION_PENDING', 'DIDIT_NOT_APPROVED', 'DIDIT_CHECKS_INCOMPLETE', 'INVALID_VERIFICATION', 'APPLICATION_CHANGED', 'ID_NAME_MISMATCH', 'ID_NAME_UNAVAILABLE', 'REGISTRATION_NAME_REQUIRED'].includes(code)) {
         setVerified(null);
         setStatus('failed');
+      }
+      if (code === 'ID_NAME_UNAVAILABLE') {
+        sessionStorage.removeItem(storageKey);
+        setSession(null);
       }
     } finally { setLoading(false); }
   }
@@ -118,16 +129,16 @@ export default function Step3() {
               <span className="font-extrabold text-xl text-primary">iRequestD</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-800">ID &amp; Face Verification</h1>
-            <p className="text-gray-500 text-sm mt-1">Step 3 of 3 — Identity Verification</p>
+            <p className="text-gray-500 text-sm mt-1">Step 2 of 2 — Identity Verification</p>
           </div>
-          <StepProgress current={3} />
+          <StepProgress current={2} total={2} />
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="card">
               {status === 'passed' ? (
                 <div className="text-center py-5">
                   <MdCheckCircle className="text-primary mx-auto mb-3" size={52} />
                   <h2 className="text-lg font-bold text-gray-800">Identity check completed</h2>
-                  <p className="text-gray-600 mt-2">Your ID, live selfie, and face match passed verification.</p>
+                  <p className="text-gray-600 mt-2">Your ID, live selfie, and face match passed verification. The name on your ID matches your registered full name.</p>
                   <dl className="mt-5 text-sm space-y-2">
                     <div><dt className="text-gray-500">Document</dt><dd className="font-semibold">{verified.idType}</dd></div>
                     {verified.idName && <div><dt className="text-gray-500">Name on ID</dt><dd className="font-semibold">{verified.idName}</dd></div>}
@@ -141,6 +152,7 @@ export default function Step3() {
                   <p className="text-sm text-gray-600 mt-2">Scan your ID and take a live selfie using the secure verification service. These images are processed to check your identity. Once complete, return here to submit for barangay review.</p>
                   <ol className="list-decimal pl-5 text-sm text-gray-600 space-y-2 my-5">
                     <li>Have your government-issued photo ID ready.</li>
+                    <li>The name on your ID must match the full name you entered in Step 1.</li>
                     <li>Allow camera access and follow the instructions.</li>
                     <li>Return here and select Submit for Review.</li>
                   </ol>
@@ -161,9 +173,12 @@ export default function Step3() {
                 </div>
               )}
               {message && <p role="alert" className={`text-sm mt-4 ${status === 'pending' ? 'text-gray-600' : 'text-red-600'}`}>{message}</p>}
+              {['ID_NAME_MISMATCH', 'REGISTRATION_NAME_REQUIRED'].includes(errorCode) && (
+                <button type="button" onClick={() => navigate('/verify/step1')} disabled={busy} className="btn-outline mt-4 w-full">Edit full name in Step 1</button>
+              )}
             </div>
             <div className="flex gap-3">
-              <button type="button" onClick={() => navigate('/verify/step2')} disabled={busy} className="btn-outline flex-1">← Back</button>
+              <button type="button" onClick={() => navigate('/verify/step1')} disabled={busy} className="btn-outline flex-1">← Back</button>
               <button type="submit" disabled={busy || !verified?.verificationProof} className="btn-primary flex-1 flex items-center justify-center gap-2">
                 {loading ? <LoadingSpinner size="sm" /> : 'Submit for Review'}
               </button>

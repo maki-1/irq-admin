@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { passwordClipboardHandlers } from '../../utils/passwordClipboard';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { MdVisibility, MdVisibilityOff } from 'react-icons/md';
@@ -13,8 +14,7 @@ function getVerifyRoute(user) {
   if (user.verificationStatus === 'rejected') return '/verify/step1';
   const step = user.verificationStep ?? 0;
   if (step === 0) return '/verify/step1';
-  if (step === 1) return '/verify/step2';
-  if (step === 2) return '/verify/step3';
+  if (step === 1 || step === 2) return '/verify/step3';
   return '/verify/waiting';
 }
 
@@ -113,6 +113,7 @@ export default function Login() {
                 <input
                   {...register('password', { required: 'Password is required' })}
                   type={showPw ? 'text' : 'password'}
+                  {...passwordClipboardHandlers}
                   className="input-field pr-12"
                   placeholder="Enter your password"
                   autoComplete="current-password"

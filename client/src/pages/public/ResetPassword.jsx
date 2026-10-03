@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import PasswordStrengthMeter from '../../components/common/PasswordStrengthMeter';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { passwordClipboardHandlers } from '../../utils/passwordClipboard';
 
 export default function ResetPassword() {
   const { state } = useLocation();
@@ -65,6 +66,7 @@ export default function ResetPassword() {
                     },
                   })}
                   type={showPw ? 'text' : 'password'}
+                  {...passwordClipboardHandlers}
                   className="input-field pr-12"
                   placeholder="New password"
                   autoComplete="new-password"
@@ -83,6 +85,7 @@ export default function ResetPassword() {
               <input
                 {...register('confirmPassword', { required: 'Required' })}
                 type="password"
+                {...passwordClipboardHandlers}
                 className="input-field"
                 placeholder="Re-enter new password"
                 autoComplete="new-password"

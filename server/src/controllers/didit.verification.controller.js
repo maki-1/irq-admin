@@ -32,9 +32,11 @@ async function currentProfile(resident, profileId) {
   if (resident.isVerified || reviewStatuses.has(String(profile.status).toLowerCase())) {
     throw didit.verificationError('ALREADY_SUBMITTED', 'Your application has already been submitted for review.', 409);
   }
-  if (resident.verificationStep !== 2) {
-    throw didit.verificationError('EARLIER_STEPS_REQUIRED', 'Complete steps 1 and 2 before verifying your identity.', 409);
+  // Stage 2 is retained for residents who used the former education step.
+  if (![1, 2].includes(resident.verificationStep)) {
+    throw didit.verificationError('EARLIER_STEPS_REQUIRED', 'Complete your personal information before verifying your identity.', 409);
   }
+  didit.requireRegisteredName(profile.fullName);
   return profile;
 }
 
@@ -47,10 +49,10 @@ function callbackOrigin(req) {
   return origin;
 }
 
-async function verifiedResult(payload, resident) {
+async function verifiedResult(payload, resident, profile) {
   return didit.assessDecision(await didit.getDecision(payload.sessionId), {
     sessionId: payload.sessionId, workflowId: payload.workflowId,
-    residentId: resident.id, profileId: payload.profileId,
+    residentId: resident.id, profileId: payload.profileId, fullName: profile.fullName,
   });
 }
 
@@ -73,8 +75,8 @@ exports.start = async (req, res) => {
 exports.complete = async (req, res) => {
   try {
     const payload = readToken(req.body?.resumeToken, 'didit-session', req.resident);
-    await currentProfile(req.resident, payload.profileId);
-    const result = await verifiedResult(payload, req.resident);
+    const profile = await currentProfile(req.resident, payload.profileId);
+    const result = await verifiedResult(payload, req.resident, profile);
     if (result.status === 'pending') {
       return res.status(202).json({ status: 'pending', message: result.providerStatus === 'In Review'
         ? 'Your identity check is being reviewed. You can return here and check the result later.'
@@ -105,8 +107,8 @@ exports.submit = async (req, res) => {
         reviewStatuses.has(String(profile.status).toLowerCase())) {
       return res.json({ message: 'Verification already submitted for review', step: 3 });
     }
-    await currentProfile(req.resident, payload.profileId);
-    const result = await verifiedResult(payload, req.resident);
+    const current = await currentProfile(req.resident, payload.profileId);
+    const result = await verifiedResult(payload, req.resident, current);
     if (result.status !== 'approved') {
       return res.status(409).json({ code: 'VERIFICATION_PENDING', message: 'Your identity check is still being processed. Please check the result again.' });
     }
@@ -118,13 +120,16 @@ exports.submit = async (req, res) => {
     ]);
     await prisma.$transaction(async (tx) => {
       const changed = await tx.user.updateMany({
-        where: { id: req.resident.id, verificationStep: 2, isVerified: false,
+        where: { id: req.resident.id, verificationStep: { in: [1, 2] }, isVerified: false,
           active: true, deletedAt: null, sessionVersion: payload.sessionVersion },
         data: { verificationStep: 3, verificationStatus: 'pending' },
       });
       if (changed.count !== 1) throw didit.verificationError('APPLICATION_CHANGED', 'Your application has changed. Reload this page to see its current status.', 409);
       const saved = await tx.verificationProfile.updateMany({
         where: { id: payload.profileId, userId: req.resident.id,
+          // A concurrent Step 1 edit must not swap in a different name after
+          // the provider check but before this application is submitted.
+          fullName: current.fullName,
           status: { notIn: ['pending', 'Pending', 'under review', 'approved', 'Approved'] } },
         data: {
           idType: result.idType, idName: result.idName, idFront, idBack, facePhoto,
