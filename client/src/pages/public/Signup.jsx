@@ -183,7 +183,7 @@ export default function Signup() {
                   })}
                   type={showPw ? 'text' : 'password'}
                   {...passwordClipboardHandlers}
-                  className="input-field pr-12"
+                  className="input-field password-toggle-input pr-12"
                   placeholder="Min 8 chars, uppercase, digit, special"
                   autoComplete="new-password"
                 />

@@ -114,7 +114,7 @@ export default function Login() {
                   {...register('password', { required: 'Password is required' })}
                   type={showPw ? 'text' : 'password'}
                   {...passwordClipboardHandlers}
-                  className="input-field pr-12"
+                  className="input-field password-toggle-input pr-12"
                   placeholder="Enter your password"
                   autoComplete="current-password"
                   onCopy={e => e.preventDefault()}
