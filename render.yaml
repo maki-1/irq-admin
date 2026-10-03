@@ -12,6 +12,11 @@ services:
       # when accepting sessions issued by either service.
       - key: JWT_SECRET
         sync: false
+      # Didit Free KYC workflow: ID verification, passive liveness, face match.
+      - key: DIDIT_API_KEY
+        sync: false
+      - key: DIDIT_WORKFLOW_ID
+        sync: false
       # The admin site hosts the public email approval page.
       - key: PORTAL_URL
         value: https://www.irq-dologon.com

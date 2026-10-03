@@ -9,6 +9,7 @@ import {
 import api from '../../services/api';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
 import ResidentContactDetails from '../../components/residents/ResidentContactDetails';
+import DiditVerificationSummary from '../../components/residents/DiditVerificationSummary';
 import useAuthStore from '../../store/authStore';
 import { exportReportXLSX } from '../../utils/reportExport';
 
@@ -288,6 +289,8 @@ function ReviewModal({ profile, onClose, onSave, onReset, onDisable, onDelete, o
               <InfoRow icon={FiCreditCard}label="Name on ID"         value={profile.idName} />
             </div>
           </div>
+
+          <DiditVerificationSummary result={profile.aiVerification} />
 
           {/* Uploaded documents */}
           {(() => {

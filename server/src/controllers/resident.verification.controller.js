@@ -1,10 +1,6 @@
 const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
-const jwt        = require('jsonwebtoken');
 const { listPuroks, isKnownPurok } = require('../../lib/purokFee');
-const { verifyIdentity }      = require('../utils/groqVerify');
-const { azureVerifyIdentity } = require('../utils/azureFaceVerify');
-const { createQuickLink, getLivenessResult, passedLiveness } = require('../utils/azureLiveness');
 
 /* ── GET /api/verification/puroks ────────────────────────── */
 exports.getPuroks = async (req, res) => {
@@ -33,52 +29,6 @@ const upsertProfile = (userId, data) =>
     create: { userId, ...data },
     update: data,
   });
-
-const livenessSecret = () => process.env.LIVENESS_SESSION_SECRET || process.env.JWT_SECRET;
-
-function allowedPortalOrigin(req) {
-  const origin = req.get('origin');
-  const allowed = (process.env.CLIENT_URL || '').split(',').map((item) => item.trim());
-  if (!origin || !allowed.includes(origin)) throw new Error('Unrecognized portal origin');
-  return origin;
-}
-
-exports.startLiveness = async (req, res) => {
-  try {
-    const secret = livenessSecret();
-    if (!secret) return res.status(503).json({ message: 'Secure face check is not configured' });
-    const origin = allowedPortalOrigin(req);
-    const { sessionId, url } = await createQuickLink(`${origin}/verify/step3?liveness=return`);
-    const resumeToken = jwt.sign({ purpose: 'liveness-session', sub: req.resident.id, sessionId }, secret, { expiresIn: '10m' });
-    res.json({ url, resumeToken });
-  } catch (err) {
-    console.error('Liveness session error:', err.response?.data || err.message);
-    res.status(503).json({ message: 'Secure face check is unavailable. Please try again later.' });
-  }
-};
-
-exports.completeLiveness = async (req, res) => {
-  try {
-    const secret = livenessSecret();
-    if (!secret) return res.status(503).json({ message: 'Secure face check is not configured' });
-    const payload = jwt.verify(req.body?.resumeToken, secret);
-    if (payload.purpose !== 'liveness-session' || payload.sub !== req.resident.id || !payload.sessionId) {
-      return res.status(403).json({ message: 'Invalid liveness session' });
-    }
-    const result = await getLivenessResult(payload.sessionId);
-    if (!passedLiveness(result)) {
-      return res.status(422).json({ message: 'We could not confirm a live face. Please try the secure face check again.' });
-    }
-    const livenessProof = jwt.sign({ purpose: 'liveness-passed', sub: req.resident.id, sessionId: payload.sessionId }, secret, { expiresIn: '10m' });
-    res.json({ livenessProof });
-  } catch (err) {
-    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-      return res.status(403).json({ message: 'Your secure face check expired. Please start again.' });
-    }
-    console.error('Liveness result error:', err.response?.data || err.message);
-    res.status(503).json({ message: 'Could not verify the secure face check yet. Please try again.' });
-  }
-};
 
 /* ── POST /api/verification/step1 ───────────────────────── */
 exports.step1 = async (req, res) => {
@@ -195,106 +145,6 @@ exports.step2 = async (req, res) => {
     await prisma.user.update({ where: { id: userId }, data: { verificationStep: 2 } });
 
     res.json({ message: 'Step 2 saved', step: 2 });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-/* ── POST /api/verification/step3 ───────────────────────── */
-exports.step3 = async (req, res) => {
-  try {
-    const userId = req.resident.id;
-    const {
-      idType, idName,
-      secondaryIdType, secondaryIdName,
-      secondaryId2Type, secondaryId2Name,
-      livenessProof,
-    } = req.body;
-
-    if (!idType || !req.files?.idFront?.[0]) {
-      return res.status(400).json({ message: 'Primary ID type and front photo are required' });
-    }
-    if (!req.files?.facePhoto?.[0]) {
-      return res.status(400).json({ message: 'Face photo is required' });
-    }
-    try {
-      const proof = jwt.verify(livenessProof, livenessSecret());
-      if (proof.purpose !== 'liveness-passed' || proof.sub !== userId) throw new Error('Invalid liveness proof');
-    } catch {
-      return res.status(403).json({ message: 'A completed secure face check is required before submission' });
-    }
-
-    const [idFrontUrl, facePhotoUrl] = await Promise.all([
-      uploadBuffer(req.files.idFront[0].buffer, 'irequestd/ids'),
-      uploadBuffer(req.files.facePhoto[0].buffer, 'irequestd/faces'),
-    ]);
-
-    let idBackUrl = null;
-    if (req.files?.idBack?.[0]) {
-      idBackUrl = await uploadBuffer(req.files.idBack[0].buffer, 'irequestd/ids');
-    }
-
-    let secondaryIdFrontUrl = null;
-    let secondaryId2FrontUrl = null;
-    if (req.files?.secondaryIdFront?.[0]) {
-      secondaryIdFrontUrl = await uploadBuffer(req.files.secondaryIdFront[0].buffer, 'irequestd/ids');
-    }
-    if (req.files?.secondaryId2Front?.[0]) {
-      secondaryId2FrontUrl = await uploadBuffer(req.files.secondaryId2Front[0].buffer, 'irequestd/ids');
-    }
-
-    // Run Groq (doc validity) + Azure Face (face match) in parallel — non-blocking
-    let aiVerification = null;
-    try {
-      const [groqResult, azureResult] = await Promise.allSettled([
-        verifyIdentity(facePhotoUrl, idFrontUrl),
-        azureVerifyIdentity(facePhotoUrl, idFrontUrl),
-      ]);
-
-      aiVerification = { checkedAt: new Date().toISOString() };
-
-      if (groqResult.status === 'fulfilled') {
-        Object.assign(aiVerification, groqResult.value);
-      } else {
-        console.error('Groq verification error:', groqResult.reason?.message);
-      }
-
-      if (azureResult.status === 'fulfilled') {
-        aiVerification.azureIsIdentical = azureResult.value.isIdentical;
-        aiVerification.azureConfidence  = azureResult.value.confidence;
-        aiVerification.azureError       = azureResult.value.error || null;
-      } else {
-        console.error('Azure Face error:', azureResult.reason?.message);
-        aiVerification.azureError = azureResult.reason?.message || 'Azure check failed';
-      }
-    } catch (aiErr) {
-      console.error('Verification error:', aiErr.message);
-    }
-
-    const updateData = {
-      idType,
-      idName: idName || idType,
-      idFront: idFrontUrl,
-      facePhoto: facePhotoUrl,
-      status: 'Pending',
-      ...(aiVerification && { aiVerification }),
-      ...(idBackUrl && { idBack: idBackUrl }),
-      ...(secondaryIdType && { secondaryIdType }),
-      ...(secondaryIdName && { secondaryIdName }),
-      ...(secondaryIdFrontUrl && { secondaryIdFront: secondaryIdFrontUrl }),
-      ...(secondaryId2Type && { secondaryId2Type }),
-      ...(secondaryId2Name && { secondaryId2Name }),
-      ...(secondaryId2FrontUrl && { secondaryId2Front: secondaryId2FrontUrl }),
-    };
-
-    await upsertProfile(userId, updateData);
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { verificationStep: 3, verificationStatus: 'pending' },
-    });
-
-    res.json({ message: 'Verification submitted for review', step: 3 });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

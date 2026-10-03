@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Mobile start screen and Didit redirect",
+    "passed": true
+  },
+  {
+    "name": "Server approval overrides callback text; submit clears resume state",
+    "passed": true
+  },
+  {
+    "name": "Pending cannot submit even with Approved callback; manual retry succeeds",
+    "passed": true
+  },
+  {
+    "name": "Expired resume permits a new check",
+    "passed": true
+  },
+  {
+    "name": "Missing resume token explains recovery and does not trust callback",
+    "passed": true
+  },
+  {
+    "name": "Refresh restores result; failed submission can be retried",
+    "passed": true
+  },
+  {
+    "name": "Barangay Captain sees verified document checks",
+    "passed": true
+  },
+  {
+    "name": "Secretary sees verified document checks",
+    "passed": true
+  }
+]

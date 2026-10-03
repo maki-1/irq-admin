@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fi';
 import api from '../../services/api';
 import SecretaryLayout from '../../components/layouts/SecretaryLayout';
+import DiditVerificationSummary from '../../components/residents/DiditVerificationSummary';
 import useAuthStore from '../../store/authStore';
 import { exportReportXLSX } from '../../utils/reportExport';
 
@@ -286,6 +287,8 @@ function ReviewModal({ profile, onClose, onSave, onReset, onDisable, onDelete })
               <InfoRow icon={FiCreditCard}label="Name on ID"         value={profile.idName} />
             </div>
           </div>
+
+          <DiditVerificationSummary result={profile.aiVerification} />
 
           {/* Uploaded documents */}
           {(() => {

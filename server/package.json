@@ -7,7 +7,8 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "test": "node --test test/*.test.cjs",
-    "check:approval-email": "node scripts/check-approval-email.cjs"
+    "check:approval-email": "node scripts/check-approval-email.cjs",
+    "check:didit": "node scripts/check-didit.cjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
