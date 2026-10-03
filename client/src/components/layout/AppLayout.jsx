@@ -3,6 +3,7 @@ import { MdDashboard, MdArticle, MdAddCircle, MdPerson, MdLogout } from 'react-i
 import useAuthStore from '../../store/authStore';
 import Logo from '../common/Logo';
 import toast from 'react-hot-toast';
+import RequestRejectionNotice from '../common/RequestRejectionNotice';
 
 const NAV_ITEMS = [
   { to: '/dashboard', icon: MdDashboard, label: 'Dashboard' },
@@ -69,6 +70,7 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-forest-deep lg:p-5">
+      <RequestRejectionNotice key={user?.id || user?._id} residentId={user?.id || user?._id} />
       <div className="min-h-screen lg:min-h-[calc(100vh-2.5rem)] flex flex-col md:flex-row bg-mint lg:rounded-[28px] lg:overflow-hidden lg:shadow-frame">
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex flex-col w-64 shrink-0 sticky top-0 h-screen lg:h-auto lg:min-h-full bg-gradient-to-b from-forest-700 via-forest to-forest-deep px-4 py-6 overflow-y-auto">

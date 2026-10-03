@@ -43,6 +43,9 @@ function CreateModal({ onClose, onCreated }) {
       toast.error('All fields are required.'); return;
     }
     if (form.password.length < 6) { toast.error('Password must be at least 6 characters.'); return; }
+    if (form.contactNumber && !/^09\d{9}$/.test(form.contactNumber)) {
+      toast.error('Contact number must contain exactly 11 digits and start with 09.'); return;
+    }
     if (form.role === 'Purok Leader' && !form.purok) { toast.error('Select a purok for this leader.'); return; }
     // A Purok Leader needs a way to be reached for SMS approvals.
     if (form.role === 'Purok Leader' && !form.contactNumber && !form.notifyEmail) {
@@ -165,8 +168,10 @@ function CreateModal({ onClose, onCreated }) {
             </label>
             <input
               type="tel"
+              inputMode="numeric"
+              maxLength={11}
               value={form.contactNumber}
-              onChange={(e) => set('contactNumber', e.target.value.replace(/\D/g, ''))}
+              onChange={(e) => set('contactNumber', e.target.value.replace(/\D/g, '').slice(0, 11))}
               placeholder="e.g. 09171234567"
               className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
               style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: '#333' }}
@@ -224,6 +229,9 @@ function EditModal({ target, onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!form.fullName.trim()) { toast.error('Full name is required.'); return; }
+    if (form.contactNumber && !/^09\d{9}$/.test(form.contactNumber)) {
+      toast.error('Contact number must contain exactly 11 digits and start with 09.'); return;
+    }
     if (isLeader && !form.contactNumber && !form.notifyEmail) {
       toast.error('A Purok Leader needs a contact number (for SMS approvals) or a notify email.'); return;
     }
@@ -248,8 +256,10 @@ function EditModal({ target, onClose, onSaved }) {
       </label>
       <input
         type={opts.type || 'text'}
+        inputMode={key === 'contactNumber' ? 'numeric' : undefined}
+        maxLength={key === 'contactNumber' ? 11 : undefined}
         value={form[key]}
-        onChange={(e) => set(key, key === 'contactNumber' ? e.target.value.replace(/\D/g, '') : e.target.value)}
+        onChange={(e) => set(key, key === 'contactNumber' ? e.target.value.replace(/\D/g, '').slice(0, 11) : e.target.value)}
         placeholder={opts.placeholder || ''}
         className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
         style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: '#333' }}

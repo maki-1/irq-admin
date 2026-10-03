@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { FiCheckCircle, FiXCircle, FiX, FiDownload, FiFilter } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiX, FiDownload, FiFilter, FiRotateCcw } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import PurokLeaderLayout from '../../components/layouts/PurokLeaderLayout';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import { exportReportPDF, exportReportXLSX } from '../../utils/reportExport';
 
-const TABS     = ['Pending', 'Approved', 'Rejected'];
+const TABS     = ['Pending', 'Approved', 'Archive'];
 const PAGE_SIZE = 10;
 
 const STATUS_STYLE = {
@@ -33,7 +33,7 @@ function ActionModal({ request, action, onClose, onDone }) {
     setSaving(true);
     try {
       await api.patch(`/purok-leader/requests/${request._id}/${action}`, { remarks });
-      toast.success(`Request ${action}d`);
+      toast.success(action === 'restore' ? 'Request restored to Pending' : action === 'reject' ? 'Request rejected and archived' : 'Request approved');
       onDone();
       onClose();
     } catch (err) {
@@ -44,6 +44,7 @@ function ActionModal({ request, action, onClose, onDone }) {
   }
 
   const isApprove = action === 'approve';
+  const isRestore = action === 'restore';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -52,8 +53,8 @@ function ActionModal({ request, action, onClose, onDone }) {
       <div className="w-full max-w-sm rounded-3xl overflow-y-auto max-h-[90dvh]"
         style={{ background: '#FFFFFF', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F0EAEA' }}>
-          <p style={{ fontFamily: "'Kaisei Decol', serif", color: isApprove ? '#156D07' : '#DC2626', fontSize: 18 }}>
-            {isApprove ? 'Approve Request' : 'Reject Request'}
+          <p style={{ fontFamily: "'Kaisei Decol', serif", color: isApprove || isRestore ? '#156D07' : '#DC2626', fontSize: 18 }}>
+            {isRestore ? 'Restore Request' : isApprove ? 'Approve Request' : 'Reject Request'}
           </p>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100">
             <FiX size={18} color="#827575" />
@@ -64,6 +65,9 @@ function ActionModal({ request, action, onClose, onDone }) {
           <p style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#555', fontSize: 13, marginBottom: 12 }}>
             <strong>{request.profile?.fullName || request.user?.username}</strong> — {request.documentType}
           </p>
+          {isRestore ? (
+            <p className="text-sm text-gray-600">This request will return to Pending so you can review it again.</p>
+          ) : <>
           <label style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13, display: 'block', marginBottom: 6 }}>
             Remarks {!isApprove && <span style={{ color: '#DC2626' }}>*</span>}
           </label>
@@ -75,6 +79,7 @@ function ActionModal({ request, action, onClose, onDone }) {
             className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none resize-none"
             style={{ fontFamily: "'Hanken Grotesk', sans-serif", background: '#F9F7F7', border: '1px solid #E8E0E0', color: '#333' }}
           />
+          </>}
         </div>
 
         <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #F0EAEA' }}>
@@ -82,10 +87,10 @@ function ActionModal({ request, action, onClose, onDone }) {
             style={{ fontFamily: "'Hahmlet', sans-serif", color: '#827575', background: '#F5F0F0' }}>
             Cancel
           </button>
-          <button onClick={confirm} disabled={saving || (!isApprove && !remarks.trim())}
+          <button onClick={confirm} disabled={saving || (action === 'reject' && !remarks.trim())}
             className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60"
-            style={{ fontFamily: "'Hahmlet', sans-serif", background: isApprove ? '#156D07' : '#DC2626' }}>
-            {saving ? 'Saving…' : isApprove ? 'Approve' : 'Reject'}
+            style={{ fontFamily: "'Hahmlet', sans-serif", background: isApprove || isRestore ? '#156D07' : '#DC2626' }}>
+            {saving ? 'Saving…' : isRestore ? 'Restore' : isApprove ? 'Approve' : 'Reject'}
           </button>
         </div>
       </div>
@@ -122,7 +127,7 @@ export default function PurokLeaderRequests() {
   const docTypes = [...new Set(requests.map((r) => r.documentType).filter(Boolean))];
 
   const filtered = requests.filter((r) => {
-    const matchTab    = r.purokLeaderStatus?.toLowerCase() === tab.toLowerCase();
+    const matchTab    = r.purokLeaderStatus?.toLowerCase() === (tab === 'Archive' ? 'rejected' : tab.toLowerCase());
     const name        = (r.profile?.fullName || r.user?.username || '').toLowerCase();
     const matchSearch = !search ||
       name.includes(search.toLowerCase()) ||
@@ -178,7 +183,7 @@ export default function PurokLeaderRequests() {
           request={modal.request}
           action={modal.action}
           onClose={() => setModal(null)}
-          onDone={load}
+          onDone={() => { if (modal.action === 'restore') setTab('Pending'); load(); }}
         />
       )}
 
@@ -236,6 +241,10 @@ export default function PurokLeaderRequests() {
         })}
       </div>
 
+      {tab === 'Archive' && (
+        <p className="text-sm text-gray-600 mb-4">Rejected requests are kept here. Restore a request to return it to Pending for another review.</p>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -244,7 +253,7 @@ export default function PurokLeaderRequests() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#A18D8D', fontSize: 16 }}>
-            No {tab.toLowerCase()} requests
+            {tab === 'Archive' ? 'No archived requests' : `No ${tab.toLowerCase()} requests`}
           </p>
         </div>
       ) : (
@@ -299,6 +308,12 @@ export default function PurokLeaderRequests() {
                       <FiXCircle size={14} /> Reject
                     </button>
                   </div>
+                )}
+                {r.purokLeaderStatus?.toLowerCase() === 'rejected' && (
+                  <button onClick={() => setModal({ request: r, action: 'restore' })}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold text-green-800 bg-green-50">
+                    <FiRotateCcw size={14} /> Restore
+                  </button>
                 )}
               </div>
             ))}
@@ -374,6 +389,11 @@ export default function PurokLeaderRequests() {
                               <FiXCircle size={12} /> Reject
                             </button>
                           </div>
+                        ) : r.purokLeaderStatus?.toLowerCase() === 'rejected' ? (
+                          <button onClick={() => setModal({ request: r, action: 'restore' })}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-green-800 bg-green-50">
+                            <FiRotateCcw size={12} /> Restore
+                          </button>
                         ) : (
                           <span className="text-xs" style={{ color: '#C0B0B0' }}>—</span>
                         )}

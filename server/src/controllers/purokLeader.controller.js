@@ -247,3 +247,49 @@ exports.rejectRequest = async (req, res) => {
     res.status(err.code === 'P2025' ? 409 : 500).json({ message: err.code === 'P2025' ? 'This request was already decided. Refresh the queue.' : err.message });
   }
 };
+
+/* PATCH /api/purok-leader/requests/:id/restore
+ * Rejected requests form the archive; restoring reopens the same request.
+ */
+exports.restoreRequest = async (req, res) => {
+  try {
+    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
+    const userIds = await getUserIdsForPurok(req.user.purok);
+    const where = {
+      id: req.params.id,
+      userId: { in: userIds },
+      purokLeaderStatus: 'rejected',
+      status: 'Rejected',
+      completedDocuments: { none: {} },
+    };
+    const request = await prisma.$transaction(async (tx) => {
+      const archived = await tx.request.findFirst({ where });
+      if (!archived) return null;
+      const updated = await tx.request.update({
+        where,
+        data: {
+          status: 'Pending',
+          purokLeaderStatus: 'pending',
+          purokLeaderBy: null,
+          purokLeaderAt: null,
+          purokLeaderApprovedAt: null,
+          purokLeaderRemarks: '',
+          purokClearanceFee: 0,
+        },
+        include: { user: { select: { id: true, username: true, email: true } } },
+      });
+      await auditLog({
+        user: req.user,
+        action: 'Purok Leader Restore Request',
+        details: `Request ${updated.id} (${updated.documentType}) restored to Pending by ${req.user.fullName}. Previous rejection reason: ${archived.purokLeaderRemarks || 'none'}`,
+      }, tx);
+      return updated;
+    });
+    if (!request) return res.status(404).json({ message: 'Rejected request not found or can no longer be restored.' });
+    res.json(toApi(shapeRequest(request)));
+  } catch (err) {
+    res.status(err.code === 'P2025' ? 409 : 500).json({
+      message: err.code === 'P2025' ? 'This request has changed. Refresh the archive.' : err.message,
+    });
+  }
+};

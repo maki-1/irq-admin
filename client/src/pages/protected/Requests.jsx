@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MdContentCopy, MdPayment } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -183,7 +184,10 @@ function RequestCard({ request }) {
 
 /* ── Main Page ───────────────────────────────────────────── */
 export default function Requests() {
-  const [tab, setTab]           = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabNames = ['active', 'rejected', 'ready', 'claimed'];
+  const tab = Math.max(0, tabNames.indexOf(searchParams.get('tab')));
+  const setTab = (index) => setSearchParams({ tab: tabNames[index] });
   const [requests, setRequests] = useState([]);
   const [completed, setCompleted] = useState([]);
   const [loading, setLoading]   = useState(true);

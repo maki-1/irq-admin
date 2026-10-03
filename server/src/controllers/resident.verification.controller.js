@@ -1,6 +1,7 @@
 const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
 const { listPuroks, isKnownPurok } = require('../../lib/purokFee');
+const { validateBirthday } = require('../../lib/birthday');
 
 /* ── GET /api/verification/puroks ────────────────────────── */
 exports.getPuroks = async (req, res) => {
@@ -39,7 +40,7 @@ exports.step1 = async (req, res) => {
       birthday, gender, civilStatus, yearsAtAddress,
       purok, houseNo, street, barangay, city,
       motherName, fatherName,
-      isPwd, isSenior, isIndigent, age,
+      isPwd, isIndigent,
       isSoloParent, isIndigenousPeople, isPregnant, isNonResident, ethnicGroup,
     } = req.body;
 
@@ -48,6 +49,9 @@ exports.step1 = async (req, res) => {
     if (!firstName || !lastName || !birthday || !gender || !street || !barangay || !city) {
       return res.status(400).json({ message: 'Required fields are missing' });
     }
+
+    const birth = validateBirthday(birthday);
+    if (birth.error) return res.status(400).json({ message: birth.error });
 
     // Purok decides the clearance fee and which Purok Leader reviews the
     // request, so it is validated against the configured list rather than
@@ -77,8 +81,8 @@ exports.step1 = async (req, res) => {
 
     const profileData = {
       fullName,
-      birthday: birthday ? new Date(birthday) : null,
-      age: Number(age) || null,
+      birthday: birth.date,
+      age: birth.age,
       gender,
       civilStatus,
       yearsAtAddress: Number(yearsAtAddress) || 0,
@@ -87,7 +91,7 @@ exports.step1 = async (req, res) => {
       motherName: motherName ?? '',
       fatherName: fatherName ?? '',
       isPwd: asBool(isPwd),
-      isSenior: asBool(isSenior),
+      isSenior: birth.age >= 60,
       isIndigent: asBool(isIndigent),
       isSoloParent: asBool(isSoloParent),
       isIndigenousPeople: asBool(isIndigenousPeople),

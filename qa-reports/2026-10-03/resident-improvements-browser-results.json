@@ -1,0 +1,33 @@
+{
+  "localOnly": true,
+  "results": [
+    {
+      "name": "Birthday picker rejects future dates and permits today in Philippine time",
+      "passed": true
+    },
+    {
+      "name": "Admin create/edit contact allows only 11 numeric digits",
+      "passed": true
+    },
+    {
+      "name": "Purok archive restore, conflict handling and re-rejection at 1280px",
+      "passed": true
+    },
+    {
+      "name": "Purok archive restore, conflict handling and re-rejection at 390px",
+      "passed": true
+    },
+    {
+      "name": "Resident popup shows reason, focuses actions, opens Rejected and persists acknowledgment",
+      "passed": true
+    },
+    {
+      "name": "Resident polling catches new rejection, closes restored notice and shows a later rejection again",
+      "passed": true
+    },
+    {
+      "name": "Multiple rejection notices are individually acknowledged with a fallback reason",
+      "passed": true
+    }
+  ]
+}

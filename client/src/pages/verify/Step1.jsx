@@ -36,15 +36,11 @@ export default function Step1() {
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const birthday = watch('birthday');
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Manila' });
 
   function calcAge(dob) {
-    if (!dob) return null;
-    const today = new Date();
-    const birth = new Date(dob);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-    return age;
+    if (!dob || dob > today) return null;
+    return Number(today.slice(0, 4)) - Number(dob.slice(0, 4)) - (today.slice(5) < dob.slice(5) ? 1 : 0);
   }
 
   const age = calcAge(birthday);
@@ -135,7 +131,10 @@ export default function Step1() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Birthday</label>
-                <input {...register('birthday', { required: 'Required' })} type="date" className="input-field" />
+                <input {...register('birthday', {
+                  required: 'Required',
+                  validate: (value) => value <= new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Manila' }) || 'Birthday cannot be later than today.',
+                })} type="date" max={today} className="input-field" />
                 {errors.birthday && <p className="text-red-500 text-xs mt-1">{errors.birthday.message}</p>}
               </div>
               <div>

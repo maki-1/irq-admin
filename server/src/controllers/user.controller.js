@@ -95,7 +95,7 @@ exports.updateUser = async (req, res) => {
     const data = {};
     if (fullName !== undefined) data.fullName = String(fullName).trim();
     if (purok !== undefined) data.purok = purok || '';
-    const contacts = notificationContact({ contactNumber, notifyEmail });
+    const contacts = notificationContact({ contactNumber, notifyEmail }, { localOnly: true });
     if (contacts.error) return res.status(400).json({ message: contacts.error });
     Object.assign(data, contacts.data);
     if (Object.keys(data).length === 0) {
@@ -148,7 +148,7 @@ exports.createUser = async (req, res) => {
                  'they cannot be alerted to pending approvals otherwise.',
       });
     }
-    const contacts = notificationContact({ contactNumber, notifyEmail });
+    const contacts = notificationContact({ contactNumber, notifyEmail }, { localOnly: true });
     if (contacts.error) return res.status(400).json({ message: contacts.error });
     if (role === 'Purok Leader' && !contacts.data.contactNumber && !contacts.data.notifyEmail) {
       return res.status(400).json({ message: 'A Purok Leader needs a contact number or a notification email.' });

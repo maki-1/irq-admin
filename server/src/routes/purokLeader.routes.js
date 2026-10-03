@@ -9,5 +9,6 @@ router.get('/residents',              ctrl.getResidents);
 router.get('/requests',               ctrl.getRequests);
 router.patch('/requests/:id/approve', ctrl.approveRequest);
 router.patch('/requests/:id/reject',  ctrl.rejectRequest);
+router.patch('/requests/:id/restore', ctrl.restoreRequest);
 
 module.exports = router;
