@@ -15,7 +15,8 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     const isLoginRequest = err.config?.url?.includes('/auth/login');
-    if (err.response?.status === 401 && !isLoginRequest) {
+    const isApprovalLink = /^\/?purok-approve\//.test(err.config?.url || '');
+    if ((err.response?.status === 401 || err.response?.data?.code === 'ACCOUNT_DISABLED') && !isLoginRequest && !isApprovalLink && useAuthStore.getState().token) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }

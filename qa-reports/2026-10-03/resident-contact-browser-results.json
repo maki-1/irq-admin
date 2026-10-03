@@ -1,0 +1,25 @@
+{
+  "mode": "Local production bundle, headless Chrome, intercepted synthetic API",
+  "results": [
+    {
+      "name": "captain-contact-edit-1280",
+      "passed": true
+    },
+    {
+      "name": "captain-contact-edit-390",
+      "passed": true
+    },
+    {
+      "name": "contact-validation-duplicate-and-retry",
+      "passed": true
+    },
+    {
+      "name": "contact-stale-edit-reload",
+      "passed": true
+    },
+    {
+      "name": "secretary-contact-remains-read-only",
+      "passed": true
+    }
+  ]
+}

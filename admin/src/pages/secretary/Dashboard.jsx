@@ -58,9 +58,9 @@ export default function SecretaryDashboard() {
   const totalRes     = residentStats.total;
   const pendingRes   = residentStats.pending;
   const pendingDocs  = todayRequests.filter((r) => r.status?.toLowerCase() === 'pending').length;
-  const finishedDocs = todayRequests.filter((r) => r.status?.toLowerCase() === 'completed').length;
+  const finishedDocs = todayRequests.filter((r) => ['Ready for Pickup', 'Claimed'].includes(r.status)).length;
   const newReqs     = requests.filter((r) => r.status?.toLowerCase() === 'pending').slice(0, 5);
-  const readyPickup = releases.filter((r) => r.claimStatus !== 'claimed').slice(0, 10);
+  const readyPickup = releases.filter((r) => r.status === 'Ready for Pickup').slice(0, 10);
   const newResidents = approvedResidents;
 
   const firstName = user?.fullName?.split(' ')[0] || 'Secretary';

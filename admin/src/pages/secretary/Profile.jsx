@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   FiUser, FiMail, FiMapPin, FiBriefcase,
@@ -45,7 +46,8 @@ function Field({ label, icon: Icon, ...props }) {
 }
 
 export default function Profile() {
-  const { user, setAuth, token } = useAuthStore();
+  const { user, setAuth, token, logout } = useAuthStore();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     fullName: user?.fullName || '',
@@ -84,8 +86,10 @@ export default function Profile() {
     setSaving(true);
     try {
       await api.patch('/users/me', { currentPassword: pw.current, newPassword: pw.next });
-      toast.success('Password changed!');
+      toast.success('Password changed. Please sign in again.');
       setPw({ current: '', next: '', confirm: '' });
+      logout();
+      navigate('/login', { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to change password');
     } finally {

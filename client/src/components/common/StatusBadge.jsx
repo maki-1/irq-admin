@@ -4,7 +4,7 @@ const MAP = {
   'Under Review': 'status-processing',
   Processing: 'status-processing',
   Printing: 'status-processing',
-  Ready: 'status-ready',
+  'Ready for Pickup': 'status-ready',
   Rejected: 'status-rejected',
   Claimed: 'status-claimed',
 };

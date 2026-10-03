@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
+import BrowserProtection from './components/common/BrowserProtection';
 
 // Public
 import Landing from './pages/Landing';
@@ -51,6 +52,8 @@ export default function App() {
   const { user } = useAuthStore();
 
   return (
+    <>
+    <BrowserProtection />
     <Routes>
       {/* Public */}
       <Route
@@ -108,5 +111,6 @@ export default function App() {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
+    </>
   );
 }

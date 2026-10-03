@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 
-/* Public, session-less approval page reached from the Purok Leader's SMS.
-   The signed link in the URL (lid/exp/sig) is the only authorisation; the
+/* Public, session-less approval page reached from the Purok Leader's email.
+   The signed link in the URL (lid/exp/sig/v) is the only authorisation; the
    backend re-verifies it on every call and scopes everything to the leader's
    own purok. */
 
@@ -10,7 +10,7 @@ const GREEN = '#156D07';
 
 function params() {
   const q = new URLSearchParams(window.location.search);
-  return { lid: q.get('lid'), exp: q.get('exp'), sig: q.get('sig') };
+  return { lid: q.get('lid'), exp: q.get('exp'), sig: q.get('sig'), v: q.get('v') };
 }
 
 export default function PurokApprove() {

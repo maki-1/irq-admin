@@ -15,7 +15,8 @@ const DOC_STATUS_CFG = {
   pending:    { bg: '#FFF7ED', color: '#C2610A', label: 'Pending',    Icon: FiClock       },
   processing: { bg: '#EFF6FF', color: '#1D6DB5', label: 'Processing', Icon: FiLoader      },
   printing:   { bg: '#F5F3FF', color: '#6D28D9', label: 'Printing',   Icon: FiPrinter     },
-  completed:  { bg: '#F0FDF4', color: '#156D07', label: 'Completed',  Icon: FiCheckCircle },
+  'ready for pickup': { bg: '#F0FDF4', color: '#156D07', label: 'Ready for Pickup',  Icon: FiCheckCircle },
+  claimed:    { bg: '#F0FDF4', color: '#0F5132', label: 'Claimed', Icon: FiCheckCircle },
   rejected:   { bg: '#FFF1F2', color: '#BE123C', label: 'Rejected',   Icon: FiXCircle     },
 };
 
@@ -53,7 +54,7 @@ function PayBadge({ status }) {
   );
 }
 
-const DOC_STATUSES = ['All', 'Pending', 'Processing', 'Printing', 'Completed', 'Rejected'];
+const DOC_STATUSES = ['All', 'Pending', 'Processing', 'Printing', 'Ready for Pickup', 'Claimed', 'Rejected'];
 const PAGE_SIZE = 10;
 
 export default function SecretaryRequests() {
@@ -106,7 +107,7 @@ export default function SecretaryRequests() {
       if (norm(status) === 'processing') return -3;
       if (norm(status) === 'printing') return -2;
       if (norm(status) === 'pending') return -1;
-      if (norm(status) === 'completed') return 1;
+      if (['ready for pickup', 'claimed'].includes(norm(status))) return 1;
       if (norm(status) === 'rejected') return 2;
       return 3;
     };
@@ -309,7 +310,7 @@ export default function SecretaryRequests() {
 
                 <tbody>
                   {paged.map((req, idx) => {
-                    const isCompleted = norm(req.status) === 'completed';
+                    const isCompleted = ['ready for pickup', 'claimed'].includes(norm(req.status));
                     const isPaidOrFree = ['paid', 'free'].includes(norm(req.paymentStatus));
                     return (
                     <tr
@@ -380,11 +381,12 @@ export default function SecretaryRequests() {
                           );
                           if (!isPaidOrFree) return <div className="flex items-center gap-1.5"><span className="text-xs whitespace-nowrap" title="This request must be paid or marked free before processing." style={{ color: '#C2610A', fontFamily: "'Hanken Grotesk', sans-serif" }}>Waiting for payment</span>{rejectButton}</div>;
 
+                          if (norm(req.status) === 'claimed') return <span className="text-xs">Claimed</span>;
                           const actions = {
                             pending:    { label: 'Print document',   status: 'Printing' },
                             processing: { label: 'Print document',   status: 'Printing' },
-                            printing:   { label: 'Mark ready',       status: 'Completed' },
-                            completed:  { label: 'Reprint',          status: 'Reprint' },
+                            printing:   { label: 'Mark ready',       status: 'Ready for Pickup' },
+                            'ready for pickup': { label: 'Reprint',          status: 'Reprint' },
                           };
                           const action = actions[norm(req.status)];
                           return action ? (

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
+import BrowserProtection from './components/common/BrowserProtection';
 
 // Guards
 import PrivateRoute from './components/guards/PrivateRoute';
@@ -35,6 +36,8 @@ export default function App() {
   const { token, user } = useAuthStore();
 
   return (
+    <>
+    <BrowserProtection />
     <Routes>
       {/* ── Public routes ────────────────────────────────── */}
       <Route
@@ -74,5 +77,6 @@ export default function App() {
       {/* ── Fallback ─────────────────────────────────────── */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

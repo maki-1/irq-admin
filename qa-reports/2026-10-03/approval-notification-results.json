@@ -1,0 +1,255 @@
+{
+  "testedAt": "2026-10-03T07:15:05.359Z",
+  "liveSends": 0,
+  "realDatabaseWrites": 0,
+  "scope": "Provider and Prisma doubles, real sender/notification/controller modules, local HTTP requests; kiosk clearance verification and fee lookup stubbed.",
+  "total": 61,
+  "passed": 61,
+  "failed": 0,
+  "results": [
+    {
+      "name": "web: routes both channels to saved contact and Notify Email",
+      "passed": true
+    },
+    {
+      "name": "web: skips missing resident purok without sending",
+      "passed": true
+    },
+    {
+      "name": "web: skips missing leader without sending",
+      "passed": true
+    },
+    {
+      "name": "web: disabled leader receives no notifications",
+      "passed": true
+    },
+    {
+      "name": "web: login email is not used when Notify Email is blank",
+      "passed": true
+    },
+    {
+      "name": "web: SMS-only and email-only contacts work",
+      "passed": true
+    },
+    {
+      "name": "web: in-app failure does not block external channels",
+      "passed": true
+    },
+    {
+      "name": "web: SMS rejection does not block email",
+      "passed": true
+    },
+    {
+      "name": "web: SMTP rejection does not block SMS",
+      "passed": true
+    },
+    {
+      "name": "web: email contains a valid current-version approval link",
+      "passed": true
+    },
+    {
+      "name": "web: provider request uses E.164, sender ID and authentication",
+      "passed": true
+    },
+    {
+      "name": "web: SMS request has a bounded timeout",
+      "passed": true
+    },
+    {
+      "name": "web: provider failure is returned by sender",
+      "passed": true
+    },
+    {
+      "name": "web: missing sender ID blocks sending locally",
+      "passed": true
+    },
+    {
+      "name": "web: email escapes resident-supplied markup",
+      "passed": true
+    },
+    {
+      "name": "web: duplicate purok leaders do not silently lose reachable email",
+      "passed": true
+    },
+    {
+      "name": "web: all-channel failures are not reported as notified",
+      "passed": true
+    },
+    {
+      "name": "mobile: routes both channels to saved contact and Notify Email",
+      "passed": true
+    },
+    {
+      "name": "mobile: skips missing resident purok without sending",
+      "passed": true
+    },
+    {
+      "name": "mobile: skips missing leader without sending",
+      "passed": true
+    },
+    {
+      "name": "mobile: disabled leader receives no notifications",
+      "passed": true
+    },
+    {
+      "name": "mobile: login email is not used when Notify Email is blank",
+      "passed": true
+    },
+    {
+      "name": "mobile: SMS-only and email-only contacts work",
+      "passed": true
+    },
+    {
+      "name": "mobile: in-app failure does not block external channels",
+      "passed": true
+    },
+    {
+      "name": "mobile: SMS rejection does not block email",
+      "passed": true
+    },
+    {
+      "name": "mobile: SMTP rejection does not block SMS",
+      "passed": true
+    },
+    {
+      "name": "mobile: email contains a valid current-version approval link",
+      "passed": true
+    },
+    {
+      "name": "mobile: provider request uses E.164, sender ID and authentication",
+      "passed": true
+    },
+    {
+      "name": "mobile: SMS request has a bounded timeout",
+      "passed": true
+    },
+    {
+      "name": "mobile: provider failure is returned by sender",
+      "passed": true
+    },
+    {
+      "name": "mobile: missing sender ID blocks sending locally",
+      "passed": true
+    },
+    {
+      "name": "mobile: email escapes resident-supplied markup",
+      "passed": true
+    },
+    {
+      "name": "mobile: duplicate purok leaders do not silently lose reachable email",
+      "passed": true
+    },
+    {
+      "name": "mobile: all-channel failures are not reported as notified",
+      "passed": true
+    },
+    {
+      "name": "web: no signing secret falls back to a normal sign-in link",
+      "passed": true
+    },
+    {
+      "name": "approval: valid link lists only pending requests in assigned purok",
+      "passed": true
+    },
+    {
+      "name": "approval: approves request and records fee plus audit",
+      "passed": true
+    },
+    {
+      "name": "approval: rejects request and synchronizes resident status",
+      "passed": true
+    },
+    {
+      "name": "approval: repeated action returns conflict",
+      "passed": true
+    },
+    {
+      "name": "approval: another purok request cannot be approved",
+      "passed": true
+    },
+    {
+      "name": "approval: deactivated leader link is rejected",
+      "passed": true
+    },
+    {
+      "name": "approval: changed session version invalidates old link",
+      "passed": true
+    },
+    {
+      "name": "approval: wrong staff role is rejected",
+      "passed": true
+    },
+    {
+      "name": "approval: expired, tampered and incomplete links are rejected",
+      "passed": true
+    },
+    {
+      "name": "approval: malformed request and action are rejected",
+      "passed": true
+    },
+    {
+      "name": "approval: Purok 1 cannot read legacy Purok 10 addresses",
+      "passed": true
+    },
+    {
+      "name": "approval: Purok 1 cannot approve legacy Purok 10 request",
+      "passed": true
+    },
+    {
+      "name": "approval: audit failure does not leave a committed decision behind a 500",
+      "passed": true
+    },
+    {
+      "name": "approval: simultaneous approve and reject have one winner",
+      "passed": true
+    },
+    {
+      "name": "approval: portal action cannot overwrite a concurrent email decision",
+      "passed": true
+    },
+    {
+      "name": "approval: portal rejection cannot overwrite a concurrent email approval",
+      "passed": true
+    },
+    {
+      "name": "approval: portal approve rolls back when its audit fails",
+      "passed": true
+    },
+    {
+      "name": "approval: portal reject rolls back when its audit fails",
+      "passed": true
+    },
+    {
+      "name": "trigger: web bulk dispatches one SMS and email per submission",
+      "passed": true
+    },
+    {
+      "name": "trigger: web payment submission dispatches one SMS and email per submission",
+      "passed": true
+    },
+    {
+      "name": "trigger: mobile single dispatches one SMS and email per submission",
+      "passed": true
+    },
+    {
+      "name": "trigger: mobile bulk dispatches one SMS and email per submission",
+      "passed": true
+    },
+    {
+      "name": "trigger: approved kiosk clearance does not request approval again",
+      "passed": true
+    },
+    {
+      "name": "staff: Captain contact edit is used by next notification",
+      "passed": true
+    },
+    {
+      "name": "staff: non-Captain cannot edit leader contact",
+      "passed": true
+    },
+    {
+      "name": "staff: malformed notification contacts are rejected",
+      "passed": true
+    }
+  ]
+}

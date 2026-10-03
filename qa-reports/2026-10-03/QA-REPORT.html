@@ -1,0 +1,422 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>iRequestDologon QA Report — 3 October 2026</title><style>
+  *{box-sizing:border-box}body{margin:0;background:#edf2ef;color:#182b23;font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1100px;margin:30px auto;padding:52px 60px;background:#fff;border-top:8px solid #135d3c;box-shadow:0 8px 35px #16322412}h1{font-size:32px;line-height:1.2;letter-spacing:-.7px;margin-top:0}p{margin:14px 0}a{color:#126342;text-decoration:underline;overflow-wrap:anywhere}code{font:12px/1.5 Consolas,monospace;background:#eef4f0;padding:1px 4px;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;margin:20px 0 26px;font-size:13px}th,td{border:1px solid #dbe3dd;text-align:left;padding:10px 12px;vertical-align:top}th{background:#edf5ef;color:#13472d}tr:nth-child(even){background:#fafcfb}.finding{font-size:18px;color:#135d3c;border-top:1px solid #dbe3dd;padding-top:22px;margin-top:30px;break-after:avoid}strong{font-weight:650}li{margin:8px 0}pre{white-space:pre-wrap;padding:15px;background:#eef4f0}.evidence{break-before:page}.evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}.evidence-grid figure{margin:0;break-inside:avoid}.evidence-grid img{width:100%;max-height:600px;object-fit:contain;object-position:top;border:1px solid #dbe3dd}.evidence-grid figcaption{font-size:12px;margin-top:8px;color:#496052}.print{position:fixed;right:20px;bottom:20px;background:#135d3c;color:white;border:0;padding:12px 18px;border-radius:8px;cursor:pointer}@media(max-width:700px){main{margin:0;padding:25px 18px}table{font-size:11px}th,td{padding:6px}.evidence-grid{grid-template-columns:1fr}}@media print{body{background:white;font-size:9.6pt;line-height:1.43}main{margin:0;padding:0;max-width:none;border:0;box-shadow:none}h1{font-size:25pt}table{font-size:8pt;margin:12px 0 17px}th,td{padding:6px}thead{display:table-header-group}tr{break-inside:avoid}.finding{font-size:12.5pt;margin-top:19px;padding-top:13px}p{orphans:3;widows:3}.print{display:none}.evidence-grid img{max-height:205mm}.evidence-grid figcaption{font-size:8pt}a{color:#135d3c}}
+  </style></head><body><main><h1>iRequestDologon QA report</h1>
+<p><strong>Reviewed: 3 October 2026 · Web admin, resident website, resident app, and kiosk</strong></p>
+<p><strong>Recommendation: hold production sign-off until the payment and authorization defects below are fixed.</strong> The interfaces and core workflows are developed enough for structured acceptance testing, but the current code permits incorrect payment status, inconsistent account restrictions, and inaccurate financial reporting. These issues matter more than further visual polishing.</p>
+<p>This assessment covers the current working files in <code>D:\irqadmin\irq-admin</code> and <code>D:\irequestd</code>, including changes already present when QA began. Application source was not modified. The new files are this report, test reproductions, results, and screenshots.</p>
+<p><strong>What was actually tested</strong></p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Work performed</th>
+<th>Result and limit</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Web admin</td>
+<td>Production build; login validation; browser checks of Secretary dashboard, Collector payments/reports, Captain users/documents, Purok Leader requests</td>
+<td>Build passed. Tested pages rendered with synthetic/empty data. Real staff login and database workflows were not exercised.</td>
+</tr>
+<tr>
+<td>Resident website</td>
+<td>Production build; login/signup/password recovery screens; dashboard, requests and new-request screens; simulated API outage; payment success page</td>
+<td>Build passed. Reproduced dashboard, failure-state, and payment-confirmation defects.</td>
+</tr>
+<tr>
+<td>Browser coverage</td>
+<td>18 page/viewport scenarios in headless Chrome; 13 automated accessibility scans; desktop and 390px mobile layouts</td>
+<td>No uncaught page errors or horizontal document overflow in these scenarios. This is not full responsive or accessibility certification.</td>
+</tr>
+<tr>
+<td>Kiosk</td>
+<td>Flutter web production build; synthetic clearance verification, document selection, submission, amount display, Done/reset, pricing outage, inactivity</td>
+<td>Build and mocked walkthrough passed. Ordinary pointer input returned to idle after 63 seconds. Accessibility-action inactivity behaved differently; see recommendations.</td>
+</tr>
+<tr>
+<td>Resident app</td>
+<td>Flutter static analysis; API/client integration review; isolated tests of its real backend routes</td>
+<td>Analysis found <strong>76 issues: 14 warnings and 62 informational items, no analyzer errors</strong>. Native Android/iOS execution was not tested.</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Real Express routes/controllers with synthetic JWTs, in-memory database doubles, mocked SMS/email/payment services</td>
+<td>16 defect-oriented checks plus 4 baseline controls. Findings are described individually below; these are not live database or provider tests.</td>
+</tr>
+<tr>
+<td>Dependencies</td>
+<td><code>npm audit --omit=dev --json</code> in four Node projects</td>
+<td>Registry findings saved for triage; counts do not establish exploitability in this application.</td>
+</tr>
+</tbody></table>
+<p>No staging URL or dedicated QA accounts were supplied during this review. No real payments, SMS/email deliveries, resident record changes, database migrations, or physical printer jobs were performed. Database race and failure tests used controlled doubles; production concurrency remains to be tested. Public visual assets were allowed a short fetch timeout, so screenshots should not be used to diagnose CDN availability.</p>
+<p><strong>Fix order</strong></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Priority</th>
+<th>Finding</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>QA-01</td>
+<td>Critical</td>
+<td>Unsigned webhook can mark a payment and request paid</td>
+<td>Isolated HTTP reproduction</td>
+</tr>
+<tr>
+<td>QA-02</td>
+<td>Critical</td>
+<td>Mobile backend gives every staff role broad admin powers</td>
+<td>Isolated HTTP reproduction</td>
+</tr>
+<tr>
+<td>QA-03</td>
+<td>Critical</td>
+<td>Paid documents can be submitted through the free endpoint</td>
+<td>Isolated controller reproduction</td>
+</tr>
+<tr>
+<td>QA-04</td>
+<td>High</td>
+<td>Disabled residents and staff can still log in through mobile backend</td>
+<td>Isolated HTTP reproduction + schema review</td>
+</tr>
+<tr>
+<td>QA-05</td>
+<td>High</td>
+<td>Resident approval rules differ across backends and are not enforced on request creation</td>
+<td>Isolated reproduction + route review</td>
+</tr>
+<tr>
+<td>QA-06</td>
+<td>High</td>
+<td>AI service key is packaged in the Flutter application assets</td>
+<td>Generated-build inspection</td>
+</tr>
+<tr>
+<td>QA-07</td>
+<td>High</td>
+<td>Mobile payment webhooks fail with the configured JSON middleware order</td>
+<td>Isolated HTTP reproduction</td>
+</tr>
+<tr>
+<td>QA-08</td>
+<td>High</td>
+<td>Payment polling leaves the stored amount inconsistent with the checkout total</td>
+<td>Isolated controller reproduction</td>
+</tr>
+<tr>
+<td>QA-09</td>
+<td>High</td>
+<td>Financial reports treat the last edit time as the payment date</td>
+<td>Source-confirmed logic defect</td>
+</tr>
+<tr>
+<td>QA-10</td>
+<td>High</td>
+<td>Concurrent cash collection can create duplicate payment records</td>
+<td>Controlled interleaving; real DB test pending</td>
+</tr>
+<tr>
+<td>QA-11</td>
+<td>High</td>
+<td>Kiosk redemption can consume a clearance without completing the request update</td>
+<td>Fault injection + source review</td>
+</tr>
+<tr>
+<td>QA-12</td>
+<td>High</td>
+<td>Password-reset tokens are accepted as normal access tokens</td>
+<td>Isolated HTTP reproduction</td>
+</tr>
+<tr>
+<td>QA-13</td>
+<td>High</td>
+<td>Mobile OTP verification has no failed-attempt cap</td>
+<td>Isolated reproduction + source review</td>
+</tr>
+<tr>
+<td>QA-14</td>
+<td>Medium</td>
+<td>Ready-for-pickup count is wrong on resident dashboard</td>
+<td>Controller and browser reproduction</td>
+</tr>
+<tr>
+<td>QA-15</td>
+<td>Medium</td>
+<td>Payment success page claims success without a reference</td>
+<td>Browser reproduction</td>
+</tr>
+<tr>
+<td>QA-16</td>
+<td>Medium</td>
+<td>Service failures appear as empty data or force unnecessary logout</td>
+<td>Browser reproduction + mobile source review</td>
+</tr>
+<tr>
+<td>QA-17</td>
+<td>Medium</td>
+<td>Kiosk accepts submission without showing a price when pricing fails</td>
+<td>Browser reproduction</td>
+</tr>
+<tr>
+<td>QA-18</td>
+<td>Medium</td>
+<td>Accessibility and password-entry barriers</td>
+<td>Automated accessibility scans + browser reproduction</td>
+</tr>
+</tbody></table>
+<p>Critical findings should be resolved before exposing the affected paths to production traffic. High findings should be resolved before release acceptance; Medium findings belong in the next usability and reliability pass.</p>
+<p class="finding"><strong>QA-01 — Payment webhook accepts unauthenticated, unsigned updates</strong></p>
+<p>The web backend exposes <code>POST /api/payments/paymongo/webhook</code> without signature verification. An unsigned synthetic event referencing an existing synthetic checkout session returned HTTP 200 and changed both the payment and request to <code>paid</code>; the request also moved to <code>Processing</code>.</p>
+<p>This does not require guessing a payment amount or completing a provider payment. Knowing a session identifier is enough for the current handler to trust the supplied event. This was demonstrated only against an isolated local fixture.</p>
+<p>Work on: require PayMongo signature validation over the raw body, verify event/session ownership and expected amount/currency, reject stale or repeated events appropriately, and make processing idempotent. A webhook must not rely on a browser session for authentication. PayMongo documents signature checking against the raw payload in its <a href="https://docs.paymongo.com/docs/developer-tools-webhook-setup-management">webhook security guidance</a>.</p>
+<p>Retest: missing/invalid signatures produce no writes; a valid event updates exactly the intended payment; replaying it changes neither totals nor document state twice.</p>
+<p>Source: <code>server/src/routes/payment.routes.js:6</code>; <code>server/src/controllers/payment.controller.js:63</code>.</p>
+<p class="finding"><strong>QA-02 — The second admin API bypasses the main portal&#39;s role restrictions</strong></p>
+<p><code>D:\irequestd\backend\routes\admin.js</code> checks only whether the JWT contains <code>isAdmin</code>. The route does not enforce operation-specific roles or Purok scope. A synthetic Collector token successfully changed a document price to one centavo through <code>/api/admin/prices/:documentType</code> and received HTTP 200. The same router exposes resident approvals, request status changes, and Purok decisions behind that broad check.</p>
+<p>Work on: remove unused alternate admin endpoints or give them the same role and scope rules as the main backend. Load current staff permissions from the database. Test Secretary, Collector, Captain and Purok Leader against every sensitive operation, including direct API calls. This follows <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html">OWASP&#39;s guidance to validate authorization on every request</a>.</p>
+<p>Retest: a Collector cannot modify prices or approve residents; a Purok Leader cannot view or act on another Purok&#39;s records. The main admin role middleware correctly rejected a Collector for a Captain-only operation in the baseline check.</p>
+<p>Source: <code>D:\irequestd\backend\routes\admin.js:21</code>, <code>:109</code>, <code>:192</code>, <code>:251</code>, <code>:299</code>, <code>:391</code>.</p>
+<p class="finding"><strong>QA-03 — The client decides whether a request is free</strong></p>
+<p>The resident website chooses between a paid and free endpoint. The free handler unconditionally writes <code>paymentStatus: &#39;free&#39;</code> and <code>amountPaid: 0</code>; it does not calculate the price or verify the resident&#39;s exemption. An ordinary synthetic resident submitted a Barangay Clearance through <code>/api/my/requests/bulk</code> and the handler created it as free.</p>
+<p>Work on: use one server-side pricing decision for every submission. Validate allowed document types, current fees, approved exemption evidence, and the user&#39;s approval status. Treat client prices and exemption flags as display data. Also assign the submission channel on the server; the current handler accepts a client-supplied kiosk channel.</p>
+<p>Retest: the same document produces the same authoritative charge regardless of endpoint or manipulated local storage. Only documented, approved exemptions produce a free request.</p>
+<p>Source: <code>server/src/controllers/resident.request.controller.js:134</code>, <code>:188</code>; <code>client/src/pages/protected/NewRequest.jsx:58</code>, <code>:111</code>.</p>
+<p class="finding"><strong>QA-04 — Deactivation does not apply across all entry points</strong></p>
+<p>The mobile backend issued tokens for both a disabled synthetic resident and disabled synthetic staff account. Its general authentication middleware verifies the token without reloading account state. The mobile Prisma User model also lacks the resident <code>active</code>/<code>deletedAt</code> fields recently added in the main repository.</p>
+<p>Work on: share a single account-lifecycle rule between backends, align schemas, and check current activity at login and on protected requests. Existing sessions should lose access after deactivation. Password change/reset should also have a deliberate session-revocation policy.</p>
+<p>Retest: disable a resident or staff member in admin, then try fresh login and an existing token through both backends; all affected access should be denied.</p>
+<p>Source: <code>D:\irequestd\backend\routes\auth.js:385</code>; <code>backend/routes/admin.js:65</code>; <code>backend/middleware/auth.js:4</code>; <code>backend/prisma/schema.prisma:62</code>.</p>
+<p class="finding"><strong>QA-05 — Contact verification and resident approval are mixed together</strong></p>
+<p>The mobile registration OTP handler sets <code>isVerified: true</code>, while staff approval also uses that field. Mobile login checks <code>isVerified</code> instead of <code>contactVerified</code>. This can cause an OTP-verified web registrant awaiting staff review to be asked for registration OTP again in the app.</p>
+<p>Request creation is also missing an approval gate: a synthetic draft resident received HTTP 201 from the mobile request route. The main web resident middleware permits a contact-verified draft resident, and the creation controllers do not independently require an approved profile. Frontend route guards are not sufficient to enforce this rule.</p>
+<p>Work on: define contact verification, profile review, active status, and document-request authorization separately. Enforce approved profile status when creating requests; keep verification endpoints accessible to residents completing onboarding.</p>
+<p>Retest: sign up on either channel and continue on the other. Draft, pending, rejected, approved and disabled residents must see consistent states and API permissions.</p>
+<p>Source: <code>D:\irequestd\backend\routes\auth.js:318</code>, <code>:407</code>; <code>backend/routes/requests.js:83</code>; <code>server/src/middleware/residentAuth.js</code>; <code>server/src/controllers/resident.request.controller.js:134</code>.</p>
+<p class="finding"><strong>QA-06 — A configured AI service key ships in the app bundle</strong></p>
+<p><code>pubspec.yaml</code> includes <code>.env</code> as an asset. The newly generated kiosk web build contained <code>assets/.env</code> with a non-empty <code>GROQ_API_KEY</code>, even though the kiosk does not need the resident verification service. No key value is included in this report. Key validity or usage was not tested.</p>
+<p>Work on: move AI calls behind your authenticated backend, remove service secrets from client assets, and rotate any key already distributed in an app or web build. Review quota restrictions and access logs. This is a known <a href="https://mas.owasp.org/MASWE-0004/">mobile application package secret exposure</a>.</p>
+<p>Retest: inspect release APK/IPA/web assets and confirm no reusable service credentials remain. The verification API should apply authentication, authorization and request limits.</p>
+<p>Source: <code>D:\irequestd\pubspec.yaml:80</code>; <code>lib/services/groq_secrets.dart:3</code>; <code>lib/services/llama_service.dart:69</code>.</p>
+<p class="finding"><strong>QA-07 — Mobile payment webhooks cannot parse the incoming body correctly</strong></p>
+<p>The mobile server installs <code>express.json()</code> before mounting the payment router. The webhook then expects raw bytes and calls <code>req.body.toString()</code>. With the same middleware order, a correctly signed synthetic event received HTTP 400, <code>Invalid signature</code>. Without a configured webhook secret it received HTTP 500 because <code>[object Object]</code> could not be parsed as JSON.</p>
+<p>The handler also uses <code>findFirst</code> to update only one request for a checkout session, while the checkout supports multiple requests. That second issue was established by source review, not by a real provider transaction.</p>
+<p>Work on: preserve the raw body before JSON parsing, require signature verification, and settle all requests in the basket atomically. Record an event identifier for replay handling. Test the exact event format for the PayMongo API version you deploy.</p>
+<p>Retest: valid multi-document checkout event, invalid signature, duplicate event, delayed event, and a user who closes the payment tab before returning. See <a href="https://docs.paymongo.com/docs/developer-tools-webhook-setup-management">PayMongo&#39;s raw-body requirements</a>.</p>
+<p>Source: <code>D:\irequestd\backend\server.js:17</code>; <code>backend/routes/payment.js:208</code>, <code>:221</code>, <code>:232</code>, <code>:238</code>.</p>
+<p class="finding"><strong>QA-08 — Stored payment amounts depend on how confirmation arrives</strong></p>
+<p>Web payment creation stores the document amount on the request, then charges document plus Purok fee. Polling verification marks the request paid without updating <code>amountPaid</code>. For a synthetic ₱100 document plus ₱50 Purok fee, the paid request still stored ₱100; Collector&#39;s net calculation then displayed ₱50 instead of ₱100. The webhook path writes a different gross amount.</p>
+<p>Work on: persist an immutable checkout breakdown: document fee, Purok fee, exemption/discount, total paid, currency and settlement time. Use the same settlement operation for both polling and webhook confirmation. Reports and receipts should read that breakdown.</p>
+<p>Retest: browser-return-first, webhook-first and duplicate-confirmation orders must produce identical request, receipt and report amounts. Include fee changes after checkout creation and baskets with multiple documents.</p>
+<p>Source: <code>server/src/controllers/resident.payment.controller.js:190</code>, <code>:259</code>; <code>server/src/controllers/payment.controller.js:95</code>; <code>admin/src/pages/collector/Payments.jsx:124</code>.</p>
+<p class="finding"><strong>QA-09 — Editing a request moves income between reporting periods</strong></p>
+<p>Financial reports label the date as “date paid” but use <code>request.updatedAt</code>. That timestamp also changes when a document progresses, is completed or is claimed. A payment received in September can consequently appear as October income after an October workflow update.</p>
+<p>Work on: use a dedicated immutable <code>paidAt</code>/<code>settledAt</code> from the payment ledger. Separate money collected from request creation, printing, completion and pickup dates. Do not infer historical settlement time from the latest request edit.</p>
+<p>Retest: pay a request on one date, complete/claim it later, and confirm the original daily/monthly collection totals remain unchanged.</p>
+<p>Source: <code>admin/src/components/reports/FinancialReport.jsx:22</code>, <code>:76</code>, <code>:129</code>; <code>server/prisma/schema.prisma:401</code>; <code>server/src/controllers/release.controller.js:49</code>.</p>
+<p class="finding"><strong>QA-10 — Two cash-collection calls can both pass the unpaid check</strong></p>
+<p>Cash collection reads the unpaid request before its transaction, then updates by ID and creates a payment without a conditional state transition. In a controlled interleaving, both calls read unpaid, both returned HTTP 200, and two payment records were created. Real PostgreSQL concurrency was not exercised, so this is a reproduced handler race requiring a database integration test.</p>
+<p>Work on: atomically transition unpaid to paid inside the transaction, enforce an appropriate uniqueness/idempotency constraint, and return the original result on a safe retry. A disabled button alone cannot protect against two staff sessions or a network retry.</p>
+<p>Retest: simultaneous collection from two terminals and a retry after the response is lost must create exactly one settlement and one receipt record.</p>
+<p>Source: <code>server/src/controllers/request.controller.js:210</code>, <code>:235</code>; <code>server/prisma/schema.prisma:260</code>.</p>
+<p class="finding"><strong>QA-11 — Kiosk submission and clearance redemption are not one transaction</strong></p>
+<p>Kiosk submission creates requests individually, then consumes the clearance and updates its requests in separate operations. Injecting a failure after the clearance update left it <code>used</code> even though request authorization failed. A failure while creating a later document can also leave an incomplete basket, based on the source structure.</p>
+<p>Work on: place request creation, clearance consumption and authorization in one transaction. Add a submission identifier so a lost response can be retried without creating another basket or stranding a consumed code. Send notifications after commit.</p>
+<p>Retest: fail each database step, submit the same clearance simultaneously, and lose the HTTP response after commit. The result must be either one complete retrievable submission or no consumed clearance/no partial requests.</p>
+<p>Source: <code>server/src/controllers/kiosk.controller.js:178</code>, <code>:214</code>, <code>:241</code>; <code>server/lib/purokClearance.js:113</code>.</p>
+<p class="finding"><strong>QA-12 — Reset tokens can be used for ordinary API access</strong></p>
+<p>The mobile backend creates password-reset JWTs with <code>purpose: &#39;reset&#39;</code>, but its general authentication middleware accepts any valid JWT signed with the same key. A synthetic reset-purpose token successfully fetched the resident profile with HTTP 200.</p>
+<p>Work on: require an explicit access-token purpose/audience on normal routes and restrict reset tokens to the password-reset endpoint. Make reset authorization single-use and consider invalidating prior sessions after a successful reset.</p>
+<p>Retest: access, reset and staff tokens must be rejected outside their intended API scopes.</p>
+<p>Source: <code>D:\irequestd\backend\middleware\auth.js:11</code>; <code>backend/routes/auth.js:350</code>.</p>
+<p class="finding"><strong>QA-13 — OTP protections differ materially between backends</strong></p>
+<p>Six incorrect OTP submissions against the mobile handler all reached code comparison and returned the same invalid-code response. There is no failed-attempt counter in that route. OTP generation uses <code>Math.random()</code>, and delivery failures print the code in server logs. The main web backend already uses a stronger random generator and a five-attempt cap.</p>
+<p>Work on: share the stronger OTP implementation, add account/IP resend and verification limits, remove OTP values from logs, and return an honest delivery-failure state. Ensure resend limits cannot be bypassed by switching channels.</p>
+<p>Retest: exhausted OTP, expired OTP, replay, repeated resend, concurrent verification and provider outage. Logs must not contain usable codes.</p>
+<p>Source: <code>D:\irequestd\backend\routes\auth.js:20</code>, <code>:43</code>, <code>:288</code>, <code>:481</code>; <code>server/src/controllers/resident.auth.controller.js:26</code>.</p>
+<p class="finding"><strong>QA-14 — Ready-for-pickup count does not match completed documents</strong></p>
+<p>The summary endpoint returns <code>Completed</code>, while the dashboard reads only <code>ready</code> or <code>Ready</code>. A browser fixture displayed a completed request and “0 Ready for Pickup” at the same time. A controller fixture with two completed requests also produced a dashboard count of zero.</p>
+<p>Work on: define a single response contract and derive pickup count from actual unclaimed completed documents. Use consistent Pending, Processing, Printing, Ready for Pickup, Claimed and Rejected meanings across channels.</p>
+<p>Retest: complete two documents, claim one, and check both the website and app counts and pickup lists.</p>
+<p>Source: <code>server/src/controllers/resident.request.controller.js:44</code>; <code>client/src/pages/protected/Dashboard.jsx:54</code>. Evidence: <a href="screenshots/resident-dashboard-ready-count.png">dashboard screenshot</a>.</p>
+<p class="finding"><strong>QA-15 — “Payment Successful” is shown without verifying a payment</strong></p>
+<p>Opening <code>/payment/success</code> without a <code>refs</code> query parameter displays “Payment Successful!” and “Your payment was received.” This was reproduced without any authenticated session or payment request. It does not itself update the database, but it gives misleading confirmation.</p>
+<p>Work on: require a valid reference and a confirmed backend payment state. Missing references should show a neutral “Unable to verify this payment” message with a route to the resident&#39;s requests.</p>
+<p>Retest: absent, malformed, expired, another resident&#39;s and genuinely paid references.</p>
+<p>Source: <code>client/src/pages/payment/Success.jsx:19</code>. Evidence: <a href="screenshots/payment-success-without-reference.png">success-without-reference screenshot</a>.</p>
+<p class="finding"><strong>QA-16 — Outages are confused with empty data or invalid sessions</strong></p>
+<p>When dashboard API calls were forced to HTTP 503, the resident website displayed “No requests yet” and “Make your first request” without an error or retry action. The app&#39;s My Requests screen sets an <code>_error</code> value that is never rendered. Separately, <code>ApiService.getMe()</code> returns null for every non-200 response; startup interprets null as invalid authentication and clears the session even for a server error.</p>
+<p>Work on: distinguish loading, empty, stale, offline, unauthorized and server-error states. Preserve cached data/session on transient service failures, offer Retry, and add bounded HTTP timeouts. Do not invite a second submission merely because the original request list failed to load.</p>
+<p>Retest: timeout, offline startup, 401, 403, 429, 500/503 and non-JSON proxy responses. Verify existing requests remain distinguishable from an empty account.</p>
+<p>Source: <code>client/src/pages/protected/Dashboard.jsx:45</code>; <code>D:\irequestd\lib\my_requests_screen.dart:48</code>; <code>lib/services/api_service.dart:105</code>; <code>lib/main.dart:39</code>. Evidence: <a href="screenshots/resident-dashboard-outage.png">outage screenshot</a>.</p>
+<p class="finding"><strong>QA-17 — Kiosk can commit a request without disclosing its price</strong></p>
+<p>When the pricing endpoint returned HTTP 503, the kiosk converted the error to an empty price map. The review page omitted the amount and kept Submit enabled. The synthetic successful submission then showed ₱100 due for the first time.</p>
+<p>Work on: require a server quote before confirming a paid request, or clearly tell the resident that a quote cannot be obtained and offer retry/staff assistance. Snapshot the agreed quote and handle a price change between review and submission explicitly.</p>
+<p>Retest: pricing unavailable, slow, incomplete or changed; a paid request must not silently look free or unpriced at confirmation.</p>
+<p>Source: <code>D:\irequestd\lib\kiosk\kiosk_api.dart:64</code>; <code>kiosk_review_screen.dart:30</code>, <code>:207</code>. Evidence: <a href="screenshots/kiosk-review-pricing-outage.png">review during pricing outage</a>, <a href="screenshots/kiosk-success-tablet.png">amount after submission</a>.</p>
+<p class="finding"><strong>QA-18 — Improve accessibility and permit normal password entry</strong></p>
+<p>Automated checks identified low contrast on several pages, unnamed icon buttons, two unlabeled selects on the resident request form and two unlabeled inputs on Collector payments. Both login forms cancel password paste events. Blocking paste/context menus makes password managers and assisted entry harder without protecting server data.</p>
+<p>Work on: associate labels with inputs/selects, give icon buttons accessible names, improve text contrast, preserve visible keyboard focus, and allow paste/autofill. Reconsider global right-click/shortcut blocking. Test keyboard navigation and a screen reader, especially modal dialogs and error announcements.</p>
+<p>Retest: complete signup, login, a document request and a staff review using only a keyboard; repeat with screen-reader output and 200% zoom. Exact failing selectors are in <a href="browser-results.json">browser-results.json</a>.</p>
+<p>Source examples: <code>client/src/pages/protected/NewRequest.jsx:167</code>; <code>client/src/pages/public/Login.jsx:104</code>, <code>:121</code>; <code>admin/src/pages/auth/Login.jsx</code>; both <code>BrowserProtection.jsx</code> components.</p>
+<p><strong>Other release work to consider</strong></p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Comment and suggested work</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Two backend contracts</td>
+<td>Maintain a shared specification or common business-service layer. Routes, token claims, OTP storage, verification steps, price shapes and payment creation payloads differ. Merely pointing every client at one existing API will not make them compatible.</td>
+</tr>
+<tr>
+<td>Resident web deployment</td>
+<td>Local <code>.env</code> targets the main backend correctly, and <code>.env.production</code> uses <code>/api</code>. The resident <code>client/vercel.json</code> has a SPA fallback but no API proxy, unlike <code>admin/vercel.json</code>. If hosted as a standalone Vercel site, configure the API origin/rewrite and test a deep-link refresh and real API request. This is deployment-dependent, not a confirmed failure of the live site.</td>
+</tr>
+<tr>
+<td>Deployment automation</td>
+<td><code>render.yaml</code> installs dependencies/builds the client but does not explicitly run Prisma generation or migration deployment. Confirm the actual release pipeline applies the new account-lifecycle migration before the new server code. Both repositories need one clear migration owner. Do this first on a disposable database.</td>
+</tr>
+<tr>
+<td>JWT configuration</td>
+<td>Main-backend development code accepts raw user IDs when <code>JWT_SECRET</code> is absent. Production rejects that fallback, but a publicly reachable non-production configuration would be unsafe. Require the secret at startup and remove raw-ID authentication from shared environments.</td>
+</tr>
+<tr>
+<td>Captain revenue definition</td>
+<td>The per-Purok report hardcodes ₱50 per paid <code>Completed</code> document and excludes <code>Claimed</code> documents (<code>admin/src/pages/captain/Reports.jsx:29</code>, <code>:69</code>). Confirm whether this is a fixed allocation or actual collected revenue. If it is actual revenue, use settled fee records; claiming a document should not erase collected revenue.</td>
+</tr>
+<tr>
+<td>Kiosk idle accessibility</td>
+<td>Ordinary mouse interaction reset the kiosk after 63 seconds. With Flutter web accessibility actions enabled, the same inactivity check did not return home. The timer listens only to pointer-down events. Start/reset inactivity on navigation and semantic/keyboard actions too; repeat on the real Android kiosk.</td>
+</tr>
+<tr>
+<td>Kiosk printer UX</td>
+<td>The web walkthrough exposed a raw <code>MissingPluginException</code> in the resident-facing success screen. Native printing was not tested. Use a short “Please ask staff for your ticket” message, staff diagnostics, and a controlled reprint function that does not create another request. Keep the reference visible long enough after a printer failure.</td>
+</tr>
+<tr>
+<td>Admin usability</td>
+<td>Rename “RESIDENCE” to “Residents” where it means people; distinguish “Ready for Pickup” from “Claimed.” Add a clear next action and rejection reason to each resident request. Verify mobile tables with realistic long names and large datasets.</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Admin&#39;s main production JS chunk is <strong>2.41 MB, about 694 KB gzip</strong>, with a Vite size warning. Load report/chart/export libraries on demand and measure login/dashboard performance on a slow connection.</td>
+</tr>
+<tr>
+<td>Automated tests and handover</td>
+<td>The inspected Node package scripts expose build/start/dev, without a test suite. The Flutter project has no first-party test directory. Add tests around the defects above and document local setup, environment variables, role permissions, release steps, rollback and printer setup. The current root Flutter README is still the starter template.</td>
+</tr>
+</tbody></table>
+<p><strong>Dependency review snapshot</strong></p>
+<p>These are npm&#39;s reported package counts as observed during this review. Shared packages appear in multiple projects; do not add these counts as distinct vulnerabilities. A reported advisory is not proof that an exploitable code path exists here.</p>
+<table>
+<thead>
+<tr>
+<th>Project</th>
+<th align="right">High</th>
+<th align="right">Moderate</th>
+<th align="right">Low</th>
+<th align="right">Total reported</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Admin frontend</td>
+<td align="right">3</td>
+<td align="right">7</td>
+<td align="right">0</td>
+<td align="right">10</td>
+</tr>
+<tr>
+<td>Resident frontend</td>
+<td align="right">2</td>
+<td align="right">3</td>
+<td align="right">0</td>
+<td align="right">5</td>
+</tr>
+<tr>
+<td>Main backend</td>
+<td align="right">8</td>
+<td align="right">6</td>
+<td align="right">1</td>
+<td align="right">15</td>
+</tr>
+<tr>
+<td>Mobile backend</td>
+<td align="right">8</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">12</td>
+</tr>
+</tbody></table>
+<p>Triage the saved <code>audit-*.json</code> files, prioritize reachable server-side dependencies, and update with focused regression checks. Some proposed automatic fixes involve major changes or downgrades; review them individually rather than applying <code>audit fix --force</code> indiscriminately. No dependency upgrades were made.</p>
+<p><strong>What is already working well in the tested scope</strong></p>
+<ul>
+<li>Both React production builds and the kiosk web build completed successfully.</li>
+<li>The tested web screens rendered without uncaught browser errors or horizontal overflow at their tested viewport sizes.</li>
+<li>Main admin API checks rejected unpaid printing and a Claimed-to-Processing reversal; its role middleware rejected a Collector for a Captain-only operation.</li>
+<li>The resident middleware rejected requests without a token.</li>
+<li>The kiosk has a short, understandable clearance → document → review → reference flow. Done returned home, the next resident&#39;s surname was empty, and ordinary pointer inactivity reset correctly.</li>
+<li>Empty admin login fields produced clear validation messages.</li>
+</ul>
+<p><strong>Acceptance tests to run before sign-off</strong></p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Required outcome</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Web signup → app login, then app signup → web login</td>
+<td>One account, one contact-verification state, correct wizard step and review status</td>
+</tr>
+<tr>
+<td>Approve, reject, disable and restore a resident</td>
+<td>Both channels enforce the change, including existing sessions</td>
+</tr>
+<tr>
+<td>Every staff role and another Purok&#39;s records</td>
+<td>Allowed actions succeed; direct API calls cannot bypass permissions</td>
+</tr>
+<tr>
+<td>Paid, free/exempt and mixed document baskets</td>
+<td>Authoritative fees match review, checkout, receipt, Collector and Captain reports</td>
+</tr>
+<tr>
+<td>Successful, cancelled, delayed and repeated provider events</td>
+<td>Exactly one correct settlement; closing the browser does not lose payment confirmation</td>
+</tr>
+<tr>
+<td>Simultaneous cash collection and repeated submission</td>
+<td>No duplicate request, charge, receipt or ledger entry</td>
+</tr>
+<tr>
+<td>Complete → print → release → claim</td>
+<td>Same status/count/reference across admin, web resident and app; payment date does not move</td>
+</tr>
+<tr>
+<td>Kiosk with interrupted network/power, idle user or repeated clearance</td>
+<td>Recoverable submission and no previous resident&#39;s details exposed</td>
+</tr>
+<tr>
+<td>Real kiosk printer: disconnected, denied permission, out of paper, reconnect and reprint</td>
+<td>Clear staff recovery path with no duplicate request</td>
+</tr>
+<tr>
+<td>Physical Android/iOS: denied camera permission, app resume, expired session and offline startup</td>
+<td>Clear recovery without losing completed work</td>
+</tr>
+<tr>
+<td>Restore a backup into a disposable environment</td>
+<td>Requests, attachments, payments, audit history and schema remain usable</td>
+</tr>
+</tbody></table>
+<p>Run these with dedicated staging accounts for all four staff roles, approved/pending/rejected/disabled residents, test payment credentials and representative exemption cases. Current observations support fixing the identified issues; they do not certify external provider integration, deployed infrastructure or native device behavior.</p>
+<p><strong>Evidence and reproduction files</strong></p>
+<p>The report folder contains <code>backend-results.json</code>, <code>browser-results.json</code>, <code>kiosk-results.json</code>, <code>kiosk-pointer-results.json</code>, redacted build notes, npm audit snapshots and screenshots. The <code>reproduce-*.cjs</code> scripts execute the local fixtures and never load application <code>.env</code> files or contact production APIs for their backend tests. See <a href="REPRODUCING.md">REPRODUCING.md</a> for setup and scope.</p>
+<div class="evidence"><p class="finding"><strong>Selected visual evidence</strong></p><p>All shown residents and requests are synthetic QA fixtures.</p><div class="evidence-grid"><figure><img src="screenshots/resident-dashboard-outage.png" alt="Resident dashboard during a simulated API outage"><figcaption>QA-16: HTTP 503 is presented as an empty request list, with no visible retry action.</figcaption></figure><figure><img src="screenshots/kiosk-review-pricing-outage.png" alt="Kiosk review page during a pricing outage"><figcaption>QA-17: Submit remains available when the review page has no price.</figcaption></figure></div></div></main><button class="print" onclick="window.print()">Print / Save PDF</button></body></html>

@@ -2,6 +2,7 @@ const prisma = require('../../lib/prisma');
 const { hashPassword, comparePassword } = require('../../lib/password');
 const { toApi } = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
+const { notificationContact } = require('../../lib/notificationContact');
 
 // Everything except the password hash (was .select('-password')).
 const SAFE = {
@@ -9,9 +10,6 @@ const SAFE = {
   contactNumber: true, notifyEmail: true, active: true,
   role: true, oauthProvider: true, oauthId: true, createdAt: true, updatedAt: true,
 };
-
-// Basic sanity only — the real test of an address is whether mail to it lands.
-const looksLikeEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
 
 // GET /api/users/me
 exports.getMe = async (req, res) => {
@@ -38,16 +36,9 @@ exports.updateMe = async (req, res) => {
 
     // Where approval alerts actually reach this person. Both clearable by
     // sending an empty string, so a wrong number can be removed.
-    if (contactNumber !== undefined) {
-      data.contactNumber = String(contactNumber).replace(/\D/g, '') || null;
-    }
-    if (notifyEmail !== undefined) {
-      const v = String(notifyEmail).toLowerCase().trim();
-      if (v && !looksLikeEmail(v)) {
-        return res.status(400).json({ message: 'Notification email is not a valid address' });
-      }
-      data.notifyEmail = v || null;
-    }
+    const contacts = notificationContact({ contactNumber, notifyEmail });
+    if (contacts.error) return res.status(400).json({ message: contacts.error });
+    Object.assign(data, contacts.data);
 
     if (newPassword) {
       if (!currentPassword) return res.status(400).json({ message: 'Current password is required' });
@@ -55,10 +46,11 @@ exports.updateMe = async (req, res) => {
       const ok = user.password && (await comparePassword(currentPassword, user.password));
       if (!ok) return res.status(400).json({ message: 'Current password is incorrect' });
       data.password = await hashPassword(newPassword);
+      data.sessionVersion = { increment: 1 };
     }
 
     const updated = await prisma.admin.update({
-      where: { id: user.id },
+      where: { id: user.id, ...(newPassword ? { active: true, sessionVersion: req.user.sessionVersion } : {}) },
       data,
       select: SAFE,
     });
@@ -103,13 +95,9 @@ exports.updateUser = async (req, res) => {
     const data = {};
     if (fullName !== undefined) data.fullName = String(fullName).trim();
     if (purok !== undefined) data.purok = purok || '';
-    if (contactNumber !== undefined) {
-      const digits = String(contactNumber).replace(/\D/g, '');
-      data.contactNumber = digits || null;
-    }
-    if (notifyEmail !== undefined) {
-      data.notifyEmail = String(notifyEmail).trim() || null;
-    }
+    const contacts = notificationContact({ contactNumber, notifyEmail });
+    if (contacts.error) return res.status(400).json({ message: contacts.error });
+    Object.assign(data, contacts.data);
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ message: 'Nothing to update.' });
     }
@@ -160,8 +148,10 @@ exports.createUser = async (req, res) => {
                  'they cannot be alerted to pending approvals otherwise.',
       });
     }
-    if (notifyEmail && !looksLikeEmail(notifyEmail)) {
-      return res.status(400).json({ message: 'Notification email is not a valid address' });
+    const contacts = notificationContact({ contactNumber, notifyEmail });
+    if (contacts.error) return res.status(400).json({ message: contacts.error });
+    if (role === 'Purok Leader' && !contacts.data.contactNumber && !contacts.data.notifyEmail) {
+      return res.status(400).json({ message: 'A Purok Leader needs a contact number or a notification email.' });
     }
     const normalised = String(email).toLowerCase().trim();
     const exists = await prisma.admin.findUnique({ where: { email: normalised } });
@@ -174,8 +164,8 @@ exports.createUser = async (req, res) => {
         email: normalised,
         password: await hashPassword(password),
         role,
-        contactNumber: contactNumber ? String(contactNumber).replace(/\D/g, '') : null,
-        notifyEmail: notifyEmail ? String(notifyEmail).toLowerCase().trim() : null,
+        contactNumber: contacts.data.contactNumber || null,
+        notifyEmail: contacts.data.notifyEmail || null,
       },
       select: SAFE,
     });
@@ -200,7 +190,7 @@ exports.resetPassword = async (req, res) => {
     const updated = await prisma.admin
       .update({
         where: { id: req.params.id },
-        data: { password: await hashPassword(newPassword) },
+        data: { password: await hashPassword(newPassword), sessionVersion: { increment: 1 } },
       })
       .catch((e) => {
         if (e.code === 'P2025') return null;
@@ -233,7 +223,7 @@ exports.setActive = async (req, res) => {
 
     const user = await prisma.admin.update({
       where: { id: req.params.id },
-      data: { active },
+      data: { active, sessionVersion: { increment: 1 } },
       select: SAFE,
     });
     res.json(toApi(user));

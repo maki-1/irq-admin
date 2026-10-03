@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-03T05:45:14.383Z",
+  "scope": "Unauthenticated read-only public route smoke test; no valid links and no real decisions.",
+  "checks": [
+    {
+      "url": "https://www.irq-dologon.com/purok-approve",
+      "httpStatus": 200,
+      "contentType": "text/html; charset=utf-8",
+      "returnedSpa": true,
+      "returnedInvalidLinkMessage": false
+    },
+    {
+      "url": "https://www.irq-dologon.com/api/purok-approve/pending",
+      "httpStatus": 401,
+      "contentType": "application/json; charset=utf-8",
+      "returnedSpa": false,
+      "returnedInvalidLinkMessage": true
+    }
+  ]
+}

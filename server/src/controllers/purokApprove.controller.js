@@ -1,9 +1,12 @@
+const { shapeRequest } = require('../../lib/requestStatus');
 const prisma = require('../../lib/prisma');
+const { isAccountActive } = require('../../lib/accountLifecycle');
 const { toApi } = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
 const { verify } = require('../../lib/approveLink');
 const { purokFeeCentavosForUser } = require('../../lib/purokFee');
 const auditLog = require('../utils/auditLog');
+const { userIdsForPurok } = require('../../lib/purokScope');
 
 // Resolve the leader behind a signed link (from the email one-tap button), plus
 // the user ids in their purok. Everything below is scoped to that set, so a link
@@ -13,24 +16,15 @@ async function leaderFromParams(params) {
   if (!leaderId || !isUuid(leaderId)) return null;
   const leader = await prisma.admin.findUnique({
     where: { id: leaderId },
-    select: { id: true, fullName: true, purok: true, role: true, active: true },
+    select: { id: true, fullName: true, purok: true, role: true, active: true, sessionVersion: true },
   });
-  if (!leader || leader.role !== 'Purok Leader' || leader.active === false) return null;
+  if (!isAccountActive(leader) || leader.role !== 'Purok Leader' || leader.sessionVersion !== Number(params.v)) return null;
 
-  const profiles = await prisma.verificationProfile.findMany({
-    where: {
-      OR: [
-        { purok: { equals: leader.purok, mode: 'insensitive' } },
-        { AND: [{ purok: null }, { address: { contains: leader.purok, mode: 'insensitive' } }] },
-      ],
-    },
-    select: { userId: true },
-  });
-  const userIds = profiles.map((p) => p.userId).filter(Boolean);
+  const userIds = await userIdsForPurok(leader.purok, prisma);
   return { leader, userIds };
 }
 
-// GET /api/purok-approve/pending?lid=&exp=&sig=
+// GET /api/purok-approve/pending?lid=&exp=&sig=&v=
 exports.getPending = async (req, res) => {
   try {
     const ctx = await leaderFromParams(req.query);
@@ -39,6 +33,7 @@ exports.getPending = async (req, res) => {
     const requests = await prisma.request.findMany({
       where: { userId: { in: ctx.userIds }, purokLeaderStatus: 'pending' },
       include: {
+        completedDocuments: true,
         user: { select: { username: true, verificationProfile: { select: { fullName: true, address: true } } } },
       },
       orderBy: [{ channel: 'asc' }, { createdAt: 'desc' }],
@@ -48,7 +43,7 @@ exports.getPending = async (req, res) => {
       ok: true,
       leader: { fullName: ctx.leader.fullName, purok: ctx.leader.purok },
       requests: requests.map((r) => {
-        const o = toApi(r);
+        const o = toApi(shapeRequest(r));
         o.residentName = r.user?.verificationProfile?.fullName || r.user?.username || 'A resident';
         o.residentAddress = r.user?.verificationProfile?.address || '';
         delete o.user;
@@ -60,11 +55,11 @@ exports.getPending = async (req, res) => {
   }
 };
 
-// POST /api/purok-approve/action  { lid, exp, sig, requestId, action, remarks }
+// POST /api/purok-approve/action  { lid, exp, sig, v, requestId, action, remarks }
 exports.act = async (req, res) => {
   try {
-    const { lid, exp, sig, requestId, action, remarks } = req.body || {};
-    const ctx = await leaderFromParams({ lid, exp, sig });
+    const { lid, exp, sig, v, requestId, action, remarks } = req.body || {};
+    const ctx = await leaderFromParams({ lid, exp, sig, v });
     if (!ctx) return res.status(401).json({ ok: false, message: 'This approval link is invalid or has expired.' });
     if (!isUuid(requestId)) return res.status(404).json({ ok: false, message: 'Request not found.' });
     if (action !== 'approve' && action !== 'reject') {
@@ -82,39 +77,34 @@ exports.act = async (req, res) => {
     }
 
     const via = 'email link';
-    let request;
-    if (action === 'approve') {
-      const feecentavos = await purokFeeCentavosForUser(existing.userId);
-      request = await prisma.request.update({
-        where: { id: requestId },
-        data: {
-          purokLeaderStatus: 'approved',
-          purokLeaderBy: ctx.leader.id,
-          purokLeaderAt: new Date(),
-          purokLeaderRemarks: remarks || `Approved via ${via}`,
-          purokClearanceFee: feecentavos / 100,
-        },
+    const data = {
+      purokLeaderStatus: action === 'approve' ? 'approved' : 'rejected',
+      purokLeaderBy: ctx.leader.id,
+      purokLeaderAt: new Date(),
+      purokLeaderRemarks: remarks || (action === 'approve' ? 'Approved' : 'Rejected') + ' via ' + via,
+      ...(action === 'approve'
+        ? { purokClearanceFee: (await purokFeeCentavosForUser(existing.userId)) / 100 }
+        : { status: 'Rejected' }),
+    };
+    const request = await prisma.$transaction(async tx => {
+      const result = await tx.request.updateMany({
+        where: { id: requestId, userId: { in: ctx.userIds }, purokLeaderStatus: 'pending' },
+        data,
       });
-    } else {
-      request = await prisma.request.update({
-        where: { id: requestId },
-        data: {
-          purokLeaderStatus: 'rejected',
-          purokLeaderBy: ctx.leader.id,
-          purokLeaderAt: new Date(),
-          purokLeaderRemarks: remarks || `Rejected via ${via}`,
-        },
-      });
-    }
-
-    await auditLog({
-      user: { id: ctx.leader.id, fullName: ctx.leader.fullName, role: 'Purok Leader' },
-      action: `Purok Leader ${action === 'approve' ? 'Approve' : 'Reject'} Request (${via})`,
-      details: `Request ${request.id} (${request.documentType}) ${action}d via ${via}`,
+      if (result.count !== 1) {
+        throw Object.assign(new Error('This request was already decided. Refresh the queue.'), { status: 409 });
+      }
+      const updated = await tx.request.findUnique({ where: { id: requestId } });
+      await auditLog({
+        user: { id: ctx.leader.id, fullName: ctx.leader.fullName, role: 'Purok Leader' },
+        action: 'Purok Leader ' + (action === 'approve' ? 'Approve' : 'Reject') + ' Request (' + via + ')',
+        details: 'Request ' + updated.id + ' (' + updated.documentType + ') ' + action + 'd via ' + via,
+      }, tx);
+      return updated;
     });
 
     res.json({ ok: true, action, request: toApi(request) });
   } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
+    res.status(err.status === 409 ? 409 : 500).json({ ok: false, message: err.message });
   }
 };

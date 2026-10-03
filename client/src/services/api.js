@@ -15,7 +15,7 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     const isLoginRequest = err.config?.url?.includes('/auth/login');
-    if (err.response?.status === 401 && !isLoginRequest) {
+    if ((err.response?.status === 401 || err.response?.data?.code === 'ACCOUNT_DISABLED') && !isLoginRequest && useAuthStore.getState().token) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }
@@ -34,7 +34,11 @@ export async function multipartPost(path, formData) {
     body: formData,
   });
   const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw { response: { data } };
+  if ((resp.status === 401 || data.code === 'ACCOUNT_DISABLED') && useAuthStore.getState().token) {
+    useAuthStore.getState().logout();
+    window.location.href = '/login';
+  }
+  if (!resp.ok) throw { response: { status: resp.status, data } };
   return { data };
 }
 

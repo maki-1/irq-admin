@@ -57,7 +57,7 @@ app.use('/api/releases',        releaseRoutes);
 app.use('/api/document-prices', documentPriceRoutes);
 app.use('/api/crop-id',        cropRoutes);
 app.use('/api/purok-leader',   purokLeaderRoutes);
-// Public SMS one-tap approval (authorised by a signed link, not a session).
+// Public email approval (authorised by a signed link, not a session).
 app.use('/api/purok-approve',  require('./routes/purokApprove.routes'));
 app.use('/api/purok-clearance', purokClearanceFeeRoutes);
 // Issuance register — mounted after the fee routes so their fixed paths

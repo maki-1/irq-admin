@@ -1,0 +1,53 @@
+{
+  "mode": "Local production builds, mocked API, headless Chrome",
+  "results": [
+    {
+      "site": "admin",
+      "scenario": "password-change",
+      "passed": true,
+      "storageCleared": true,
+      "redirectedTo": "/login",
+      "pageErrors": []
+    },
+    {
+      "site": "admin",
+      "scenario": "deactivated",
+      "passed": true,
+      "storageCleared": true,
+      "redirectedTo": "/login",
+      "pageErrors": []
+    },
+    {
+      "site": "admin",
+      "scenario": "revoked",
+      "passed": true,
+      "storageCleared": true,
+      "redirectedTo": "/login",
+      "pageErrors": []
+    },
+    {
+      "site": "resident",
+      "scenario": "password-change",
+      "passed": true,
+      "storageCleared": true,
+      "redirectedTo": "/login",
+      "pageErrors": []
+    },
+    {
+      "site": "resident",
+      "scenario": "deactivated",
+      "passed": true,
+      "storageCleared": true,
+      "redirectedTo": "/login",
+      "pageErrors": []
+    },
+    {
+      "site": "resident",
+      "scenario": "revoked",
+      "passed": true,
+      "storageCleared": true,
+      "redirectedTo": "/login",
+      "pageErrors": []
+    }
+  ]
+}

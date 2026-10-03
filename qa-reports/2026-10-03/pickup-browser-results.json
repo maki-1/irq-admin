@@ -1,0 +1,35 @@
+{
+  "mode": "Local production builds; mocked API; headless Chrome",
+  "results": [
+    {
+      "name": "resident-pickup-1280",
+      "passed": true,
+      "pageErrors": []
+    },
+    {
+      "name": "resident-pickup-390",
+      "passed": true,
+      "pageErrors": []
+    },
+    {
+      "name": "resident-summary-error-and-retry",
+      "passed": true,
+      "pageErrors": []
+    },
+    {
+      "name": "secretary-canonical-statuses",
+      "passed": true,
+      "pageErrors": []
+    },
+    {
+      "name": "captain-canonical-statuses",
+      "passed": true,
+      "pageErrors": []
+    },
+    {
+      "name": "secretary-release-label-and-handover",
+      "passed": true,
+      "pageErrors": []
+    }
+  ]
+}

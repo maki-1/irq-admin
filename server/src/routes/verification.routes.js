@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/verification.controller');
+const residentContact = require('../controllers/residentContact.controller');
 const { protect, requireRole } = require('../middleware/auth');
 
 // Protected
@@ -17,9 +18,12 @@ router.get('/stats',    requireRole('Secretary', 'Barangay Captain'), ctrl.getSt
 router.get('/approved', requireRole('Secretary', 'Barangay Captain'), ctrl.getLatestApproved);
 router.get('/',         requireRole('Secretary', 'Barangay Captain'), ctrl.getAll);
 router.get('/:id',  requireRole('Secretary', 'Barangay Captain'), ctrl.getOne);
+router.patch('/:id/contact', requireRole('Barangay Captain'), residentContact.update);
 router.patch('/:id/review',  requireRole('Secretary', 'Barangay Captain'), ctrl.review);
 router.delete('/:id/reset',  requireRole('Secretary', 'Barangay Captain'), ctrl.reset);
 router.patch('/:id/archive', requireRole('Barangay Captain'), ctrl.archive);
 router.patch('/:id/restore', requireRole('Barangay Captain'), ctrl.restore);
+router.patch('/:id/disable', requireRole('Secretary', 'Barangay Captain'), ctrl.disableAccount);
+router.delete('/:id/account', requireRole('Secretary', 'Barangay Captain'), ctrl.deleteAccount);
 
 module.exports = router;

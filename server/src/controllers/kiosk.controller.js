@@ -4,10 +4,7 @@ const prisma = require('../../lib/prisma');
 const { toApi } = require('../../lib/serialize');
 const { verifyClearance, redeemClearance } = require('../../lib/purokClearance');
 const generateORNumber = require('../utils/generateORNumber');
-const { notifyPurokLeader } = require('../../lib/purokNotify');
 const { normalizePurpose } = require('../../lib/purpose');
-const sendSmsRaw = require('../utils/sendSms');
-const sendEmail = require('../utils/sendEmail');
 
 /**
  * Walk-in kiosk.
@@ -21,9 +18,6 @@ const sendEmail = require('../utils/sendEmail');
  * Requests made through the app or website never touch this controller; they
  * keep the in-app per-request approval.
  */
-
-// The shared notifier calls sendSms(to, message); the util takes an object.
-const sendSms = (to, message) => sendSmsRaw({ to, message });
 
 const DOCUMENT_TYPES = [
   'Barangay Clearance',
@@ -47,17 +41,6 @@ async function priceCentavosFor(documentType, client = prisma) {
   const priceDoc = await client.documentPrice.findUnique({ where: { documentType } });
   if (priceDoc) return priceDoc.pricecentavos;
   return FALLBACK_CENTAVOS[documentType] ?? 10000; // default ₱100
-}
-
-// Fire-and-forget: a resident is standing at the counter, so tell their Purok
-// Leader a request is waiting. `channel:'kiosk'` makes purokNotify mark them as
-// physically present. Never allowed to fail the submission.
-function announceToPurokLeader(userId, documentTypes) {
-  notifyPurokLeader({ userId, documentTypes, channel: 'kiosk', sendSms, sendEmail })
-    .then((r) => {
-      if (!r.notified) console.warn(`[kiosk] purok leader not notified: ${r.reason}`);
-    })
-    .catch((e) => console.error('[kiosk] notify failed:', e.message));
 }
 
 const slugify = (s) =>
@@ -268,7 +251,8 @@ exports.submitRequests = async (req, res) => {
       totalDue,
     });
 
-    announceToPurokLeader(userId, requests.map((r) => r.documentType));
+    // Redeeming this clearance already approved these requests. An approval
+    // email would point to an empty queue and ask the leader to approve twice.
   } catch (err) {
     console.error('[kiosk] submit failed:', err);
     res.status(500).json({ message: 'Server error' });

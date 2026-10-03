@@ -8,6 +8,21 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Required for signed sessions. Use the same value on the mobile backend
+      # when accepting sessions issued by either service.
+      - key: JWT_SECRET
+        sync: false
+      # The admin site hosts the public email approval page.
+      - key: PORTAL_URL
+        value: https://www.irq-dologon.com
+      # Use the same signing secret on both backends.
+      - key: APPROVE_LINK_SECRET
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      # Gmail app password, not the account's ordinary password.
+      - key: EMAIL_PASS
+        sync: false
       # Shared secret every kiosk terminal sends as the X-Kiosk-Key header.
       # Set the value in the Render dashboard; must match the Flutter kiosk
       # build's --dart-define=KIOSK_KEY=...

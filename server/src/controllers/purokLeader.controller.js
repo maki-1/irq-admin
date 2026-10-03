@@ -1,36 +1,16 @@
+const { shapeRequest } = require('../../lib/requestStatus');
 const prisma     = require('../../lib/prisma');
 const { toApi }  = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
 const { purokFeeCentavosForUser } = require('../../lib/purokFee');
 const auditLog   = require('../utils/auditLog');
+const { purokProfileWhere, belongsToPurok, userIdsForPurok } = require('../../lib/purokScope');
 
 const USER_BRIEF = { select: { id: true, username: true, email: true, contactNumber: true } };
 
-/* Which verification profiles belong to a purok.
- *
- * Prefers the stored `purok` field. The address `contains` match is kept only
- * as a fallback for profiles predating that column, and is deliberately narrow:
- * a substring test on address matches "Purok 20" for a leader of "Purok 2".
- *
- * Every purok-scoped query goes through this one clause, so the roster and the
- * request queue can never disagree about who belongs to a leader's purok.
- */
-function purokProfileWhere(purok) {
-  return {
-    OR: [
-      { purok: { equals: purok, mode: 'insensitive' } },
-      { AND: [{ purok: null }, { address: { contains: purok, mode: 'insensitive' } }] },
-    ],
-  };
-}
-
+// Share the exact assignment/legacy-address matcher with email approvals.
 async function getUserIdsForPurok(purok) {
-  if (!purok) return [];
-  const profiles = await prisma.verificationProfile.findMany({
-    where: purokProfileWhere(purok),
-    select: { userId: true },
-  });
-  return profiles.map((p) => p.userId).filter(Boolean);
+  return userIdsForPurok(purok, prisma);
 }
 
 /* GET /api/purok-leader/dashboard */
@@ -114,7 +94,7 @@ exports.getResidents = async (req, res) => {
       orderBy: { fullName: 'asc' },
     });
 
-    const residents = profiles.map((p) => {
+    const residents = profiles.filter(p => belongsToPurok(p, purok)).map((p) => {
       const obj = toApi(p);
       const user = obj.user || null;
       delete obj.user;
@@ -148,6 +128,7 @@ exports.getRequests = async (req, res) => {
     const requests = await prisma.request.findMany({
       where: { userId: { in: userIds } },
       include: {
+        completedDocuments: true,
         user: {
           select: {
             ...USER_BRIEF.select,
@@ -163,7 +144,7 @@ exports.getRequests = async (req, res) => {
     // Preserves the old shape: `profile` beside the request rather than nested
     // inside `user`.
     const result = requests.map((r) => {
-      const obj = toApi(r);
+      const obj = toApi(shapeRequest(r));
       const profile = obj.user?.verificationProfile ?? null;
       if (obj.user) delete obj.user.verificationProfile;
       obj.profile = profile;
@@ -182,12 +163,14 @@ exports.approveRequest = async (req, res) => {
     const { remarks } = req.body;
     if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
 
-    // Find the request to get the resident's user ID
-    const existing = await prisma.request.findUnique({
-      where: { id: req.params.id },
+    // A leader may only act on a still-pending request belonging to their own
+    // purok. The id alone must never be enough to approve another leader's row.
+    const userIds = await getUserIdsForPurok(req.user.purok);
+    const existing = await prisma.request.findFirst({
+      where: { id: req.params.id, userId: { in: userIds }, purokLeaderStatus: 'pending' },
       select: { userId: true },
     });
-    if (!existing) return res.status(404).json({ message: 'Request not found' });
+    if (!existing) return res.status(404).json({ message: 'Request not found or is no longer pending' });
 
     // Resolve the clearance fee from the resident's purok. Shared with the
     // Flutter backend via lib/purokFee.js so the amount quoted to the resident
@@ -197,27 +180,30 @@ exports.approveRequest = async (req, res) => {
     const feecentavos = await purokFeeCentavosForUser(existing.userId);
     const purokClearanceFee = feecentavos / 100;
 
-    const request = await prisma.request.update({
-      where: { id: req.params.id },
-      data: {
-        purokLeaderStatus:  'approved',
-        purokLeaderBy:      req.user.id,
-        purokLeaderAt:      new Date(),
-        purokLeaderRemarks: remarks || '',
-        purokClearanceFee,
-      },
-      include: { user: { select: { id: true, username: true, email: true } } },
+    const request = await prisma.$transaction(async tx => {
+      const updated = await tx.request.update({
+        where: { id: req.params.id, userId: { in: userIds }, purokLeaderStatus: 'pending' },
+        data: {
+          purokLeaderStatus:  'approved',
+          purokLeaderBy:      req.user.id,
+          purokLeaderAt:      new Date(),
+          purokLeaderRemarks: remarks || '',
+          purokClearanceFee,
+        },
+        include: { user: { select: { id: true, username: true, email: true } } },
+      });
+
+      await auditLog({
+        user: req.user,
+        action: 'Purok Leader Approve Request',
+        details: `Request ${updated.id} (${updated.documentType}) approved by ${req.user.fullName} — Purok Clearance Fee: ₱${purokClearanceFee}`,
+      }, tx);
+      return updated;
     });
 
-    await auditLog({
-      user: req.user,
-      action: 'Purok Leader Approve Request',
-      details: `Request ${request.id} (${request.documentType}) approved by ${req.user.fullName} — Purok Clearance Fee: ₱${purokClearanceFee}`,
-    });
-
-    res.json(toApi(request));
+    res.json(toApi(shapeRequest(request)));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.code === 'P2025' ? 409 : 500).json({ message: err.code === 'P2025' ? 'This request was already decided. Refresh the queue.' : err.message });
   }
 };
 
@@ -227,33 +213,37 @@ exports.rejectRequest = async (req, res) => {
     const { remarks } = req.body;
     if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Request not found' });
 
-    const request = await prisma.request
-      .update({
-        where: { id: req.params.id },
-        data: {
-          purokLeaderStatus:  'rejected',
-          purokLeaderBy:      req.user.id,
-          purokLeaderAt:      new Date(),
-          purokLeaderRemarks: remarks || '',
-          status:             'Rejected',
-        },
-        include: { user: { select: { id: true, username: true, email: true } } },
-      })
-      .catch((e) => {
-        if (e.code === 'P2025') return null;
-        throw e;
-      });
+    const userIds = await getUserIdsForPurok(req.user.purok);
+    const existing = await prisma.request.findFirst({
+      where: { id: req.params.id, userId: { in: userIds }, purokLeaderStatus: 'pending' },
+      select: { id: true },
+    });
+    if (!existing) return res.status(404).json({ message: 'Request not found or is no longer pending' });
 
-    if (!request) return res.status(404).json({ message: 'Request not found' });
+    const request = await prisma.$transaction(async tx => {
+      const updated = await tx.request
+        .update({
+          where: { id: req.params.id, userId: { in: userIds }, purokLeaderStatus: 'pending' },
+          data: {
+            purokLeaderStatus:  'rejected',
+            purokLeaderBy:      req.user.id,
+            purokLeaderAt:      new Date(),
+            purokLeaderRemarks: remarks || '',
+            status:             'Rejected',
+          },
+          include: { user: { select: { id: true, username: true, email: true } } },
+        });
 
-    await auditLog({
-      user: req.user,
-      action: 'Purok Leader Reject Request',
-      details: `Request ${request.id} (${request.documentType}) rejected by ${req.user.fullName}. Reason: ${remarks || 'none'}`,
+      await auditLog({
+        user: req.user,
+        action: 'Purok Leader Reject Request',
+        details: `Request ${updated.id} (${updated.documentType}) rejected by ${req.user.fullName}. Reason: ${remarks || 'none'}`,
+      }, tx);
+      return updated;
     });
 
-    res.json(toApi(request));
+    res.json(toApi(shapeRequest(request)));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.code === 'P2025' ? 409 : 500).json({ message: err.code === 'P2025' ? 'This request was already decided. Refresh the queue.' : err.message });
   }
 };

@@ -1,0 +1,204 @@
+{
+  "mode": "Local real HTTP handlers; shared in-memory database, synthetic uploads, intercepted delivery and AI services; no live providers or accounts",
+  "observations": [
+    {
+      "name": "Successful registration and OTP set different isVerified meanings",
+      "reproduced": true,
+      "web": {
+        "contactVerified": true,
+        "isVerified": false,
+        "profileExists": false
+      },
+      "mobile": {
+        "contactVerified": true,
+        "isVerified": true,
+        "profileExists": false
+      }
+    },
+    {
+      "name": "One-character password",
+      "reproduced": true,
+      "web": 201,
+      "mobile": 400
+    },
+    {
+      "name": "Digits-only eight-character password",
+      "reproduced": true,
+      "web": 201,
+      "mobile": 201
+    },
+    {
+      "name": "Invalid contact number",
+      "reproduced": true,
+      "web": 400,
+      "mobile": 201
+    },
+    {
+      "name": "Username outside both UI rules",
+      "reproduced": true,
+      "web": 201,
+      "mobile": 201
+    },
+    {
+      "name": "Malformed email",
+      "reproduced": true,
+      "web": 201,
+      "mobile": 201
+    },
+    {
+      "name": "Web registration payload without confirmPassword",
+      "reproduced": true,
+      "web": 201,
+      "mobile": 400
+    },
+    {
+      "name": "Failed OTP delivery reports success only on mobile",
+      "reproduced": true,
+      "web": 502,
+      "mobile": 201
+    },
+    {
+      "name": "Email fallback exists only on web",
+      "reproduced": true,
+      "web": {
+        "status": 201,
+        "deliveries": [
+          "email"
+        ],
+        "channel": "email"
+      },
+      "mobile": {
+        "status": 201,
+        "deliveries": [],
+        "channel": null
+      }
+    },
+    {
+      "name": "Retrying an abandoned registration differs",
+      "reproduced": true,
+      "web": {
+        "available": true,
+        "retryStatus": 201
+      },
+      "mobile": {
+        "available": false,
+        "retryStatus": 409
+      }
+    },
+    {
+      "name": "OTP guesses are capped only on web",
+      "reproduced": true,
+      "web": {
+        "wrongAttemptStatuses": [
+          400,
+          400,
+          400,
+          400,
+          429,
+          400
+        ],
+        "correctCodeAfterSixFailures": 400
+      },
+      "mobile": {
+        "wrongAttemptStatuses": [
+          400,
+          400,
+          400,
+          400,
+          400,
+          400
+        ],
+        "correctCodeAfterSixFailures": 200
+      }
+    },
+    {
+      "name": "An OTP issued by one backend cannot be verified by the other",
+      "reproduced": true,
+      "webTomobile": 400,
+      "mobileToweb": 400
+    },
+    {
+      "name": "Resending in the other channel does not invalidate the original OTP",
+      "reproduced": true,
+      "oldWebCodeStatus": 200,
+      "unusedMobileChallenges": 1
+    },
+    {
+      "name": "Verified registrations can be used for login on both services",
+      "reproduced": true,
+      "web": {
+        "web": 200,
+        "mobile": 200
+      },
+      "mobile": {
+        "web": 200,
+        "mobile": 200
+      }
+    },
+    {
+      "name": "Blank education is accepted only by mobile and marks review pending before ID submission",
+      "reproduced": true,
+      "web": {
+        "http": 400,
+        "profileStatus": "draft",
+        "currentStep": 2,
+        "hasId": false
+      },
+      "mobile": {
+        "http": 200,
+        "profileStatus": "pending",
+        "currentStep": 3,
+        "hasId": false
+      }
+    },
+    {
+      "name": "ID submission without face photo",
+      "reproduced": true,
+      "web": 400,
+      "mobile": 200
+    },
+    {
+      "name": "ID submission without server liveness proof",
+      "reproduced": true,
+      "web": 403,
+      "mobile": 200
+    },
+    {
+      "name": "Education can skip demographics only through the web endpoint",
+      "reproduced": true,
+      "web": 200,
+      "mobile": 400
+    },
+    {
+      "name": "Web secondary-only ID payload is rejected by its own backend",
+      "reproduced": true,
+      "status": 400,
+      "message": "Primary ID type and front photo are required"
+    },
+    {
+      "name": "Step-one progress is written to different fields and returned inconsistently across channels",
+      "reproduced": true,
+      "web": {
+        "webStep": 1,
+        "mobileStep": 1,
+        "profileStatus": "submitted",
+        "yearsAtAddress": 5,
+        "yearsOfResidency": null
+      },
+      "mobile": {
+        "webStep": 0,
+        "mobileStep": 2,
+        "profileStatus": "draft",
+        "yearsAtAddress": null,
+        "yearsOfResidency": "5"
+      }
+    },
+    {
+      "name": "The app demographic payload omits the required purok field",
+      "reproduced": true,
+      "status": 400,
+      "message": "Please select your purok",
+      "savedProfiles": 0
+    }
+  ]
+}

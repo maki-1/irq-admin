@@ -1,3 +1,4 @@
+const { STATUS, shapeRequest, residentDocuments, residentSummary } = require('../../lib/requestStatus');
 const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
 const { toApi }  = require('../../lib/serialize');
@@ -35,18 +36,7 @@ async function uploadBuffer(buffer, folder) {
 /* ── GET /api/requests/summary ──────────────────────────── */
 exports.getSummary = async (req, res) => {
   try {
-    const userId = req.resident.id;
-    const requests = await prisma.request.findMany({
-      where: { userId },
-      select: { status: true },
-    });
-
-    const summary = { total: requests.length, Pending: 0, Processing: 0, Printing: 0, Completed: 0, Claimed: 0 };
-    requests.forEach((r) => {
-      if (summary[r.status] !== undefined) summary[r.status]++;
-    });
-
-    res.json({ ...summary, total: requests.length });
+    res.json(toApi(await residentSummary(prisma, req.resident.id)));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -57,9 +47,10 @@ exports.getMyRequests = async (req, res) => {
   try {
     const requests = await prisma.request.findMany({
       where: { userId: req.resident.id },
+      include: { completedDocuments: true },
       orderBy: { createdAt: 'desc' },
     });
-    res.json(toApi(requests));
+    res.json(toApi(requests.map(shapeRequest)));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -68,14 +59,9 @@ exports.getMyRequests = async (req, res) => {
 /* ── GET /api/requests/claimed ──────────────────────────── */
 exports.getClaimed = async (req, res) => {
   try {
-    const requests = await prisma.request.findMany({
-      where: { userId: req.resident.id, status: 'Claimed' },
-      orderBy: { updatedAt: 'desc' },
-    });
-    res.json(toApi(requests));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+    const docs = await residentDocuments(prisma, req.resident.id);
+    res.json(toApi(docs.filter((doc) => doc.status === STATUS.claimed)));
+  } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 /* ── GET /api/my/requests/completed ────────────────────────
@@ -86,29 +72,11 @@ exports.getClaimed = async (req, res) => {
 ────────────────────────────────────────────────────────── */
 exports.getMyCompleted = async (req, res) => {
   try {
-    const where = { userId: req.resident.id };
-    // Case-insensitive: claim statuses have been written with varying casing.
-    if (req.query.status) {
-      where.claimStatus = { equals: req.query.status, mode: 'insensitive' };
-    }
-
-    const docs = await prisma.completedDocument.findMany({
-      where,
-      include: {
-        request: {
-          select: {
-            id: true, documentType: true, purpose: true, paymentStatus: true,
-            orNumber: true, createdAt: true,
-          },
-        },
-      },
-      orderBy: { completedAt: 'desc' },
-    });
-
-    res.json(toApi(docs));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+    const filter = req.query.status?.toLowerCase();
+    if (filter && !['pending', 'claimed'].includes(filter)) return res.status(400).json({ message: 'Status must be pending or claimed.' });
+    const docs = await residentDocuments(prisma, req.resident.id);
+    res.json(toApi(filter ? docs.filter((doc) => doc.claimStatus === filter) : docs));
+  } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 /* ── DELETE /api/requests/:id ───────────────────────────── */

@@ -1,14 +1,9 @@
-const jwt = require('jsonwebtoken');
+const { signToken, requireActive } = require('../../lib/accountLifecycle');
 const prisma = require('../../lib/prisma');
 const { comparePassword } = require('../../lib/password');
 const { toApi } = require('../../lib/serialize');
 const residentCtrl = require('./resident.auth.controller');
 const auditLog = require('../utils/auditLog');
-
-const signToken = (id) => {
-  if (!process.env.JWT_SECRET) return id.toString();
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
-};
 
 // POST /api/auth/login — handles admin (email) and resident (username)
 exports.login = async (req, res) => {
@@ -32,10 +27,8 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
     // Deactivated accounts keep their history but cannot sign in.
-    if (user.active === false) {
-      return res.status(403).json({ message: 'This account has been deactivated. Contact the Barangay Captain.' });
-    }
-    const token = signToken(user.id);
+    if (!requireActive(user, res)) return;
+    const token = signToken(user, 'staff');
     // Record the sign-in on the audit trail. Fire-and-forget: a logging hiccup
     // must never block a valid login.
     auditLog({ user, action: 'Login', details: `Signed in as ${user.role}` }).catch(() => {});
@@ -62,8 +55,8 @@ exports.getMe = async (req, res) => {
 };
 
 // POST /api/auth/logout — records the sign-out on the audit trail.
-// The token is stateless (nothing to invalidate server-side); this exists so
-// the sign-out time is captured. `protect` runs first, so req.user is the
+// Ordinary logout removes this client session; password and lifecycle changes
+// revoke every session. This endpoint captures the sign-out time. `protect` runs first, so req.user is the
 // staff member logging out — any staff role, Purok Leader included.
 exports.logout = async (req, res) => {
   try {

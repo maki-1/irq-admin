@@ -1,9 +1,26 @@
+const { residentRevocationData } = require('../../lib/accountLifecycle');
+const { PROFILE_CONTACT_INCLUDE, contactProfile } = require('../../lib/residentContact');
 const prisma     = require('../../lib/prisma');
 const { toApi }  = require('../../lib/serialize');
 const { isUuid } = require('../../lib/ids');
 const sendEmail  = require('../utils/sendEmail');
 const sendSms    = require('../utils/sendSms');
 const auditLog   = require('../utils/auditLog');
+
+const REVIEW_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+function isReviewWindowExpired(profile) {
+  const createdAt = profile?.user?.createdAt || profile?.createdAt;
+  return !createdAt || Date.now() - new Date(createdAt).getTime() >= REVIEW_WINDOW_MS;
+}
+
+async function findProfileForLifecycle(id) {
+  if (!isUuid(id)) return null;
+  return prisma.verificationProfile.findUnique({
+    where: { id },
+    include: { user: { select: { id: true, createdAt: true } } },
+  });
+}
 
 // The Mongo filter was `{ $or: [{ verified: true }, { status: in [approved, Approved] }] }`.
 // No document has ever carried a `verified` field, so the first clause never
@@ -69,23 +86,25 @@ async function contactFor(profile) {
 // GET /api/verifications/purok-stats
 exports.getPurokStats = async (req, res) => {
   try {
-    // The Mongo aggregation grouped by `purok` when present, else the first
-    // comma-separated segment of the address. No profile carries a `purok`
+    // Prefer the stored purok. For older profiles, derive an explicit Purok N
+    // token from the address rather than a generic barangay name.
     // field, so only the address branch is reachable. Grouped in JS — the
     // table is small and this keeps the derivation readable.
     const profiles = await prisma.verificationProfile.findMany({
       where: APPROVED_WHERE,
-      select: { address: true },
+      select: { purok: true, address: true },
     });
 
     const counts = new Map();
     for (const p of profiles) {
-      const label = (p.address || 'Unknown').split(',')[0].trim() || 'Unknown';
+      const legacyMatch = p.address?.match(/\bPurok\s*\d+\b/i);
+      const label = p.purok?.trim() || legacyMatch?.[0]?.replace(/\s+/g, ' ').trim();
+      if (!label) continue;
       counts.set(label, (counts.get(label) || 0) + 1);
     }
 
     const stats = [...counts.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
       .map(([purok, count]) => ({ purok, count }));
 
     res.json(stats);
@@ -107,13 +126,18 @@ exports.getResidentCount = async (req, res) => {
 // GET /api/verifications/stats
 exports.getStats = async (req, res) => {
   try {
-    const [total, pending] = await Promise.all([
+    const [total, pending, pwd, senior, indigent, soloParent, pregnant] = await Promise.all([
       prisma.verificationProfile.count({ where: APPROVED_WHERE }),
       prisma.verificationProfile.count({
         where: { status: { equals: 'pending', mode: 'insensitive' } },
       }),
+      prisma.verificationProfile.count({ where: { ...APPROVED_WHERE, isPwd: true } }),
+      prisma.verificationProfile.count({ where: { ...APPROVED_WHERE, isSenior: true } }),
+      prisma.verificationProfile.count({ where: { ...APPROVED_WHERE, isIndigent: true } }),
+      prisma.verificationProfile.count({ where: { ...APPROVED_WHERE, isSoloParent: true } }),
+      prisma.verificationProfile.count({ where: { ...APPROVED_WHERE, isPregnant: true } }),
     ]);
-    res.json({ total, pending });
+    res.json({ total, pending, special: { pwd, senior, indigent, soloParent, pregnant } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -143,9 +167,10 @@ exports.getAll = async (req, res) => {
     if (status) where.status = { equals: status, mode: 'insensitive' };
     const profiles = await prisma.verificationProfile.findMany({
       where,
+      include: PROFILE_CONTACT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
-    res.json(toApi(profiles));
+    res.json(toApi(profiles.map(contactProfile)));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -155,9 +180,9 @@ exports.getAll = async (req, res) => {
 exports.getOne = async (req, res) => {
   try {
     if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
-    const profile = await prisma.verificationProfile.findUnique({ where: { id: req.params.id } });
+    const profile = await prisma.verificationProfile.findUnique({ where: { id: req.params.id }, include: PROFILE_CONTACT_INCLUDE });
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
-    res.json(toApi(profile));
+    res.json(toApi(contactProfile(profile)));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -183,9 +208,13 @@ exports.create = async (req, res) => {
 // DELETE /api/verifications/:id/reset
 exports.reset = async (req, res) => {
   try {
-    if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
-    const profile = await prisma.verificationProfile.findUnique({ where: { id: req.params.id } });
+    const profile = await findProfileForLifecycle(req.params.id);
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
+    if (isReviewWindowExpired(profile)) {
+      return res.status(403).json({
+        message: 'The three-day review period has ended. Disable or delete the account instead.',
+      });
+    }
 
     const { remarks } = req.body || {};
     const { email, contactNumber } = await contactFor(profile);
@@ -303,6 +332,14 @@ exports.review = async (req, res) => {
     }
     if (!isUuid(req.params.id)) return res.status(404).json({ message: 'Profile not found' });
 
+    const reviewTarget = await findProfileForLifecycle(req.params.id);
+    if (!reviewTarget) return res.status(404).json({ message: 'Profile not found' });
+    if (isReviewWindowExpired(reviewTarget)) {
+      return res.status(403).json({
+        message: 'The three-day review period has ended. Disable or delete the account instead.',
+      });
+    }
+
     // Store the status lower-cased. The mobile app compares it exactly
     // (`status == 'approved'`), so a capitalised "Approved" would fail to route
     // an approved resident to their dashboard.
@@ -392,6 +429,53 @@ exports.review = async (req, res) => {
     }
 
     res.json(toApi(profile));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// PATCH /api/verifications/:id/disable
+// The account remains in the residence register, but active sessions and future
+// login attempts are refused by residentProtect and residentLogin.
+exports.disableAccount = async (req, res) => {
+  try {
+    const profile = await findProfileForLifecycle(req.params.id);
+    if (!profile) return res.status(404).json({ message: 'Profile not found' });
+    if (!isReviewWindowExpired(profile)) {
+      return res.status(403).json({ message: 'Accounts can only be disabled after the three-day review period.' });
+    }
+
+    await prisma.user.update({ where: { id: profile.userId }, data: { active: false, ...residentRevocationData() } });
+    await auditLog({ user: req.user, action: 'Disabled Resident Account', details: `Resident: ${profile.fullName}` });
+    res.json({ message: 'Account disabled. The resident can no longer log in.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// DELETE /api/verifications/:id/account
+// Preserve the residence profile in the archive and soft-delete the account so
+// foreign-keyed requests and the audit trail remain intact.
+exports.deleteAccount = async (req, res) => {
+  try {
+    const profile = await findProfileForLifecycle(req.params.id);
+    if (!profile) return res.status(404).json({ message: 'Profile not found' });
+    if (!isReviewWindowExpired(profile)) {
+      return res.status(403).json({ message: 'Accounts can only be deleted after the three-day review period.' });
+    }
+
+    await prisma.$transaction([
+      prisma.verificationProfile.update({
+        where: { id: profile.id },
+        data: { archived: true, archivedAt: new Date() },
+      }),
+      prisma.user.update({
+        where: { id: profile.userId },
+        data: { active: false, deletedAt: new Date(), ...residentRevocationData() },
+      }),
+    ]);
+    await auditLog({ user: req.user, action: 'Deleted Resident Account', details: `Resident: ${profile.fullName}; residence profile archived` });
+    res.json({ message: 'Account deleted and residence profile archived.' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

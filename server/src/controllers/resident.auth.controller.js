@@ -1,5 +1,5 @@
 const bcrypt     = require('bcryptjs');
-const jwt        = require('jsonwebtoken');
+const { signToken, requireActive, isAccountActive, changeResidentPassword, revoked } = require('../../lib/accountLifecycle');
 const crypto     = require('crypto');
 const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
@@ -14,12 +14,8 @@ const withTimeout = require('../../lib/withTimeout');
 // so both verify against each other.
 const ROUNDS = 12;
 
-const signToken = (id) => {
-  if (!process.env.JWT_SECRET) return id.toString();
-  return jwt.sign({ id, role: 'resident' }, process.env.JWT_SECRET, { expiresIn: '7d' });
-};
-
 const OTP_TTL_MS = 10 * 60 * 1000;
+const RESIDENT_CONTACT_RE = /^09\d{9}$/;
 // Six digits with unlimited guesses falls to a script in minutes, so a code is
 // burned after this many wrong tries and the resident has to request a new one.
 const OTP_MAX_ATTEMPTS = 5;
@@ -33,7 +29,7 @@ function generateOtp() {
 function safeUser(u) {
   if (!u) return u;
   const {
-    password, otp, otpExpires, otpAttempts, resetToken, resetTokenExpires, ...rest
+    password, otp, otpExpires, otpAttempts, resetToken, resetTokenExpires, sessionVersion, ...rest
   } = toApi(u);
   return rest;
 }
@@ -119,6 +115,7 @@ async function withAccountState(user) {
 // register() reclaims it — so reporting it as taken here would stop the signup
 // form before it ever got the chance, and strand the resident for good.
 async function claimsIdentifierAsync(row) {
+  if (row && !isAccountActive(row)) return true;
   if (!row) return false;
   if (row.contactVerified) return true;
   return hasHistory(row);
@@ -150,8 +147,11 @@ exports.checkUsername = async (req, res) => {
 /* ── GET /api/auth/check-contact ────────────────────────── */
 exports.checkContact = async (req, res) => {
   try {
-    if (!req.query.contact) return res.json({ available: false });
-    const exists = await prisma.user.findUnique({ where: { contactNumber: req.query.contact } });
+    const rawContact = String(req.query.contact || '').trim();
+    if (!rawContact || !RESIDENT_CONTACT_RE.test(rawContact)) {
+      return res.json({ available: false });
+    }
+    const exists = await prisma.user.findUnique({ where: { contactNumber: rawContact } });
     res.json({ available: !(await claimsIdentifierAsync(exists)) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -179,13 +179,18 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Username, contact number, and password are required' });
     }
 
+    const cleanContact = String(contactNumber).replace(/\D/g, '');
+    if (!RESIDENT_CONTACT_RE.test(cleanContact)) {
+      return res.status(400).json({ message: 'Contact number must be 11 digits only.' });
+    }
+
     const normalisedEmail = email?.toLowerCase() || null;
 
     const clashes = await prisma.user.findMany({
       where: {
         OR: [
           { username },
-          { contactNumber },
+          { contactNumber: cleanContact },
           ...(normalisedEmail ? [{ email: normalisedEmail }] : []),
         ],
       },
@@ -201,7 +206,7 @@ exports.register = async (req, res) => {
     if (taken) {
       const field =
         taken.username === username ? 'Username'
-        : taken.contactNumber === contactNumber ? 'Contact number'
+        : taken.contactNumber === cleanContact ? 'Contact number'
         : 'Email';
       return res.status(400).json({ message: `${field} is already registered` });
     }
@@ -237,14 +242,14 @@ exports.register = async (req, res) => {
     const user = stale
       ? await prisma.user.update({
           where: { id: stale.id },
-          data: { username, contactNumber, email: normalisedEmail, password: hashed, ...otpData },
+          data: { username, contactNumber: cleanContact, email: normalisedEmail, password: hashed, ...otpData },
         })
       : await prisma.user.create({
-          data: { username, contactNumber, email: normalisedEmail, password: hashed, ...otpData },
+          data: { username, contactNumber: cleanContact, email: normalisedEmail, password: hashed, ...otpData },
         });
 
     const channel = await deliverOtp({
-      contactNumber,
+      contactNumber: cleanContact,
       email: normalisedEmail,
       otp,
       purpose: 'verification',
@@ -283,6 +288,7 @@ exports.verifyOtp = async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!requireActive(user, res)) return;
 
     if (!user.otp || !user.otpExpires) {
       return res.status(400).json({ message: 'No verification code is pending. Request a new one.' });
@@ -316,7 +322,7 @@ exports.verifyOtp = async (req, res) => {
 
     if (!correct) {
       const { otpAttempts } = await prisma.user.update({
-        where: { id: userId },
+        where: { id: userId, active: true, deletedAt: null, sessionVersion: user.sessionVersion, otp: user.otp },
         data: { otpAttempts: { increment: 1 } },
         select: { otpAttempts: true },
       });
@@ -324,7 +330,7 @@ exports.verifyOtp = async (req, res) => {
       if (attemptsRemaining === 0) {
         // Burn the code outright rather than leaving a guessed-at value live.
         await prisma.user.update({
-          where: { id: userId },
+          where: { id: userId, active: true, deletedAt: null, sessionVersion: user.sessionVersion, otp: user.otp },
           data: { otp: null, otpExpires: null },
         });
         return res.status(429).json({
@@ -338,7 +344,7 @@ exports.verifyOtp = async (req, res) => {
     if (wantReset) {
       const resetToken = crypto.randomBytes(32).toString('hex');
       await prisma.user.update({
-        where: { id: userId },
+        where: { id: userId, active: true, deletedAt: null, sessionVersion: user.sessionVersion, otp: user.otp },
         data: {
           otp: null, otpExpires: null, otpType: null, otpAttempts: 0,
           resetToken,
@@ -352,7 +358,7 @@ exports.verifyOtp = async (req, res) => {
     // `isVerified` stays false because that one tracks the barangay's review of
     // the documents, which has not even been submitted yet.
     const updated = await prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, active: true, deletedAt: null, sessionVersion: user.sessionVersion, otp: user.otp },
       data: {
         otp: null, otpExpires: null, otpType: null, otpAttempts: 0,
         contactVerified: true,
@@ -361,9 +367,10 @@ exports.verifyOtp = async (req, res) => {
         verificationStep: 0,
       },
     });
-    const token = signToken(updated.id);
+    const token = signToken(updated, 'resident');
     res.json({ message: 'Account verified successfully', token, user: safeUser(updated) });
   } catch (err) {
+    if (err.code === 'P2025') return res.status(400).json({ message: 'Code expired or account changed. Request a new code.' });
     res.status(500).json({ message: err.message });
   }
 };
@@ -376,6 +383,7 @@ exports.resendOtp = async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!requireActive(user, res)) return;
 
     // Keep the purpose of the in-flight code: resending mid password-reset must
     // not quietly turn it into a code that verifies the account.
@@ -425,6 +433,7 @@ exports.forgotPassword = async (req, res) => {
     }
     const user = await prisma.user.findUnique({ where: { contactNumber } });
     if (!user) return res.status(404).json({ message: 'No account with that contact number' });
+    if (!requireActive(user, res)) return;
 
     const otp = generateOtp();
     await prisma.user.update({
@@ -471,14 +480,14 @@ exports.resetPassword = async (req, res) => {
         resetTokenExpires: { gt: new Date() },
       },
     });
-    if (!user) return res.status(400).json({ message: 'Invalid or expired reset token' });
+    if (!isAccountActive(user)) return res.status(400).json({ message: 'Invalid or expired reset token' });
 
     const hashed = await bcrypt.hash(newPassword, ROUNDS);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashed, resetToken: null, resetTokenExpires: null },
+    const changed = await changeResidentPassword(prisma, user, hashed, {
+      resetToken: token, resetTokenExpires: { gt: new Date() },
     });
-    res.json({ message: 'Password reset successfully' });
+    if (!changed) return res.status(400).json({ message: 'Invalid or expired reset token' });
+    res.json({ message: 'Password reset successfully. Please sign in again.', sessionsRevoked: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -496,6 +505,8 @@ exports.residentLogin = async (req, res) => {
     if (!user || !user.password) {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
+
+    if (!requireActive(user, res)) return;
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: 'Invalid username or password' });
@@ -548,7 +559,7 @@ exports.residentLogin = async (req, res) => {
       });
     }
 
-    const token = signToken(user.id);
+    const token = signToken(user, 'resident');
 
     res.json({
       token,
@@ -602,8 +613,9 @@ exports.changePassword = async (req, res) => {
     if (!match) return res.status(400).json({ message: 'Current password is incorrect' });
 
     const hashed = await bcrypt.hash(newPassword, ROUNDS);
-    await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
-    res.json({ message: 'Password changed successfully' });
+    const changed = await changeResidentPassword(prisma, req.resident, hashed);
+    if (!changed) return res.status(401).json(revoked);
+    res.json({ message: 'Password changed successfully. Please sign in again.', sessionsRevoked: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

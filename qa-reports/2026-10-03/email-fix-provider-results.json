@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "name": "web",
+      "checkedAt": "2026-10-03T07:05:06.071Z",
+      "emailSent": false,
+      "smtpAuthenticated": true,
+      "portalOrigin": "https://www.irq-dologon.com",
+      "approvalSecretConfigured": true
+    },
+    {
+      "name": "mobile",
+      "checkedAt": "2026-10-03T07:05:08.076Z",
+      "emailSent": false,
+      "smtpAuthenticated": true,
+      "portalOrigin": "https://www.irq-dologon.com",
+      "approvalSecretConfigured": true
+    }
+  ]
+}

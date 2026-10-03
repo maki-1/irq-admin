@@ -1,0 +1,134 @@
+{
+  "checkedAt": "2026-10-03T05:41:16.561Z",
+  "messageSends": 0,
+  "databaseWrites": 0,
+  "scope": "Local .env credentials; does not establish deployed host configuration or inbox/handset delivery.",
+  "smsApiDocs": "https://unismsapi.com/docs/sms",
+  "results": [
+    {
+      "name": "web",
+      "checkedAt": "2026-10-03T05:41:04.319Z",
+      "config": {
+        "UNISMS_API_KEY": true,
+        "UNISMS_SENDER_ID": true,
+        "EMAIL_USER": true,
+        "EMAIL_PASS": true,
+        "APPROVE_LINK_SECRET": true,
+        "PORTAL_URL": true
+      },
+      "approvalPortalOrigin": "http://localhost:5173",
+      "smsAccount": {
+        "httpStatus": 200,
+        "accountStatus": "active",
+        "smsCredits": 91,
+        "sidTokens": 0
+      },
+      "purok10": {
+        "leaderCount": 3,
+        "leaders": [
+          {
+            "active": true,
+            "phoneConfigured": true,
+            "phoneLast4": "9111",
+            "notifyEmailConfigured": false,
+            "notifyEmailDomain": null
+          },
+          {
+            "active": true,
+            "phoneConfigured": true,
+            "phoneLast4": "9915",
+            "notifyEmailConfigured": true,
+            "notifyEmailDomain": "gmail.com"
+          },
+          {
+            "active": true,
+            "phoneConfigured": true,
+            "phoneLast4": "7497",
+            "notifyEmailConfigured": false,
+            "notifyEmailDomain": null
+          }
+        ]
+      },
+      "staffSessionVersionColumn": false,
+      "actualPrismaLeaderLookup": {
+        "succeeded": false,
+        "code": "P2022"
+      },
+      "smtpAuthentication": {
+        "verified": false,
+        "code": "ETIMEDOUT",
+        "httpStatus": null,
+        "smtpStatus": null
+      }
+    },
+    {
+      "name": "mobile",
+      "checkedAt": "2026-10-03T05:41:04.428Z",
+      "config": {
+        "UNISMS_API_KEY": true,
+        "UNISMS_SENDER_ID": true,
+        "EMAIL_USER": true,
+        "EMAIL_PASS": true,
+        "APPROVE_LINK_SECRET": false,
+        "PORTAL_URL": false
+      },
+      "approvalPortalOrigin": "http://localhost:5173",
+      "smsAccount": {
+        "httpStatus": 200,
+        "accountStatus": "active",
+        "smsCredits": 91,
+        "sidTokens": 0
+      },
+      "purok10": {
+        "leaderCount": 3,
+        "leaders": [
+          {
+            "active": true,
+            "phoneConfigured": true,
+            "phoneLast4": "9111",
+            "notifyEmailConfigured": false,
+            "notifyEmailDomain": null
+          },
+          {
+            "active": true,
+            "phoneConfigured": true,
+            "phoneLast4": "9915",
+            "notifyEmailConfigured": true,
+            "notifyEmailDomain": "gmail.com"
+          },
+          {
+            "active": true,
+            "phoneConfigured": true,
+            "phoneLast4": "7497",
+            "notifyEmailConfigured": false,
+            "notifyEmailDomain": null
+          }
+        ]
+      },
+      "staffSessionVersionColumn": false,
+      "actualPrismaLeaderLookup": {
+        "succeeded": false,
+        "code": "P2022"
+      },
+      "smtpAuthentication": {
+        "verified": true,
+        "emailSent": false
+      }
+    }
+  ],
+  "smtpFollowup": {
+    "checkedAt": "2026-10-03T05:43:48.684Z",
+    "name": "web",
+    "emailSent": false,
+    "verified": false,
+    "code": "EAUTH",
+    "smtpStatus": 535
+  },
+  "initialWebSmtpObservation": {
+    "checkedAt": "2026-10-03T05:35:35.511Z",
+    "verified": false,
+    "code": "EAUTH",
+    "smtpStatus": 535,
+    "note": "Captured by the initial diagnostic run before adding Prisma compatibility checks."
+  }
+}

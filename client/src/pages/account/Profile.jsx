@@ -67,8 +67,10 @@ const { register, handleSubmit, watch, reset, formState: { errors } } = useForm(
     setPwLoading(true);
     try {
       await api.post('/auth/change-password', { currentPassword, newPassword });
-      toast.success('Password changed successfully!');
+      toast.success('Password changed. Please sign in again.');
       reset();
+      logout();
+      navigate('/login', { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to change password');
     } finally {

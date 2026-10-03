@@ -137,6 +137,7 @@ export default function Signup() {
                   placeholder="09XXXXXXXXX"
                   type="tel"
                   inputMode="numeric"
+                  maxLength={11}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">
                   <FieldStatus status={checks.contact} />

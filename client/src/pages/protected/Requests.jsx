@@ -6,7 +6,7 @@ import AppLayout from '../../components/layout/AppLayout';
 import StatusBadge from '../../components/common/StatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
-const TABS = ['Active', 'Ready for Pickup', 'Claimed'];
+const TABS = ['Active', 'Rejected', 'Ready for Pickup', 'Claimed'];
 
 /* ── Claim Slip ──────────────────────────────────────────── */
 function ClaimSlip({ doc }) {
@@ -42,7 +42,7 @@ function ClaimSlip({ doc }) {
             )}
           </div>
           <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-            Ready
+            Ready for Pickup
           </span>
         </div>
 
@@ -87,8 +87,8 @@ function ClaimSlip({ doc }) {
 
 /* ── Claimed Card ────────────────────────────────────────── */
 function ClaimedCard({ doc }) {
-  const claimedAt = doc.updatedAt
-    ? new Date(doc.updatedAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+  const claimedAt = doc.claimedAt
+    ? new Date(doc.claimedAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
     : '—';
 
   return (
@@ -202,8 +202,8 @@ export default function Requests() {
   async function load() {
     setLoading(true);
     try {
-      if (tab === 0) await loadActive();
-      else if (tab === 1) await loadCompleted('pending');
+      if (tab === 0 || tab === 1) await loadActive();
+      else if (tab === 2) await loadCompleted('pending');
       else await loadCompleted('claimed');
     } catch {
       toast.error('Failed to load requests');
@@ -220,11 +220,23 @@ export default function Requests() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [tab]);
 
+  // Purok Leader decisions happen in a separate portal. Refresh the two live
+  // request views so a resident sees an approval or rejection without logging
+  // out or manually reloading the page.
+  useEffect(() => {
+    const refresh = () => tab < 2 ? loadActive() : loadCompleted(tab === 2 ? 'pending' : 'claimed');
+    const interval = window.setInterval(() => { refresh().catch(() => {}); }, 30_000);
+    return () => window.clearInterval(interval);
+  }, [tab, loadActive, loadCompleted]);
+
   const activeItems = requests.filter((r) =>
     ['Pending', 'Processing', 'Printing'].includes(r.status)
   );
+  const rejectedItems = requests.filter((r) =>
+    r.status === 'Rejected' || r.purokLeaderStatus === 'rejected'
+  );
 
-  const displayItems = tab === 0 ? activeItems : completed;
+  const displayItems = tab === 0 ? activeItems : tab === 1 ? rejectedItems : completed;
 
   return (
     <AppLayout>
@@ -252,16 +264,16 @@ export default function Requests() {
       ) : displayItems.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-5xl mb-4">
-            {tab === 0 ? '📋' : tab === 1 ? '🏷️' : '✅'}
+            {tab === 0 ? '📋' : tab === 1 ? '✕' : tab === 2 ? '🏷️' : '✅'}
           </div>
           <p className="text-gray-500 font-medium">No {TABS[tab].toLowerCase()} requests</p>
           <p className="text-gray-400 text-sm mt-1">Your requests will appear here</p>
         </div>
-      ) : tab === 0 ? (
-        activeItems.map((r) => (
+      ) : tab === 0 || tab === 1 ? (
+        displayItems.map((r) => (
           <RequestCard key={r._id || r.id} request={r} />
         ))
-      ) : tab === 1 ? (
+      ) : tab === 2 ? (
         completed.map((doc) => (
           <ClaimSlip key={doc._id} doc={doc} />
         ))

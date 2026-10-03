@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FiSearch, FiEye, FiX,
-  FiUser, FiMapPin, FiPhone, FiMail,
+  FiUser, FiMapPin,
   FiCalendar, FiBriefcase, FiCheckCircle, FiXCircle, FiClock,
   FiCreditCard, FiDownload, FiAlertTriangle, FiRotateCcw, FiArchive,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
+import ResidentContactDetails from '../../components/residents/ResidentContactDetails';
 import useAuthStore from '../../store/authStore';
 import { exportReportXLSX } from '../../utils/reportExport';
 
@@ -21,6 +22,31 @@ const STATUS_CFG = {
 };
 
 const normStatus = (s) => (s || '').toLowerCase();
+
+function accountTypeLabel(profile) {
+  const types = [
+    profile.isPwd && 'PWD',
+    profile.isSenior && 'Senior Citizen',
+    profile.isIndigent && 'Indigent',
+    profile.isSoloParent && 'Solo Parent',
+    profile.isPregnant && 'Pregnant',
+    profile.isNonResident && 'Non-Resident',
+    profile.isIndigenousPeople && `Indigenous People${profile.ethnicGroup ? ` (${profile.ethnicGroup})` : ''}`,
+  ].filter(Boolean);
+  return types.join(', ') || 'Standard Resident';
+}
+
+function specialSearchTerms(profile) {
+  return [
+    profile.isPwd && 'pwd person with disability',
+    profile.isSenior && 'senior senior citizen',
+    profile.isIndigent && 'indigent',
+    profile.isSoloParent && 'solo parent',
+    profile.isPregnant && 'pregnant',
+    profile.isNonResident && 'non-resident nonresident',
+    profile.isIndigenousPeople && `indigenous people indigenous ip ${profile.ethnicGroup || ''}`,
+  ].filter(Boolean).join(' ').toLowerCase();
+}
 
 function StatusBadge({ status }) {
   const cfg = STATUS_CFG[normStatus(status)] || { bg: '#F5F5F5', color: '#888', label: status || '—' };
@@ -56,7 +82,7 @@ function InfoRow({ icon: Icon, label, value }) {
 }
 
 /* ── Review Modal ── */
-function ReviewModal({ profile, onClose, onSave, onReset }) {
+function ReviewModal({ profile, onClose, onSave, onReset, onDisable, onDelete, onContactSaved }) {
   const [remarks,    setRemarks]    = useState('');
   const [saving,     setSaving]     = useState(false);
   const [resetting,  setResetting]  = useState(false);
@@ -64,8 +90,16 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
   const [imgPreview,  setImgPreview]  = useState(null);
   const [croppedUrl,  setCroppedUrl]  = useState(null);
   const [cropLoading, setCropLoading] = useState(false);
+  const [accountAction, setAccountAction] = useState(null);
+  const [now, setNow] = useState(Date.now());
 
   const ID_LABELS = ['ID Front', 'ID Back'];
+
+  // Keep an open review dialog in sync when the three-day review window ends.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!imgPreview || !ID_LABELS.includes(imgPreview.label)) {
@@ -105,6 +139,8 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
   };
 
   const isApproved = normStatus(profile.status) === 'approved';
+  const accountCreatedAt = profile.user?.createdAt || profile.createdAt;
+  const reviewExpired = !accountCreatedAt || now - new Date(accountCreatedAt).getTime() >= 3 * 24 * 60 * 60 * 1000;
 
   const handleReject = async () => {
     setResetting(true);
@@ -114,6 +150,27 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
     } finally {
       setResetting(false);
       setShowReject(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    setAccountAction('disable');
+    try {
+      await onDisable(profile);
+      onClose();
+    } finally {
+      setAccountAction(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete ${profile.fullName}'s account? Their residence profile will be moved to the archive and they will no longer be able to log in.`)) return;
+    setAccountAction('delete');
+    try {
+      await onDelete(profile);
+      onClose();
+    } finally {
+      setAccountAction(null);
     }
   };
 
@@ -208,17 +265,18 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
             </div>
           </div>
 
+          <ResidentContactDetails key={profile._id} profile={profile} onSaved={onContactSaved} />
+
           {/* Personal details */}
           <div>
             <p className="mb-3" style={{ fontFamily: "'Kaisei Decol', serif", color: '#827575', fontSize: 13 }}>
               Personal Information
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <InfoRow icon={FiMail}      label="Email"              value={profile.email} />
-              <InfoRow icon={FiPhone}     label="Contact"            value={profile.contactNumber} />
               <InfoRow icon={FiCalendar}  label="Date of Birth"      value={dob} />
               <InfoRow icon={FiCalendar}  label="Age"                value={age} />
               <InfoRow icon={FiUser}      label="Gender"             value={profile.gender} />
+              <InfoRow icon={FiUser}      label="Account Type"       value={accountTypeLabel(profile)} />
               <InfoRow icon={FiUser}      label="Civil Status"       value={profile.civilStatus} />
               <InfoRow icon={FiBriefcase} label="Occupation"         value={profile.occupation} />
               <InfoRow icon={FiBriefcase} label="Education Level"    value={profile.educationLevel} />
@@ -314,6 +372,25 @@ function ReviewModal({ profile, onClose, onSave, onReset }) {
                 </button>
               </div>
             </div>
+          ) : reviewExpired ? (
+            <div className="flex gap-3">
+              <button
+                onClick={handleDisable}
+                disabled={accountAction !== null}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity disabled:opacity-60"
+                style={{ fontFamily: "'Hahmlet', sans-serif", color: '#92400E', background: '#FFFBEB', border: '1px solid #FDE68A' }}
+              >
+                {accountAction === 'disable' ? 'Disabling…' : 'Disable Account'}
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={accountAction !== null}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity disabled:opacity-60"
+                style={{ fontFamily: "'Hahmlet', sans-serif", color: '#FFFFFF', background: '#BE123C' }}
+              >
+                {accountAction === 'delete' ? 'Deleting…' : 'Delete Account'}
+              </button>
+            </div>
           ) : (
             <div className="flex gap-3">
               <button
@@ -384,6 +461,11 @@ export default function CaptainResidence() {
 
   useEffect(() => { fetchProfiles(showArchived); }, [showArchived]);
 
+  const handleContactSaved = (updated) => {
+    setProfiles((current) => current.map((profile) => profile._id === updated._id ? updated : profile));
+    setSelected((current) => current?._id === updated._id ? updated : current);
+  };
+
   const handleReview = async (id, status, remarks) => {
     try {
       await api.patch(`/verifications/${id}/review`, { status, remarks });
@@ -419,15 +501,39 @@ export default function CaptainResidence() {
     }
   };
 
+  const handleDisable = async (p) => {
+    try {
+      await api.patch(`/verifications/${p._id}/disable`);
+      toast.success(`${p.fullName}'s account was disabled`);
+      fetchProfiles();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to disable account');
+      throw err;
+    }
+  };
+
+  const handleDeleteAccount = async (p) => {
+    try {
+      await api.delete(`/verifications/${p._id}/account`);
+      toast.success('Account deleted and profile moved to the archive');
+      setProfiles((prev) => prev.filter((x) => x._id !== p._id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete account');
+      throw err;
+    }
+  };
+
   /* Filter + search */
   const filtered = profiles.filter((p) => {
     if (!p.facePhoto) return false;
     const matchFilter = filter === 'All' || normStatus(p.status) === normStatus(filter);
-    const q = search.toLowerCase();
+    const q = search.trim().toLowerCase();
     const matchSearch = !q ||
       p.fullName?.toLowerCase().includes(q) ||
       p.address?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q);
+      p.email?.toLowerCase().includes(q) ||
+      p.contactNumber?.includes(q) ||
+      specialSearchTerms(p).includes(q);
     return matchFilter && matchSearch;
   }).sort((a, b) => {
     // Keep residents needing action at the top of the table.
@@ -557,7 +663,7 @@ export default function CaptainResidence() {
               style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="Search by name, purok or email…"
+              placeholder="Search name, address, email, contact, or special type…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none"
@@ -746,6 +852,9 @@ export default function CaptainResidence() {
           onClose={() => setSelected(null)}
           onSave={handleReview}
           onReset={handleReset}
+          onDisable={handleDisable}
+          onDelete={handleDeleteAccount}
+          onContactSaved={handleContactSaved}
         />
       )}
     </CaptainLayout>

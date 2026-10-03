@@ -4,15 +4,17 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
   AreaChart, Area, LineChart, Line, RadialBarChart, RadialBar,
 } from 'recharts';
+import { FiDownload } from 'react-icons/fi';
 import { getRequests, getReleases } from '../../services/request.service';
 import { getVerificationStats, getPurokStats } from '../../services/verification.service';
 import { getAuditLogs } from '../../services/audit.service';
 import CaptainLayout from '../../components/layouts/CaptainLayout';
+import useAuthStore from '../../store/authStore';
 import FinancialReport from '../../components/reports/FinancialReport';
 import {
   GREEN, SERIES, STATUS_COLORS, DOC_TYPES, STATUSES,
   within, lastMonths, money, num, dayKey, isClaimed, docClass,
-  ChartTooltip, PieLabel, StatCard, ChartCard, NoData, ReportTable, PrintStyle,
+  ChartTooltip, PieLabel, StatCard, ChartCard, NoData, ReportTable, PrintStyle, exportRowsXLSX,
 } from '../../components/reports/reportKit';
 
 /* ── report tabs ── */
@@ -23,16 +25,27 @@ const TABS = [
   { key: 'issuance',    label: 'Clearance / Certificate Issuance' },
 ];
 
+// Purok revenue is the fixed clearance share, not the document's full price.
+const PUROK_CLEARANCE_REVENUE_PER_DOCUMENT = 50;
+
 /* ════════════════════════════════════════════════════════════════════
    1. DOCUMENT REQUEST REPORTS
    ════════════════════════════════════════════════════════════════════ */
 function DocumentRequestReport({ requests, from, to, docType, status }) {
+  const { user } = useAuthStore();
+  const [page, setPage] = useState(1);
+  const [selectedPurok, setSelectedPurok] = useState(null);
   const reqs = requests.filter((r) =>
     within(r.createdAt, from, to) &&
     (docType === 'All' || r.documentType === docType) &&
     (status  === 'All' || r.status === status));
 
-  const completed = reqs.filter((r) => ['Completed', 'Claimed'].includes(r.status));
+  // A filter change should always show the first matching records instead of
+  // leaving the report on a page that may no longer exist.
+  useEffect(() => { setPage(1); }, [from, to, docType, status]);
+  useEffect(() => { setSelectedPurok(null); }, [from, to, docType, status]);
+
+  const completed = reqs.filter((r) => ['Ready for Pickup', 'Claimed'].includes(r.status));
   const avgDays = completed.length
     ? (completed.reduce((s, r) => s + (new Date(r.updatedAt) - new Date(r.createdAt)), 0)
         / completed.length / 86_400_000).toFixed(1)
@@ -49,12 +62,56 @@ function DocumentRequestReport({ requests, from, to, docType, status }) {
   const trend = lastMonths(6).map((m) => ({
     name:      m.key,
     requests:  requests.filter((r) => { const t = new Date(r.createdAt); return t >= m.start && t < m.end; }).length,
-    completed: requests.filter((r) => { const t = new Date(r.createdAt); return t >= m.start && t < m.end && ['Completed', 'Claimed'].includes(r.status); }).length,
+    completed: requests.filter((r) => { const t = new Date(r.createdAt); return t >= m.start && t < m.end && ['Ready for Pickup', 'Claimed'].includes(r.status); }).length,
   }));
 
-  const byDelivery = Object.entries(
-    reqs.reduce((acc, r) => { const k = r.deliveryMethod || 'Unspecified'; acc[k] = (acc[k] || 0) + 1; return acc; }, {}),
-  ).map(([name, value]) => ({ name, value }));
+  const paidRequests = reqs.filter((r) =>
+    ['Ready for Pickup', 'Claimed'].includes(r.status) && String(r.paymentStatus).toLowerCase() === 'paid'
+  );
+  const purokRevenueFor = () => PUROK_CLEARANCE_REVENUE_PER_DOCUMENT;
+  const purokFor = (r) => r.profile?.purok || r.profile?.address?.split(',')[0]?.trim() || 'Unassigned Purok';
+  const paymentChannelFor = (r) => {
+    const provider = r.payments?.find((p) => String(p.status).toLowerCase() === 'paid')?.provider?.toLowerCase();
+    return r.channel === 'kiosk' || provider === 'manual' ? 'Walk-in Payment' : 'Online Payment';
+  };
+  const byPurokRevenue = Object.entries(
+    paidRequests.reduce((acc, r) => {
+      const purok = purokFor(r);
+      acc[purok] = (acc[purok] || 0) + purokRevenueFor(r);
+      return acc;
+    }, {}),
+  ).map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount);
+  const paymentBreakdown = selectedPurok
+    ? ['Walk-in Payment', 'Online Payment'].map((name) => ({
+        name,
+        amount: paidRequests
+          .filter((r) => purokFor(r) === selectedPurok && paymentChannelFor(r) === name)
+          .reduce((sum, r) => sum + purokRevenueFor(r), 0),
+      })).filter((entry) => entry.amount > 0)
+    : [];
+  const revenueExportRows = byPurokRevenue.map(({ name, amount }) => {
+    const purokRequests = paidRequests.filter((r) => purokFor(r) === name);
+    const kiosk = purokRequests
+      .filter((r) => paymentChannelFor(r) === 'Walk-in Payment')
+      .reduce((sum, r) => sum + purokRevenueFor(r), 0);
+    const paymongo = purokRequests
+      .filter((r) => paymentChannelFor(r) === 'Online Payment')
+      .reduce((sum, r) => sum + purokRevenueFor(r), 0);
+    return {
+      Purok: name,
+      'Paid Documents': purokRequests.length,
+      'Purok Clearance Revenue (₱)': amount.toFixed(2),
+      'Walk-in Payment (₱)': kiosk.toFixed(2),
+      'Online Payment (₱)': paymongo.toFixed(2),
+    };
+  });
+
+  const exportPurokRevenue = () => exportRowsXLSX(
+    revenueExportRows,
+    `revenue-by-purok_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    user,
+    'Purok Clearance Revenue per Purok',
+  );
 
   const csvRows = reqs.map((r) => ({
     Name:     r.profile?.fullName || r.user?.username || '—',
@@ -72,13 +129,17 @@ function DocumentRequestReport({ requests, from, to, docType, status }) {
     r.paymentStatus,
     new Date(r.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }),
   ]));
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(tableRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visibleRows = tableRows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 no-print">
         <StatCard label="TOTAL"      sublabel="REQUESTS"   value={reqs.length} />
-        <StatCard label="PENDING"    sublabel="+ PROCESSING" value={reqs.filter((r) => ['Pending', 'Processing', 'Printing', 'Ready'].includes(r.status)).length} />
-        <StatCard label="COMPLETED"  sublabel="/ CLAIMED"  value={completed.length} />
+        <StatCard label="PENDING"    sublabel="+ PROCESSING" value={reqs.filter((r) => ['Pending', 'Processing', 'Printing'].includes(r.status)).length} />
+        <StatCard label="READY / CLAIMED"  sublabel="Prepared documents"  value={completed.length} />
         <StatCard label="AVG"        sublabel="TURNAROUND" value={avgDays} sub="days to complete" />
       </div>
 
@@ -132,35 +193,94 @@ function DocumentRequestReport({ requests, from, to, docType, status }) {
             <Tooltip content={<ChartTooltip />} />
             <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontFamily: "'Hahmlet',sans-serif", color: '#A18D8D', fontSize: 11 }}>{v}</span>} />
             <Area type="monotone" dataKey="requests"  name="Total Requests" stroke={GREEN}   fill="url(#gReq)"  strokeWidth={2} dot={{ r: 3, fill: GREEN }} />
-            <Area type="monotone" dataKey="completed" name="Completed"      stroke="#4CAF50" fill="url(#gComp)" strokeWidth={2} dot={{ r: 3, fill: '#4CAF50' }} />
+            <Area type="monotone" dataKey="completed" name="Ready / Claimed"      stroke="#4CAF50" fill="url(#gComp)" strokeWidth={2} dot={{ r: 3, fill: '#4CAF50' }} />
           </AreaChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Requests by Delivery Method">
-        {byDelivery.length === 0 ? <NoData /> : (
+      <ChartCard title="Purok Clearance Revenue per Purok (₱)"
+        action={
+          <button type="button" onClick={exportPurokRevenue} disabled={revenueExportRows.length === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs disabled:opacity-40"
+            style={{ color: GREEN, background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+            <FiDownload size={13} /> Export Excel
+          </button>
+        }>
+        {byPurokRevenue.length === 0 ? <NoData /> : (
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={byDelivery} barSize={40} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <BarChart data={byPurokRevenue} barSize={40} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke="#F0EAEA" />
               <XAxis dataKey="name" tick={{ fontFamily: "'Hahmlet',sans-serif", fontSize: 10, fill: '#A18D8D' }} axisLine={false} tickLine={false} />
-              <YAxis allowDecimals={false} tick={{ fontFamily: "'Hahmlet',sans-serif", fontSize: 10, fill: '#A18D8D' }} axisLine={false} tickLine={false} width={28} />
+              <YAxis tickFormatter={(v) => `₱${v}`} tick={{ fontFamily: "'Hahmlet',sans-serif", fontSize: 10, fill: '#A18D8D' }} axisLine={false} tickLine={false} width={56} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: '#F0FDF4' }} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {byDelivery.map((_, i) => <Cell key={i} fill={SERIES[i % SERIES.length]} />)}
+              <Bar dataKey="amount" radius={[6, 6, 0, 0]} cursor="pointer"
+                onClick={(entry) => setSelectedPurok(entry?.name || entry?.payload?.name || null)}>
+                {byPurokRevenue.map((_, i) => <Cell key={i} fill={SERIES[i % SERIES.length]} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
+        {byPurokRevenue.length > 0 && <p className="mt-2 text-center text-xs" style={{ color: '#827575' }}>₱50 per paid, completed document · Select a purok bar to view its payment-channel totals.</p>}
       </ChartCard>
+
+      {selectedPurok && (
+        <ChartCard title={`Payment Channels — ${selectedPurok} (₱)`}>
+          {paymentBreakdown.length === 0 ? <NoData /> : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={paymentBreakdown} barSize={44} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="#F0EAEA" />
+                <XAxis dataKey="name" tick={{ fontFamily: "'Hahmlet',sans-serif", fontSize: 11, fill: '#A18D8D' }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={(v) => `₱${v}`} tick={{ fontFamily: "'Hahmlet',sans-serif", fontSize: 10, fill: '#A18D8D' }} axisLine={false} tickLine={false} width={56} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: '#F0FDF4' }} />
+                <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                  {paymentBreakdown.map((_, i) => <Cell key={i} fill={SERIES[i % SERIES.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      )}
 
       <ReportTable
         title="Document Request Report"
         subtitle={`${reqs.length} record${reqs.length !== 1 ? 's' : ''}${docType !== 'All' ? ` · ${docType}` : ''}${status !== 'All' ? ` · ${status}` : ''}`}
         columns={['Name', 'Document Type', 'Purpose', 'Status', 'Payment', 'Date']}
-        rows={tableRows}
+        rows={visibleRows}
         csvRows={csvRows}
         csvName={`document-requests_${new Date().toISOString().slice(0, 10)}.csv`}
       />
+      {tableRows.length > pageSize && (
+        <div className="flex items-center justify-between flex-wrap gap-3 px-1 no-print">
+          <p style={{ fontFamily: "'Hanken Grotesk',sans-serif", color: '#827575', fontSize: 12 }}>
+            Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, tableRows.length)} of {tableRows.length} requests
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={safePage === 1}
+              className="px-3 py-1.5 rounded-lg text-xs disabled:opacity-40"
+              style={{ color: GREEN, background: '#F0FDF4', border: '1px solid #BBF7D0' }}
+            >Previous</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+              <button
+                type="button"
+                key={number}
+                onClick={() => setPage(number)}
+                className="w-8 h-8 rounded-lg text-xs"
+                style={{ color: number === safePage ? '#FFFFFF' : GREEN, background: number === safePage ? GREEN : '#F0FDF4', border: `1px solid ${number === safePage ? GREEN : '#BBF7D0'}` }}
+              >{number}</button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={safePage === totalPages}
+              className="px-3 py-1.5 rounded-lg text-xs disabled:opacity-40"
+              style={{ color: GREEN, background: '#F0FDF4', border: '1px solid #BBF7D0' }}
+            >Next</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -298,7 +418,7 @@ function UtilizationReport({ requests, purokStats, from, to }) {
 
   const typeStats = DOC_TYPES.slice(1).map((t) => {
     const rows  = reqs.filter((r) => r.documentType === t);
-    const done  = rows.filter((r) => ['Completed', 'Claimed'].includes(r.status)).length;
+    const done  = rows.filter((r) => ['Ready for Pickup', 'Claimed'].includes(r.status)).length;
     const users = new Set(rows.map((r) => r.userId)).size;
     const amt   = rows.reduce((s, r) => s + num(r.amountPaid), 0);
     return {
@@ -329,7 +449,7 @@ function UtilizationReport({ requests, purokStats, from, to }) {
 
   const csvRows = typeStats.map((s) => ({
     Service: s.type, Requests: s.requests, Unique_Residents: s.users,
-    Completed: s.done, Completion_Rate: `${s.rate}%`, Avg_Fee: s.avg,
+    Ready_or_Claimed: s.done, Completion_Rate: `${s.rate}%`, Avg_Fee: s.avg,
   }));
   const tableRows = typeStats.map((s) => ([
     s.type, s.requests, s.users, s.done, `${s.rate}%`, money(s.avg),
@@ -407,7 +527,7 @@ function UtilizationReport({ requests, purokStats, from, to }) {
       <ReportTable
         title="Service Utilization Report"
         subtitle={`${uniqueUsers} resident${uniqueUsers !== 1 ? 's' : ''} served · ${reqs.length} total requests`}
-        columns={['Service', 'Requests', 'Unique Residents', 'Completed', 'Completion Rate', 'Avg Fee']}
+        columns={['Service', 'Requests', 'Unique Residents', 'Ready / Claimed', 'Completion Rate', 'Avg Fee']}
         rows={tableRows}
         csvRows={csvRows}
         csvName={`service-utilization_${new Date().toISOString().slice(0, 10)}.csv`}

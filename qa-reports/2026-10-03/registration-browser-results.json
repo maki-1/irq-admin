@@ -1,0 +1,34 @@
+{
+  "mode": "Local production bundle, headless Chrome, synthetic intercepted API",
+  "results": [
+    {
+      "name": "web-allows-three-character-username",
+      "reproduced": true,
+      "submittedUsername": "abc",
+      "sendsConfirmPassword": false
+    },
+    {
+      "name": "web-allows-spaces-in-username",
+      "reproduced": true
+    },
+    {
+      "name": "web-blocks-short-password",
+      "reproduced": true
+    },
+    {
+      "name": "web-requires-special-character",
+      "reproduced": true
+    },
+    {
+      "name": "web-email-fallback-still-displays-phone",
+      "reproduced": true,
+      "responseChannel": "email",
+      "displayedDestination": "0999***999"
+    },
+    {
+      "name": "web-does-not-normalize-country-code",
+      "reproduced": true,
+      "fieldValue": "6399999999"
+    }
+  ]
+}

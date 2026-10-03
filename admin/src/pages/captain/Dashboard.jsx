@@ -66,10 +66,11 @@ export default function CaptainDashboard() {
   monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
 
   const totalResidents    = residentStats.total;
+  const specialCounts     = residentStats.special || {};
   const pendingRequests   = requests.filter((r) => r.status?.toLowerCase() === 'pending');
   const clearancesMonth   = requests.filter((r) =>
     r.documentType === 'Barangay Clearance' &&
-    r.status?.toLowerCase() === 'completed' &&
+    ['Ready for Pickup', 'Claimed'].includes(r.status) &&
     new Date(r.updatedAt) >= monthStart
   ).length;
 
@@ -148,6 +149,31 @@ export default function CaptainDashboard() {
               </span>
             </button>
 
+          </div>
+
+          {/* Special resident classifications — each tile links to the matching
+              Residence search so the Captain can review the counted accounts. */}
+          <div className="bg-white rounded-3xl p-5" style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
+            <p className="mb-3" style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 15 }}>
+              Special Resident Accounts
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {[
+                { label: 'PWD',            search: 'PWD',            count: specialCounts.pwd },
+                { label: 'Senior Citizen', search: 'Senior Citizen', count: specialCounts.senior },
+                { label: 'Indigent',       search: 'Indigent',       count: specialCounts.indigent },
+                { label: 'Solo Parent',    search: 'Solo Parent',    count: specialCounts.soloParent },
+                { label: 'Pregnant',       search: 'Pregnant',       count: specialCounts.pregnant },
+              ].map((type) => (
+                <button key={type.label}
+                  onClick={() => navigate(`/captain/residents?q=${encodeURIComponent(type.search)}`)}
+                  className="rounded-2xl px-3 py-3 text-left hover:shadow-md transition-shadow"
+                  style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                  <p className="truncate" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: '#156D07', fontSize: 11, fontWeight: 700 }}>{type.label}</p>
+                  <p style={{ fontFamily: "'Kaisei Decol', serif", color: '#156D07', fontSize: 28, lineHeight: 1.1 }}>{type.count || 0}</p>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Residents per Purok bar chart */}

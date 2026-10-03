@@ -40,7 +40,7 @@ export default function RequestRelease() {
     try {
       const { data } = await updateClaimStatus(id, claimStatus);
       setReleases((prev) =>
-        prev.map((r) => r._id === id ? { ...r, claimStatus, claimedAt: data.claimedAt } : r)
+        prev.map((r) => r._id === id ? { ...r, ...data } : r)
       );
       toast.success(`Marked as ${claimStatus}`);
     } catch {
@@ -262,13 +262,13 @@ export default function RequestRelease() {
                                 opacity: updatingId === r._id ? 0.6 : 1,
                               }}
                             >
-                              Claimed
+                              Mark claimed
                             </button>
                             <span
                               className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
                               style={{ background: '#FFF7ED', color: '#C2610A', fontFamily: "'Hanken Grotesk', sans-serif" }}
                             >
-                              Pending
+                              Ready for Pickup
                             </span>
                           </div>
                         )}

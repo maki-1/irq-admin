@@ -13,14 +13,13 @@ export const STATUS_COLORS = {
   Pending:    '#F59E0B',
   Processing: '#3B82F6',
   Printing:   '#8B5CF6',
-  Ready:      '#0EA5E9',
-  Completed:  '#156D07',
+  'Ready for Pickup': '#156D07',
   Claimed:    '#0F5132',
   Rejected:   '#EF4444',
 };
 
 export const DOC_TYPES = ['All', 'Barangay Clearance', 'Certificate of Residency', 'Certificate of Indigency'];
-export const STATUSES  = ['All', 'Pending', 'Processing', 'Printing', 'Ready', 'Completed', 'Claimed', 'Rejected'];
+export const STATUSES  = ['All', 'Pending', 'Processing', 'Printing', 'Ready for Pickup', 'Claimed', 'Rejected'];
 
 /* ── helpers ── */
 export function within(date, from, to) {
@@ -45,7 +44,7 @@ export const money  = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { mini
 export const money0 = (n) => `₱${Math.round(Number(n || 0)).toLocaleString('en-PH')}`;
 export const num    = (v) => Number(v || 0);
 export const dayKey = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-export const isClaimed = (s) => /claim|complete/i.test(String(s || ''));
+export const isClaimed = (s) => String(s || '').toLowerCase() === 'claimed';
 export const docClass  = (t) =>
   t === 'Barangay Clearance' ? 'Clearance'
   : /^Certificate/i.test(String(t || '')) ? 'Certificate'
@@ -121,11 +120,14 @@ export function StatCard({ label, sublabel, value, sub }) {
 }
 
 /* ── chart wrapper (hidden on print) ── */
-export function ChartCard({ title, children, span2 }) {
+export function ChartCard({ title, children, span2, action }) {
   return (
     <div className={`bg-white rounded-3xl p-5 no-print ${span2 ? 'lg:col-span-2' : ''}`}
       style={{ boxShadow: '0 4px 4px rgba(0,0,0,0.15)' }}>
-      <p className="mb-4" style={{ fontFamily: "'Kaisei Decol',serif", color: GREEN, fontSize: 15 }}>{title}</p>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <p style={{ fontFamily: "'Kaisei Decol',serif", color: GREEN, fontSize: 15 }}>{title}</p>
+        {action}
+      </div>
       {children}
     </div>
   );

@@ -1,3 +1,4 @@
+const { requestStatus } = require('../../lib/requestStatus');
 const axios      = require('axios');
 const cloudinary = require('../config/cloudinary');
 const prisma     = require('../../lib/prisma');
@@ -136,7 +137,7 @@ exports.payApproved = async (req, res) => {
     const requestId = req.params.id;
     if (!isUuid(requestId)) return res.status(404).json({ message: 'Request not found' });
 
-    const request = await prisma.request.findFirst({ where: { id: requestId, userId } });
+    const request = await prisma.request.findFirst({ where: { id: requestId, userId }, include: { completedDocuments: true } });
     if (!request) return res.status(404).json({ message: 'Request not found' });
     if (request.purokLeaderStatus !== 'approved') {
       return res.status(400).json({ message: 'Request not yet approved by Purok Leader' });
@@ -228,12 +229,12 @@ exports.verifyPayment = async (req, res) => {
 
     // Already marked paid
     if (request.paymentStatus === 'paid') {
-      return res.json({ paid: true, status: request.status });
+      return res.json({ paid: true, status: requestStatus(request) });
     }
 
     // Free requests don't need payment verification
     if (request.paymentStatus === 'free') {
-      return res.json({ paid: true, status: request.status });
+      return res.json({ paid: true, status: requestStatus(request) });
     }
 
     // No session ID yet — Pay Now hasn't been called

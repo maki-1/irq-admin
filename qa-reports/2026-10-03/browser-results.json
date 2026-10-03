@@ -1,0 +1,1099 @@
+{
+  "mode": "Local production builds; APIs intercepted; synthetic data; Chrome headless",
+  "results": [
+    {
+      "name": "admin-login-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/login",
+      "pageErrors": [],
+      "observations": {
+        "passwordPaste": {
+          "prevented": true
+        },
+        "emptyFormErrors": "Email Address\n\nEmail is required.\n\nPassword\n\nPassword is required.\n\nSign In"
+      },
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "iRequestDologon\n\nBarangay Dologon Staff Portal\n\nEmail Address\n\nEmail is required.\n\nPassword\n\nPassword is required.\n\nSign In\n\nBarangay Dologon · Maramag, Bukidnon"
+      },
+      "accessibility": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                "div:nth-child(1) > .text-red-500.mt-1.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.76 (foreground color: #ef4444, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "div:nth-child(2) > .text-red-500.mt-1.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.76 (foreground color: #ef4444, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".text-gray-400"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.53 (foreground color: #9ca3af, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": []
+    },
+    {
+      "name": "admin-login-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "urlPath": "/login",
+      "pageErrors": [],
+      "layout": {
+        "width": 390,
+        "scrollWidth": 390,
+        "bodyWidth": 390,
+        "text": "iRequestDologon\n\nBarangay Dologon Staff Portal\n\nEmail Address\nPassword\nSign In\n\nBarangay Dologon · Maramag, Bukidnon"
+      },
+      "accessibility": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".text-gray-400"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.53 (foreground color: #9ca3af, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": []
+    },
+    {
+      "name": "admin-landing-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "urlPath": "/",
+      "pageErrors": [],
+      "layout": {
+        "width": 390,
+        "scrollWidth": 390,
+        "bodyWidth": 390,
+        "text": "iRequestDologon\nONLINE · BARANGAY DOLOGON\n\nBARANGAY DOLOGON · MARAMAG, BUKIDNON\n\niRequestDologon\n\nOfficial online portal for barangay document requests.\nFast, secure, and paperless.\n\nRequest a Document Online\nDISCOVER MORE\n\nWHO WE ARE\n\nAbout Barangay Dologon\n\nDologon is a major, populous barangay in the municipality of Maramag, Bukidnon, with 13,828 residents (2020 Census), representing approximately 12.77% of the town's population.\n\nIt is best known for hosting the Central Mindanao University (CMU) in its Musuan area, making it a critical hub for education, agriculture, and local commerce.\n\nThe barangay's motto: \"For the good of Dologon, We Serve and We Remain.\"\n\n13,828\n\nResidents\n\n2020 Census\n\n12.77%\n\nof Maramag\n\nPopulation share\n\n12\n\nPuroks\n\nSubdivisions\n\n282–458m\n\nElevation\n\nAbove sea level\n\nEducation\n\nHome to Central Mindanao University — the premier agricultural school in Mindanao, located in Sitio Musuan. Dologon National High School serves the local community.\n\nEconomy\n\nAgriculture is dominant, with rural agri-based livelihood projects for residents and Indigenous Peoples (IPs) across the 12 puroks.\n\nLandmarks\n\nMusuan Peak is a prominent geographic feature known for its natural beauty. The CMU campus is a landmark destination in the area.\n\nWHAT WE OFFER\n\nOur Services\n\nRequest official barangay documents online and pick them up at the barangay office — no more long queues.\n\nBarangay Clearance\n\nRequired for employment, business permits, and other government transactions. Certifies that you have no pending case in the barangay.\n\n₱130.00\n1–2 business days\nCertificate of Residency\n\nProves that you are a bona fide resident of Barangay Dologon. Required for school enrollment, scholarships, and legal transactions.\n\n₱130.00\n1–2 business days\nCertificate of Indigency\n\nCertifies financial need for PhilHealth, educational assistance, and medical assistance programs. Free for qualified residents.\n\nFree / Exempt\n1–2 business days\nHow It Works\n01\nWalk In\n\nVisit the barangay office or inform the secretary of your document request.\n\n02\nSubmit Request\n\nThe secretary encodes your information and submits the document request.\n\n03\nPayment\n\nPay the document fee at the barangay collector's window.\n\n04\nPick Up\n\nOnce signed and sealed by the Barangay Captain, your document is ready for pickup.\n\nFIND US\n\nLocation\n\nADDRESS\n\nBarangay Dologon, Maramag, Bukidnon 8714, Philippines\n\nOFFICE HOURS\n\nMonday – Friday · 8:00 AM – 5:00 PM\n\nCONTACT\n\nBarangay Dologon Office\n\nEMAIL\n\nsupport@irequestdologon.gov.ph\n\nLandmark\n\nNear the Central Mindanao University (CMU) gate, Sitio Musuan area, Maramag, Bukidnon.\n\nANDROID APPLICATION\n\nDownload iRequestDologon\n\nTake the barangay portal with you — install the official Android app and request documents directly from your phone, anytime, anywhere.\n\niRequestDologon\n\nVersion 1.0.5 · Android APK\n\nReleased April 2026 · ~111 MB\n\nDownload for Android (.apk)\n\nFree · No account required to install\n\nWHAT'S INCLUDED\nSubmit document requests without a browser\nReal-time status notifications on your phone\nSecure login — your data stays encrypted\nView and track all your past requests in one place\nWorks even on slow internet connections\nLightweight & fast — minimal system resources\nSYSTEM REQUIREMENTS\n\nOS\n\nAndroid 8.0 (Oreo) or higher\n\nRAM\n\n2 GB minimum\n\nSTORAGE\n\n50 MB free space\n\nNETWORK\n\nInternet connection required\n\nHow to Install\n01\nDownload\n\nTap the Download button above to save the APK file to your Android device.\n\n02\nAllow Install\n\nGo to Settings → Security → enable \"Install from Unknown Sources\" for your browser.\n\n03\nOpen APK\n\nTap the downloaded .apk file from your notifications or Downloads folder.\n\n04\nRequest Docs\n\nLog in with your registered account and start submitting document requests.\n\niRequestDologon\n\nBarangay Dologon, Maramag, Bukidnon\n\n© 2026 Barangay Dologon LGU · iRequestDologon\n\nPrivacy Policy\n·\nTerms of Service\n·\nContact Support"
+      },
+      "accessibility": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "description": "Ensure buttons have discernible text",
+          "nodes": [
+            {
+              "target": [
+                ".md\\:hidden"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                "#services > .max-w-5xl.relative.mx-auto > .mb-14.text-center > .tracking-\\[0\\.3em\\].text-gold\\/60.text-\\[10px\\]"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.59 (foreground color: #7d6f32, background color: #0b1a0b, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".hover\\:bg-white\\/\\[0\\.08\\].group.hover\\:border-gold\\/30:nth-child(1) > .pt-4.border-t.justify-between > .text-white\\/40"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.77 (foreground color: #737a73, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".hover\\:bg-white\\/\\[0\\.08\\].group.hover\\:border-gold\\/30:nth-child(2) > .pt-4.border-t.justify-between > .text-white\\/40"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.77 (foreground color: #737a73, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".hover\\:bg-white\\/\\[0\\.08\\].group.hover\\:border-gold\\/30:nth-child(3) > .pt-4.border-t.justify-between > .text-white\\/40"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.77 (foreground color: #737a73, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#services > .max-w-5xl.relative.mx-auto > .p-8.rounded-2xl.bg-white\\/5 > .md\\:grid-cols-4.gap-6.grid > .text-center:nth-child(1) > .text-white\\/45.leading-relaxed.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.39 (foreground color: #7e857e, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#services > .max-w-5xl.relative.mx-auto > .p-8.rounded-2xl.bg-white\\/5 > .md\\:grid-cols-4.gap-6.grid > .text-center:nth-child(2) > .text-white\\/45.leading-relaxed.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.39 (foreground color: #7e857e, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#services > .max-w-5xl.relative.mx-auto > .p-8.rounded-2xl.bg-white\\/5 > .md\\:grid-cols-4.gap-6.grid > .text-center:nth-child(3) > .text-white\\/45.leading-relaxed.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.39 (foreground color: #7e857e, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#services > .max-w-5xl.relative.mx-auto > .p-8.rounded-2xl.bg-white\\/5 > .md\\:grid-cols-4.gap-6.grid > .text-center:nth-child(4) > .text-white\\/45.leading-relaxed.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.39 (foreground color: #7e857e, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#download > .max-w-5xl.relative.mx-auto > .mb-14.text-center > .tracking-\\[0\\.3em\\].text-gold\\/60.text-\\[10px\\]"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.64 (foreground color: #7c6d31, background color: #091509, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".text-white\\/40.mb-1.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.77 (foreground color: #737a73, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-6.text-white\\/30.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.71 (foreground color: #5b645b, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".text-white\\/25"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.28 (foreground color: #505950, background color: #152115, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".px-3.py-2\\.5.rounded-xl:nth-child(1) > .text-white\\/35.mb-0\\.5.text-\\[10px\\]"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.1 (foreground color: #6f766f, background color: #212c21, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".px-3.py-2\\.5.rounded-xl:nth-child(2) > .text-white\\/35.mb-0\\.5.text-\\[10px\\]"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.1 (foreground color: #6f766f, background color: #212c21, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".px-3.py-2\\.5.rounded-xl:nth-child(3) > .text-white\\/35.mb-0\\.5.text-\\[10px\\]"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.1 (foreground color: #6f766f, background color: #212c21, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".px-3.py-2\\.5.rounded-xl:nth-child(4) > .text-white\\/35.mb-0\\.5.text-\\[10px\\]"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.1 (foreground color: #6f766f, background color: #212c21, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#download > .max-w-5xl.relative.mx-auto > .p-8.rounded-2xl.bg-white\\/5 > .md\\:grid-cols-4.gap-6.grid > .text-center:nth-child(1) > .text-white\\/45.leading-relaxed.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.39 (foreground color: #7e857e, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#download > .max-w-5xl.relative.mx-auto > .p-8.rounded-2xl.bg-white\\/5 > .md\\:grid-cols-4.gap-6.grid > .text-center:nth-child(2) > .text-white\\/45.leading-relaxed.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.39 (foreground color: #7e857e, background color: #152115, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "#download > .max-w-5xl.relative.mx-auto > .p-8.rounded-2xl.bg-white\\/5 > .md\\:grid-cols-4.gap-6.grid > .text-center:nth-child(4) > .text-white\\/45.leading-relaxed.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.24 (foreground color: #818a81, background color: #192a19, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".gap-3.items-center.flex > div > .text-white\\/30.text-xs"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.62 (foreground color: #525752, background color: #080f08, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".text-white\\/30.text-xs:nth-child(1)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.62 (foreground color: #525752, background color: #080f08, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".hover\\:text-white\\/60:nth-child(1)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.62 (foreground color: #525752, background color: #080f08, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".hover\\:text-white\\/60:nth-child(3)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.62 (foreground color: #525752, background color: #080f08, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".hover\\:text-white\\/60:nth-child(5)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.62 (foreground color: #525752, background color: #080f08, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": []
+    },
+    {
+      "name": "resident-login-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/login",
+      "pageErrors": [],
+      "observations": {
+        "passwordPaste": {
+          "prevented": true
+        }
+      },
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "iRequestD\nWelcome back\n\nSign in to your account\n\nUsername\nPassword\nForgot password?\nSign In\n\nDon't have an account? Create account"
+      },
+      "accessibility": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "description": "Ensure buttons have discernible text",
+          "nodes": [
+            {
+              "target": [
+                ".absolute"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".text-gray-500"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.31 (foreground color: #6b7280, background color: #edf4ec, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": []
+    },
+    {
+      "name": "resident-signup-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "urlPath": "/signup",
+      "pageErrors": [],
+      "layout": {
+        "width": 390,
+        "scrollWidth": 390,
+        "bodyWidth": 390,
+        "text": "iRequestD\nCreate account\n\nJoin your barangay's digital portal\n\nUsername\nContact Number\nEmail (optional)\nPassword\nConfirm Password\nCreate Account\n\nAlready have an account? Sign in"
+      },
+      "accessibility": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "description": "Ensure buttons have discernible text",
+          "nodes": [
+            {
+              "target": [
+                "div:nth-child(4) > .relative > button[type=\"button\"]"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            },
+            {
+              "target": [
+                "div:nth-child(5) > .relative > button[type=\"button\"]"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".text-gray-500"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.31 (foreground color: #6b7280, background color: #edf4ec, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".font-normal"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.53 (foreground color: #9ca3af, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": []
+    },
+    {
+      "name": "resident-forgot-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "urlPath": "/forgot-password",
+      "pageErrors": [],
+      "layout": {
+        "width": 390,
+        "scrollWidth": 390,
+        "bodyWidth": 390,
+        "text": "Forgot Password\n\nEnter your registered contact number\n\nContact Number\nSend OTP\n\n← Back to Login"
+      },
+      "accessibility": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".text-gray-500"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.31 (foreground color: #6b7280, background color: #edf4ec, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": []
+    },
+    {
+      "name": "resident-dashboard-ready-count",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/dashboard",
+      "pageErrors": [],
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "iRequestD\n\nNAVIGATION\n\nDashboard\nMy Requests\nNew Request\nProfile\n\nUSER ACCOUNT\n\nQ\n\nQA Resident\n\nLogout\n\nGood day,\n\nQA Resident 👋\n\n1\n\nTotal Requests\n\n0\n\nPending\n\n0\n\nProcessing\n\n0\n\nReady for Pickup\n\n0\n\nRejected\n\n0\n\nClaimed\n\nRequest Document\nMy Requests\nRecent Requests\nView all\n\nCertificate of Residency\n\nEmployment\n\nCompleted"
+      },
+      "accessibility": [],
+      "apiCalls": [
+        {
+          "path": "/api/my/requests/summary",
+          "method": "GET"
+        },
+        {
+          "path": "/api/my/requests",
+          "method": "GET"
+        },
+        {
+          "path": "/api/verification/status",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "resident-dashboard-outage",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "urlPath": "/dashboard",
+      "pageErrors": [],
+      "layout": {
+        "width": 390,
+        "scrollWidth": 390,
+        "bodyWidth": 390,
+        "text": "Good day,\n\nQA Resident 👋\n\n—\n\nTotal Requests\n\n—\n\nPending\n\n—\n\nProcessing\n\n0\n\nReady for Pickup\n\n—\n\nRejected\n\n—\n\nClaimed\n\nRequest Document\nMy Requests\nRecent Requests\nView all\n📄\n\nNo requests yet\n\nMake your first request →\nDashboard\nMy Requests\nNew Request\nProfile\nLogout"
+      },
+      "accessibility": [],
+      "apiCalls": [
+        {
+          "path": "/api/my/requests/summary",
+          "method": "GET"
+        },
+        {
+          "path": "/api/my/requests",
+          "method": "GET"
+        },
+        {
+          "path": "/api/verification/status",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "resident-request-new-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "urlPath": "/request/new",
+      "pageErrors": [],
+      "layout": {
+        "width": 390,
+        "scrollWidth": 390,
+        "bodyWidth": 390,
+        "text": "Request Documents\n\nFill in the details for each document you need\n\nDocument 1\n\nDocument Type\nSelect document type\nBarangay Clearance — ₱100\nCertificate of Residency — ₱50\nCertificate of Indigency — FREE\nPurpose\nSelect purpose\nEmployment\nTravel\nBank\nScholarship\nGovernment Assistance\nLegal\nOther\nAdditional Details (optional)\nAdd Another Document\n\nOrder Summary\n\nTotal\n—\nSelect a document\nDashboard\nMy Requests\nNew Request\nProfile\nLogout"
+      },
+      "accessibility": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".mt-1"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.31 (foreground color: #6b7280, background color: #edf4ec, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".font-normal"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.53 (foreground color: #9ca3af, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".border-2"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.31 (foreground color: #6b7280, background color: #edf4ec, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "description": "Ensure select element has an accessible name",
+          "nodes": [
+            {
+              "target": [
+                "div:nth-child(1) > select"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            },
+            {
+              "target": [
+                "div:nth-child(2) > select"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        }
+      ],
+      "apiCalls": [
+        {
+          "path": "/api/admin/prices",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "resident-requests-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "urlPath": "/requests",
+      "pageErrors": [],
+      "layout": {
+        "width": 390,
+        "scrollWidth": 390,
+        "bodyWidth": 390,
+        "text": "My Requests\n\nTrack all your document requests\n\nActive\nRejected\nReady for Pickup\nClaimed\n📋\n\nNo active requests\n\nYour requests will appear here\n\nDashboard\nMy Requests\nNew Request\nProfile\nLogout"
+      },
+      "accessibility": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".mt-1.text-gray-500"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.31 (foreground color: #6b7280, background color: #edf4ec, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".text-center > .text-gray-500"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.31 (foreground color: #6b7280, background color: #edf4ec, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".text-gray-400"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.26 (foreground color: #9ca3af, background color: #edf4ec, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": [
+        {
+          "path": "/api/my/requests",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "payment-success-without-reference",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/payment/success",
+      "pageErrors": [],
+      "observations": {
+        "successShown": true
+      },
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "Payment Successful!\n\nYour payment was received. Barangay staff will process your request and notify you when it's ready for pickup.\n\nTaking you to your requests…\n\nView My Requests\nBack to Dashboard"
+      },
+      "apiCalls": []
+    },
+    {
+      "name": "secretary-dashboard-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "urlPath": "/secretary",
+      "pageErrors": [],
+      "layout": {
+        "width": 390,
+        "scrollWidth": 390,
+        "bodyWidth": 390,
+        "text": "DOLOGON\nSecretary\n\nNAVIGATION\n\nDASHBOARD\nRESIDENCE\nREQUESTS\nRELEASED\nLOGS\nDASHBOARD\n\nHello QA!\n\nYou have 0 Document Requests for today, So let's start?\n\nReview Document\n\nSummary for today\n\nPENDING\n\nRESIDENTS\n\n0\n0%\n\nTOTAL\n\nRESIDENTS\n\n0\n\nPENDING\n\nDOCUMENTS\n\n0\n0%\n\nFINISH\n\nDOCUMENTS\n\n0\n\nNewly Registered Residents\n\nSee all\nFullname\tAddress\tStatus\nNo residents yet\n\nREADY TO PICK UP DOCS\n\nsee all\nName\nClaiming Code\nNo docs ready for pickup\n\nNew Request\n\nsee all\nName\nRequested Documents\nNo new requests"
+      },
+      "accessibility": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "description": "Ensure buttons have discernible text",
+          "nodes": [
+            {
+              "target": [
+                ".p-1"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            },
+            {
+              "target": [
+                ".lg\\:hidden.shadow-sm.w-9"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                "th:nth-child(1)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(3)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "td"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.08 (foreground color: #c0b0b0, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".p-5.rounded-3xl.bg-white:nth-child(1) > .mb-3.justify-between > button"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-1 > span:nth-child(1)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-1 > span:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".p-5.rounded-3xl.bg-white:nth-child(1) > ul > li"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.08 (foreground color: #c0b0b0, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".p-5.rounded-3xl.min-h-0 > .mb-3.justify-between > button"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-2.pb-2.justify-between > span:nth-child(1)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-2.pb-2.justify-between > span:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".p-5.rounded-3xl.min-h-0 > ul > li"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.08 (foreground color: #c0b0b0, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": [
+        {
+          "path": "/api/notifications",
+          "method": "GET"
+        },
+        {
+          "path": "/api/documents",
+          "method": "GET"
+        },
+        {
+          "path": "/api/verifications/stats",
+          "method": "GET"
+        },
+        {
+          "path": "/api/verifications/approved",
+          "method": "GET"
+        },
+        {
+          "path": "/api/releases",
+          "method": "GET"
+        },
+        {
+          "path": "/api/requests",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "secretary-dashboard-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/secretary",
+      "pageErrors": [],
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "DOLOGON\nSecretary\n\nNAVIGATION\n\nDASHBOARD\nRESIDENCE\nREQUESTS\nRELEASED\nLOGS\nDASHBOARD\n02:39:54 AM\nOct 3, 2026\n\nHello QA!\n\nYou have 0 Document Requests for today, So let's start?\n\nReview Document\n\nSummary for today\n\nPENDING\n\nRESIDENTS\n\n0\n0%\n\nTOTAL\n\nRESIDENTS\n\n0\n\nPENDING\n\nDOCUMENTS\n\n0\n0%\n\nFINISH\n\nDOCUMENTS\n\n0\n\nNewly Registered Residents\n\nSee all\nFullname\tAddress\tStatus\nNo residents yet\n\nREADY TO PICK UP DOCS\n\nsee all\nName\nClaiming Code\nNo docs ready for pickup\n\nNew Request\n\nsee all\nName\nRequested Documents\nNo new requests"
+      },
+      "accessibility": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".sm\\:flex > span:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.79 (foreground color: #a18d8d, background color: #edf4ec, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(1)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(3)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "td"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.08 (foreground color: #c0b0b0, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".p-5.rounded-3xl.bg-white:nth-child(1) > .mb-3.justify-between > button"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-1 > span:nth-child(1)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-1 > span:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".p-5.rounded-3xl.bg-white:nth-child(1) > ul > li"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.08 (foreground color: #c0b0b0, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".p-5.rounded-3xl.min-h-0 > .mb-3.justify-between > button"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-2.pb-2.justify-between > span:nth-child(1)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".mb-2.pb-2.justify-between > span:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".p-5.rounded-3xl.min-h-0 > ul > li"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.08 (foreground color: #c0b0b0, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "apiCalls": [
+        {
+          "path": "/api/notifications",
+          "method": "GET"
+        },
+        {
+          "path": "/api/documents",
+          "method": "GET"
+        },
+        {
+          "path": "/api/verifications/stats",
+          "method": "GET"
+        },
+        {
+          "path": "/api/verifications/approved",
+          "method": "GET"
+        },
+        {
+          "path": "/api/releases",
+          "method": "GET"
+        },
+        {
+          "path": "/api/requests",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "collector-payments-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/collector/payments",
+      "pageErrors": [],
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "DOLOGON\nCollector\n\nNAVIGATION\n\nDASHBOARD\nPAYMENTS\nREPORTS\nLOGS\nPAYMENTS\n02:44:56 AM\nOct 3, 2026\nAll\nPaid\nUnpaid\nExport PDF\nFrom\nTo\n#\tResident\tDocument Type\tPurpose\tNet Amount\tPayment Status\tDate\tAction\nNo records found.\n\nShowing 0–0 of 0 records"
+      },
+      "accessibility": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".sm\\:flex > span:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.79 (foreground color: #a18d8d, background color: #edf4ec, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".gap-1 > button:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "button:nth-child(3)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #a18d8d, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".gap-2:nth-child(1) > label"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.79 (foreground color: #a18d8d, background color: #edf4ec, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".gap-2:nth-child(2) > label"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.79 (foreground color: #a18d8d, background color: #edf4ec, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(2)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.93 (foreground color: #a18d8d, background color: #f9f7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(3)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.93 (foreground color: #a18d8d, background color: #f9f7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(4)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.93 (foreground color: #a18d8d, background color: #f9f7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(5)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.93 (foreground color: #a18d8d, background color: #f9f7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(6)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.93 (foreground color: #a18d8d, background color: #f9f7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(7)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.93 (foreground color: #a18d8d, background color: #f9f7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "th:nth-child(8)"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.93 (foreground color: #a18d8d, background color: #f9f7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                "td"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.08 (foreground color: #c0b0b0, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".justify-between.flex-wrap.gap-2 > p"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.08 (foreground color: #c0b0b0, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "description": "Ensure every form element has a label",
+          "nodes": [
+            {
+              "target": [
+                ".gap-2:nth-child(1) > input[type=\"date\"]"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            },
+            {
+              "target": [
+                ".gap-2:nth-child(2) > input[type=\"date\"]"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        }
+      ],
+      "apiCalls": [
+        {
+          "path": "/api/notifications",
+          "method": "GET"
+        },
+        {
+          "path": "/api/requests",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "collector-reports-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/collector/reports",
+      "pageErrors": [],
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "DOLOGON\nCollector\n\nNAVIGATION\n\nDASHBOARD\nPAYMENTS\nREPORTS\nLOGS\nFINANCIAL REPORTS\n02:45:07 AM\nOct 3, 2026\nFrom\nTo\n\nCOLLECTIONS\n\nTHIS PERIOD\n\n₱0\n\n0 transactions\n\nFUND\n\nBALANCE\n\n₱0\n\ncumulative, all records\n\nAVG\n\nPER PAYMENT\n\n₱0\n\nPUROK\n\nCLEARANCE FEES\n\n₱0\n\ncollected for puroks\n\nIncome by Category (₱)\n\nNo data\n\nPayment Status Breakdown\n\nNo data\n\nMonthly Collections (₱) — last 6 months\n\nMay 26\nJun 26\nJul 26\nAug 26\nSep 26\nOct 26\n₱0\n₱1\n₱2\n₱3\n₱4\n\nBarangay Fund Balance — running total\n\nMay 26\nJun 26\nJul 26\nAug 26\nSep 26\nOct 26\n₱0\n₱1\n₱2\n₱3\n₱4\n\nFinancial Summary\n\nExport Excel\nPrint / PDF\n\nAll records · by date paid\n\nIncome by Category\n\nCategory\tTransactions\tAmount\t% of Total\nNo records\nTOTAL INCOME\t0\t₱0.00\t100%\n\nBarangay Fund Position (cumulative — income only, no expenses recorded)\n\n\tAmount\nCollections prior to period\t₱0.00\nCollections this period\t₱0.00\nPurok clearance fees collected (this period)\t₱0.00\nFUND BALANCE TO DATE\t₱0.00\n\nMonthly Collections — last 6 months\n\nMonth\tTransactions\tCollected\tRunning Balance\nMay 26\t0\t₱0.00\t₱0.00\nJun 26\t0\t₱0.00\t₱0.00\nJul 26\t0\t₱0.00\t₱0.00\nAug 26\t0\t₱0.00\t₱0.00\nSep 26\t0\t₱0.00\t₱0.00\nOct 26\t0\t₱0.00\t₱0.00\n\nDetailed Collections — 0 transactions\n\nName\tCategory\tOR No.\tAmount\tDate Paid\nNo records\nTOTAL\t\t\t₱0.00\t\n₱0"
+      },
+      "apiCalls": [
+        {
+          "path": "/api/notifications",
+          "method": "GET"
+        },
+        {
+          "path": "/api/requests",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "captain-users-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/captain/users",
+      "pageErrors": [],
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "DOLOGON\nBarangay Captain\n\nNAVIGATION\n\nDASHBOARD\nRESIDENCE\nREQUESTS\nDOCUMENTS\nREPORTS\nUSERS\nPUROK FEES\nLOGS\nUSER MANAGEMENT\n02:45:13 AM\nOct 3, 2026\n\nAdmin Accounts\n\nManage barangay staff accounts from the admins collection.\n\nCreate Account\n#\tNAME\tEMAIL\tROLE\tPUROK\tACTIONS\nNo accounts found\n\n0 accounts in admins collection"
+      },
+      "apiCalls": [
+        {
+          "path": "/api/notifications",
+          "method": "GET"
+        },
+        {
+          "path": "/api/users",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "captain-documents-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/captain/documents",
+      "pageErrors": [],
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "DOLOGON\nBarangay Captain\n\nNAVIGATION\n\nDASHBOARD\nRESIDENCE\nREQUESTS\nDOCUMENTS\nREPORTS\nUSERS\nPUROK FEES\nLOGS\nDOCUMENT MANAGEMENT\n02:45:19 AM\nOct 3, 2026\n\nDocument Prices\n\nSet the processing fee for each barangay document type.\n\n0\n\ndocument types\n\nDOCUMENT TYPE\tPRICE\tLAST UPDATED\tACTION\nNo document types found\n\n0 document types · Changes take effect immediately for new requests"
+      },
+      "apiCalls": [
+        {
+          "path": "/api/notifications",
+          "method": "GET"
+        },
+        {
+          "path": "/api/document-prices",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "purok-requests-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "urlPath": "/purok-leader/requests",
+      "pageErrors": [],
+      "layout": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "bodyWidth": 1440,
+        "text": "DOLOGON\nPurok Leader\n\nNAVIGATION\n\nDASHBOARD\nISSUE CLEARANCE\nRESIDENTS\nREQUESTS\n₱\nFEE REPORT\nRequests\nAll Types\nExport Excel\nExport PDF\nPending\nApproved\nRejected\n\nNo pending requests"
+      },
+      "apiCalls": [
+        {
+          "path": "/api/purok-leader/requests",
+          "method": "GET"
+        }
+      ]
+    }
+  ]
+}

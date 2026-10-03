@@ -1,0 +1,49 @@
+{
+  "mode": "Flutter kiosk web build; mocked APIs; no printer attached",
+  "checks": [
+    {
+      "name": "Home loads",
+      "passed": true
+    },
+    {
+      "name": "Submit stays enabled when prices fail",
+      "submitEnabled": true,
+      "priceVisible": false
+    },
+    {
+      "name": "Submission shows server-computed amount",
+      "amountShown": true
+    },
+    {
+      "name": "Done returns to home",
+      "passed": true
+    },
+    {
+      "name": "Next resident surname is cleared",
+      "value": ""
+    },
+    {
+      "name": "60-second idle reset",
+      "homeVisible": false
+    }
+  ],
+  "apiCalls": [
+    {
+      "path": "/api/kiosk/clearance/verify",
+      "method": "POST"
+    },
+    {
+      "path": "/api/admin/prices",
+      "method": "GET"
+    },
+    {
+      "path": "/api/kiosk/requests",
+      "method": "POST"
+    }
+  ],
+  "pageErrors": [],
+  "documentSnapshot": "- button \"Back\"\n- heading \"Choose your documents\" [level=2]\n- group:\n  - text: Requesting as QA Resident Purok 1 · Clearance PC-2345-67\n  - button \"Not you?\"\n  - text: \"Select the documents you need:\"\n  - button \"Barangay Clearance\"\n  - button \"Certificate of Residency\"\n  - button \"Certificate of Indigency\"\n  - button \"Review\" [disabled]",
+  "selectedSnapshot": "- button \"Back\"\n- heading \"Choose your documents\" [level=2]\n- group:\n  - text: Requesting as QA Resident Purok 1 · Clearance PC-2345-67\n  - button \"Not you?\"\n  - text: \"Select the documents you need:\"\n  - button \"Barangay Clearance\"\n  - button \"Purpose of this document\"\n  - button \"Certificate of Residency\"\n  - button \"Certificate of Indigency\"\n  - button \"Review\" [disabled]",
+  "reviewSnapshot": "- button \"Back\"\n- heading \"Review your request\" [level=2]\n- group:\n  - text: \"QA Resident Purok 1 · Clearance PC-2345-67 Barangay Clearance Purpose: Employment Your purok clearance already covers its own fee — these documents are approved on submission, no waiting for the Purok Leader.\"\n  - button \"Submit request\"",
+  "successSnapshot": "- group:\n  - text: \"Request submitted Please proceed to the Collector's counter to pay before your documents are processed. Pay at Collector ₱100.00 Your reference number(s) OR-QA-ONLY Ticket not printed — please note your reference number(s) above. Could not connect to printer: MissingPluginException(No implementation found for method isConnected on channel blue_thermal_printer/methods)\"\n  - button \"Done\""
+}

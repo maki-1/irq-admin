@@ -1,0 +1,47 @@
+{
+  "reviewDate": "2026-10-03",
+  "timezone": "Asia/Singapore",
+  "applicationSourceEdited": false,
+  "adminBuild": {
+    "result": "passed",
+    "tool": "Vite 5.4.21",
+    "modules": 1232,
+    "mainJavaScriptKilobytes": 2407.22,
+    "mainJavaScriptGzipKilobytes": 693.53,
+    "warning": "Chunk larger than 500 kB"
+  },
+  "residentWebBuild": {
+    "result": "passed",
+    "modules": 139,
+    "mainJavaScriptKilobytes": 361.16,
+    "mainJavaScriptGzipKilobytes": 113.27
+  },
+  "kioskWebBuild": {
+    "result": "passed",
+    "target": "lib/main_kiosk.dart",
+    "apiBase": "http://127.0.0.1:6199/api",
+    "containsEnvAsset": true,
+    "containsNonEmptyGroqKey": true,
+    "credentialValueRecorded": false,
+    "credentialValidityTested": false
+  },
+  "flutterAnalyze": {
+    "command": "flutter analyze --no-pub",
+    "exitCode": 1,
+    "totalIssues": 76,
+    "errors": 0,
+    "warnings": 14,
+    "informational": 62,
+    "includesLocalThirdPartyPrinterPlugin": true
+  },
+  "nativeDeviceTest": {
+    "result": "not performed",
+    "reason": "Flutter device discovery found Windows, Chrome and Edge; no Android or iOS device attached"
+  },
+  "testIsolation": {
+    "productionDatabaseConnections": 0,
+    "realProviderPayments": 0,
+    "realMessagesSent": 0,
+    "physicalPrintJobs": 0
+  }
+}

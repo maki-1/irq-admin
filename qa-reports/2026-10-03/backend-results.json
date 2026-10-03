@@ -1,0 +1,212 @@
+{
+  "mode": "Isolated real handlers; synthetic data and service/database doubles",
+  "findings": [
+    {
+      "test": "Disabled resident login",
+      "expected": 403,
+      "actual": 200,
+      "tokenIssued": true
+    },
+    {
+      "test": "Disabled staff login on mobile backend",
+      "expected": 403,
+      "actual": 200,
+      "tokenIssued": true
+    },
+    {
+      "test": "Collector changes document price via mobile admin API",
+      "expected": 403,
+      "actual": 200,
+      "writes": [
+        {
+          "table": "price",
+          "data": {
+            "documentType": "Barangay Clearance",
+            "pricecentavos": 1,
+            "description": "",
+            "updatedBy": "admin"
+          }
+        }
+      ]
+    },
+    {
+      "test": "Password-reset token accepted as access token",
+      "expected": 401,
+      "actual": 200,
+      "profileReturned": true
+    },
+    {
+      "test": "Draft resident creates request before staff approval",
+      "expected": 403,
+      "actual": 201,
+      "writes": [
+        {
+          "table": "request",
+          "data": {
+            "userId": "11111111-1111-4111-8111-111111111111",
+            "documentType": "Barangay Clearance",
+            "purpose": "Employment",
+            "additionalDetails": "",
+            "deliveryMethod": "Pick up at Barangay Office",
+            "orNumber": "QA-ONLY",
+            "channel": "mobile"
+          }
+        }
+      ]
+    },
+    {
+      "test": "Six wrong OTP attempts on mobile backend",
+      "expected": "Attempt cap / exhausted code",
+      "actual": [
+        400,
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "databaseLookups": 6
+    },
+    {
+      "test": "Registration OTP changes staff-verification boolean",
+      "expected": "contactVerified only",
+      "actual": 200,
+      "writes": [
+        {
+          "table": "user",
+          "data": {
+            "isVerified": true,
+            "contactVerified": true,
+            "contactVerifiedAt": "2026-10-02T18:44:50.551Z"
+          }
+        }
+      ]
+    },
+    {
+      "test": "Valid signature webhook with actual global JSON parser order",
+      "expected": 200,
+      "actual": 400,
+      "message": "Invalid signature"
+    },
+    {
+      "test": "Webhook without configured signature secret with same parser order",
+      "expected": 200,
+      "actual": 500,
+      "message": "Webhook handling failed"
+    },
+    {
+      "test": "Paid document through free bulk endpoint",
+      "expected": "Server-priced unpaid or rejection",
+      "actual": 201,
+      "writes": [
+        {
+          "userId": "11111111-1111-4111-8111-111111111111",
+          "documentType": "Barangay Clearance",
+          "purpose": "Employment",
+          "additionalDetails": "",
+          "status": "Pending",
+          "paymentStatus": "free",
+          "amountPaid": 0,
+          "requestPhoto": "",
+          "purokLeaderStatus": "pending",
+          "orNumber": "QA-ONLY",
+          "channel": "web"
+        }
+      ]
+    },
+    {
+      "test": "Web middleware allows contact-verified draft account",
+      "expected": "Approval gate for request creation",
+      "actual": {
+        "nextCalled": true,
+        "status": 200
+      }
+    },
+    {
+      "test": "Ready count contract for two Completed requests",
+      "expected": 2,
+      "actualDashboardReady": 0,
+      "summary": {
+        "total": 2,
+        "Pending": 0,
+        "Processing": 0,
+        "Printing": 0,
+        "Completed": 2,
+        "Claimed": 0,
+        "Rejected": 0
+      }
+    },
+    {
+      "test": "Kiosk redemption fails after spending clearance",
+      "expected": "Rollback to issued",
+      "actual": "used",
+      "failure": "Injected DB failure after clearance spend"
+    },
+    {
+      "test": "Unsigned unauthenticated webhook marks payment and request paid",
+      "expected": "400/401 and no writes",
+      "actual": 200,
+      "writes": [
+        {
+          "table": "payment",
+          "data": {
+            "status": "paid"
+          }
+        },
+        {
+          "table": "request",
+          "data": {
+            "paymentStatus": "paid",
+            "status": "Processing",
+            "amountPaid": 100
+          }
+        }
+      ]
+    },
+    {
+      "test": "Two cash collection calls interleave after unpaid read",
+      "expected": "One payment and one conflict",
+      "actualStatuses": [
+        200,
+        200
+      ],
+      "createdPayments": 2,
+      "note": "Controlled in-memory interleaving; database concurrency not exercised"
+    },
+    {
+      "test": "Payment status polling leaves amountPaid below paid checkout total",
+      "expected": {
+        "gross": 150,
+        "collectorDocumentNet": 100
+      },
+      "actual": {
+        "status": 200,
+        "paid": true,
+        "storedGross": 100,
+        "collectorDocumentNet": 50
+      }
+    }
+  ],
+  "controls": [
+    {
+      "test": "Main admin API blocks printing unpaid request",
+      "expected": 400,
+      "actual": 400
+    },
+    {
+      "test": "Main admin API blocks reversing Claimed to Processing",
+      "expected": 400,
+      "actual": 400
+    },
+    {
+      "test": "Main admin role middleware rejects Collector for captain operation",
+      "expected": 403,
+      "actual": 403
+    },
+    {
+      "test": "Main resident middleware rejects missing bearer token",
+      "expected": 401,
+      "actual": 401
+    }
+  ]
+}
