@@ -166,11 +166,7 @@ export default function Step1() {
 
             <div className="border-t border-gray-100 pt-4">
               <p className="text-sm font-semibold text-gray-700 mb-3">Current Address</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">House No.</label>
-                  <input {...register('houseNo')} className="input-field" placeholder="123" />
-                </div>
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="label">Purok</label>
                   <select {...register('purok', { required: 'Required' })} className="input-field">
